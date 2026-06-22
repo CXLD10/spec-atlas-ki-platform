@@ -147,6 +147,42 @@ Next: A-0.2 (real ingest pipeline) — unblocked. Can start in parallel with Pha
 
 ---
 
+### A-1.3: Dual-Source Citations in Answer Pipeline
+**Status**: ✅ DONE
+
+**Changes**:
+- `src/spec_atlas/answer/engine.py`: Updated prompt and schema for multi-format citations
+- `src/spec_atlas/answer/provenance.py`: Generalized locator parsing for code + PDF
+- `tests/answer/test_multiformat_citations.py` (NEW): 6 tests for mixed-source scenarios
+
+**Acceptance Criteria Met**:
+- ✅ Answer can include claims from multiple source types
+- ✅ Each claim's `source` reflects correct format (code:line vs document:page)
+- ✅ No citation lost or mis-attributed
+- ✅ Backward compatible (code-only projects still work)
+- ✅ PDF-only projects include only PDF citations
+- ✅ Mixed projects show both citation types
+- ✅ Tests pass: 331 passed, 2 skipped (added 6 new multi-source tests)
+- ✅ Linting: Clean (all checks passed)
+
+**Design Changes**:
+- **Engine prompt**: Now accepts file:line, document:page, and other locator formats
+- **Provenance extraction**: Handles both code and PDF citations
+- **Confidence scoring**: Grounded claims (confidence=1.0), ungrounded (0.7)
+- **Backward compatible**: Existing code-only pipelines unaffected
+
+**Key Achievement**:
+- Pipeline now supports mixed-source answer generation
+- Citations preserve source format (file:line vs document:page)
+- Confidence scores reflect grounding in actual source spans
+
+**Ready for**:
+- Phase 1 integration testing: Code + PDF ingest → ask → mixed citations
+- Gate G1 verification: Full dual-source end-to-end demo
+- Phase 2 work: Groups, specs, and retrieval over multi-source projects
+
+---
+
 ## PHASE 1: Multi-Source Ingestion (3–8 hrs)
 
 **Goal**: Ingest from code + PDF; dual-locator citations.
