@@ -13,6 +13,10 @@ interface Message {
   claims?: Claim[];
   status?: 'success' | 'empty_db' | 'no_results' | 'error';
   suggestions?: string[];
+  disclaimer?: string;
+  source?: string;
+  gitHistory?: Array<{ sha: string; short_sha: string; message: string }>;
+  jiraIssues?: Array<{ key: string; summary: string; status: string; url: string }>;
   timestamp: number;
 }
 
@@ -23,6 +27,7 @@ export function RepoAsk() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [expandedMessage, setExpandedMessage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Pre-fill input from URL query params (from graph node click)
@@ -66,6 +71,16 @@ export function RepoAsk() {
         project_id: repoId || 'default',
       });
 
+      // Fetch git history and Jira issues in parallel
+      const [gitRes, jiraRes] = await Promise.all([
+        fetch(`/api/git/history?project_id=${repoId || 'default'}&limit=5`)
+          .then(r => r.json())
+          .catch(() => ({ commits: [] })),
+        fetch(`/api/jira/issues?project_id=${repoId || 'default'}&limit=5`)
+          .then(r => r.json())
+          .catch(() => ({ issues: [] })),
+      ]);
+
       const assistantMsg: Message = {
         id: `msg-${Date.now() + 1}`,
         role: 'assistant',
@@ -73,6 +88,10 @@ export function RepoAsk() {
         claims: data.claims || [],
         status: data.status || 'success',
         suggestions: data.suggestions || [],
+        disclaimer: data.disclaimer || '',
+        source: data.source || 'spec_atlas',
+        gitHistory: gitRes.commits || [],
+        jiraIssues: jiraRes.issues || [],
         timestamp: Date.now(),
       };
 
@@ -92,8 +111,17 @@ export function RepoAsk() {
   };
 
   const renderMessageContent = (msg: Message) => {
+    const isExpanded = expandedMessage === msg.id;
+
     return (
-      <div className="space-y-3">
+      <div className="space-y-3 w-full">
+        {/* Disclaimer (Deep Wiki fallback) */}
+        {msg.disclaimer && (
+          <div className="bg-yellow-900 bg-opacity-20 border border-yellow-700 border-opacity-50 rounded px-3 py-2 text-xs text-yellow-200">
+            {msg.disclaimer}
+          </div>
+        )}
+
         {/* Main answer text */}
         <p className="text-sm leading-relaxed">{msg.content}</p>
 
@@ -112,6 +140,62 @@ export function RepoAsk() {
                 />
               ))}
             </div>
+          </div>
+        )}
+
+        {/* References Toggle & Panel */}
+        {(msg.gitHistory?.length || 0 > 0 || msg.jiraIssues?.length || 0 > 0) && (
+          <div className="mt-4 pt-3 border-t border-slate-600 space-y-3">
+            <button
+              onClick={() => setExpandedMessage(isExpanded ? null : msg.id)}
+              className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 uppercase tracking-wide flex items-center gap-2"
+            >
+              <span>{isExpanded ? '▼' : '▶'}</span>
+              Show References ({(msg.gitHistory?.length || 0) + (msg.jiraIssues?.length || 0)})
+            </button>
+
+            {isExpanded && (
+              <div className="bg-slate-900 rounded border border-slate-700 p-3 space-y-3 text-xs">
+                {/* Git History */}
+                {msg.gitHistory && msg.gitHistory.length > 0 && (
+                  <div>
+                    <p className="font-semibold text-slate-300 mb-2">Recent Commits</p>
+                    <div className="space-y-1">
+                      {msg.gitHistory.map((commit, i) => (
+                        <div key={i} className="bg-slate-800 rounded px-2 py-1.5">
+                          <code className="text-cyan-400 text-xs">{commit.short_sha}</code>
+                          <p className="text-slate-300 text-xs mt-0.5">{commit.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Jira Issues */}
+                {msg.jiraIssues && msg.jiraIssues.length > 0 && (
+                  <div>
+                    <p className="font-semibold text-slate-300 mb-2">Related Issues</p>
+                    <div className="space-y-1">
+                      {msg.jiraIssues.map((issue, i) => (
+                        <div key={i} className="bg-slate-800 rounded px-2 py-1.5">
+                          <div className="flex items-center gap-2">
+                            <code className="text-purple-400 text-xs font-bold">{issue.key}</code>
+                            <span className={`text-xs px-1 rounded ${
+                              issue.status === 'Done' ? 'bg-green-900 text-green-300' :
+                              issue.status === 'In Progress' ? 'bg-blue-900 text-blue-300' :
+                              'bg-slate-700 text-slate-300'
+                            }`}>
+                              {issue.status}
+                            </span>
+                          </div>
+                          <p className="text-slate-300 text-xs mt-0.5">{issue.summary}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
