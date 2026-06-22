@@ -12,6 +12,8 @@
 > Note: the project was previously code-named *Sextant*. The repo root should be `spec-atlas`.
 >
 > **v1.1 changes** (informed by a reference pitch for a similar feature on another product): multi-language is now P0 via tree-sitter; the layered group.md model is reflected throughout; added dual-path retrieval with a router; added context-size/cost success metrics measured head-to-head against a baseline; added an evaluation requirement; added an execution-free security posture; elevated "living onboarding docs" to a first-class deliverable.
+>
+> **v2.0 changes** (Phase 0–4 sprint): added **multi-source ingestion** (PDF, Markdown, Excel, Jira; Phase 1) with dual-locator citations; **conversation memory** persisting facts across sessions (Phase 3); **on-demand spec generation** for any node in the graph (Phase 2); **agent integration** via MCP + HTTP API with memory context (Phase 3); streamlined UX for source management, graph exploration, and specify tool (Phases 1–2).
 
 ---
 
@@ -83,6 +85,9 @@ Context/cost figures are design estimates; a measurement phase validates them he
 - **US-7** As a developer, I can re-index a repo repeatedly without creating duplicate graph data.
 - **US-8** As an onboarding engineer, I can read a one-page summary per area of the codebase — generated, never hand-written, with `file:line` receipts — as living onboarding docs that can't silently rot.
 - **US-9** As a developer, a precise symbol question routes to the code graph and a big-picture question routes to the spec/group layer, so each question hits the right source automatically.
+- **US-10** As an architect, I can add supporting documentation (PDFs, design docs, Markdown, Excel specs, Jira tickets) to my project, so ask returns citations from both code and docs with proper provenance (page, bbox for PDF; section for Markdown).
+- **US-11** As a developer, the system remembers facts from prior conversations (e.g., "main entry is in main.py", "API auth is JWT-based") and retrieves them in the next session, so I don't re-explain the codebase to the agent.
+- **US-12** As a coding agent, I can fetch specs, memory facts, and graph data via MCP and HTTP APIs, so I'm grounded in real project knowledge across sessions and implementations.
 
 ## 7. Key scenarios (workflows)
 
@@ -164,30 +169,49 @@ Priorities: **P0** = required for v1, **P1** = important, **P2** = later/advance
 | FR-I2 | Tool responses include provenance so agents can cite/verify. | P0 | F-013 |
 | FR-I3 | An HTTP API mirrors the core graph and spec operations for non-MCP callers. | P1 | F-004/F-011 |
 
-### J. Drift detection
+### J. Multi-Source Ingestion (Phase 1, new in v2.0)
 | ID | Requirement | Priority | Feature |
 |---|---|---|---|
-| FR-J1 | On a new commit, detect which specs/groups cover changed source (via fingerprints). | P1 | F-014 |
-| FR-J2 | Mark affected pages `stale`; regenerate only the affected subtree. | P1 | F-014 |
+| FR-J1 | Ingest multiple source types beyond code: PDF documents, Markdown files, Excel sheets, Jira exports, git history. | P0 | F-001-ext |
+| FR-J2 | SourceUnit abstraction normalizes all sources (code, PDF, Markdown, Excel, Jira) with metadata + locator (file, line) for code; (page, bbox) for PDF; (section) for Markdown. | P0 | F-001-ext |
+| FR-J3 | PDF adapter (PyMuPDF) extracts text + preserves bbox for precise citations. | P0 | F-001-ext |
+| FR-J4 | Embeddings and retrieval work across all source types; answers cite both code and docs. | P0 | F-006-ext, F-007-ext |
+| FR-J5 | Frontend source manager UI allows uploading, managing, and re-ingesting multi-source projects. | P1 | F-009-ext |
 
-### K. User interface
+### K. Conversation Memory & Persistence (Phase 3, new in v2.0)
 | ID | Requirement | Priority | Feature |
 |---|---|---|---|
-| FR-K1 | A web UI with a question box, grounded answer, clickable source citations. | P1 | F-009 |
-| FR-K2 | A group-tree / spec browser to read areas as living docs. | P1 | F-009 |
-| FR-K3 | A code-graph viewer to explore structure visually. | P2 | F-009 |
+| FR-K1 | System extracts and stores durable facts from each conversation turn (e.g., "entry point is main.py", "API uses JWT"). | P1 | F-003-ext |
+| FR-K2 | Facts are retrieved and ranked by relevance in subsequent sessions; agents can build on prior knowledge. | P1 | F-007-ext, F-008-ext |
+| FR-K3 | A conversation history / memory browser shows facts and their sources (code, PDF, memory). | P2 | F-009-ext |
+| FR-K4 | Memory is scoped per project; accessible via API and MCP server. | P1 | F-013-ext |
 
-### L. Language coverage
+### L. Drift detection (formerly J)
 | ID | Requirement | Priority | Feature |
 |---|---|---|---|
-| FR-L1 | Parse multiple languages from v1 via tree-sitter (initial set: Python + TypeScript/JS). | P0 | F-002 |
-| FR-L2 | Adding a language is additive: a tree-sitter grammar + query pack implementing the same node/edge contract; nothing upstream changes. | P1 | F-015 |
+| FR-L1 | On a new commit, detect which specs/groups cover changed source (via fingerprints). | P1 | F-014 |
+| FR-L2 | Mark affected pages `stale`; regenerate only the affected subtree. | P1 | F-014 |
 
-### M. Evaluation
+### M. User interface (formerly K)
 | ID | Requirement | Priority | Feature |
 |---|---|---|---|
-| FR-M1 | A head-to-head eval harness scores the spec/group path against a raw-node-RAG baseline on a curated question set (accuracy, context size, cost). | P1 | F-016 |
-| FR-M2 | Auto-routing (FR-E5) is enabled only when eval evidence supports it. | P1 | F-016 |
+| FR-M1 | A web UI with a question box, grounded answer, clickable source citations (code + PDF). | P1 | F-009 |
+| FR-M2 | A group-tree / spec browser to read areas as living docs. | P1 | F-009 |
+| FR-M3 | A code-graph viewer to explore structure visually (L1, L2, L3 layers). | P2 | F-009 |
+| FR-M4 | Specify tool UI: select a node, generate a spec, store versioned copy. | P0 | F-010 |
+| FR-M5 | Source manager UI: upload/remove sources (code, PDF, Markdown, Excel); view ingest status. | P0 | F-009-ext |
+
+### N. Language coverage (formerly L)
+| ID | Requirement | Priority | Feature |
+|---|---|---|---|
+| FR-N1 | Parse multiple languages from v1 via tree-sitter (initial set: Python + TypeScript/JS). | P0 | F-002 |
+| FR-N2 | Adding a language is additive: a tree-sitter grammar + query pack implementing the same node/edge contract; nothing upstream changes. | P1 | F-015 |
+
+### O. Evaluation (formerly M)
+| ID | Requirement | Priority | Feature |
+|---|---|---|---|
+| FR-O1 | A head-to-head eval harness scores the spec/group path against a raw-node-RAG baseline on a curated question set (accuracy, context size, cost). | P1 | F-016 |
+| FR-O2 | Auto-routing (FR-E5) is enabled only when eval evidence supports it. | P1 | F-016 |
 
 ## 9. Non-functional requirements (summary)
 
