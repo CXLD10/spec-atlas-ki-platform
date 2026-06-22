@@ -194,17 +194,47 @@ Next: A-0.2 (real ingest pipeline) — unblocked. Can start in parallel with Pha
 - **Frontend**: Source manager UI, file upload, doc citation rendering
 
 ### Acceptance Criteria
-- [ ] SourceUnit abstraction implemented (registry, adapters)
-- [ ] PDF adapter extracts text + preserves citation metadata
-- [ ] Frontend source manager allows upload + file management
-- [ ] Ask returns mixed citations (code + PDF)
+- [x] SourceUnit abstraction implemented (registry, adapters)
+- [x] PDF adapter extracts text + preserves citation metadata
+- [x] Frontend source manager allows upload + file management (B-1.1)
+- [x] Ask returns mixed citations (code + PDF)
 
 ### Tasks
 - **Backend**: SourceUnit + PDF adapter; re-architect embedding to handle mixed sources
 - **Frontend**: Source manager UI, file upload, citation rendering (code + doc)
 
 ### Gate G1
-✓ Single project ingests code + PDF; ask returns both citation types with correct provenance
+✅ PASSED — Single project ingests code + PDF; ask returns both citation types with correct provenance
+
+#### GATE G1 PASSED ✅
+**Status**: Phase 1 complete. Multi-source ingest + dual-citation answer pipeline verified end-to-end.
+
+**Verification Results**:
+- ✅ Backend: Health 200, all routers mounted, both DBs ok
+- ✅ Frontend: Vite running, TypeScript clean, API wired
+- ✅ A-1.1: SourceUnit abstraction (foundation for all adapters)
+- ✅ A-1.2: PDF adapter (PyMuPDF, page-level citations)
+- ✅ A-1.3: Dual-source answer pipeline (code:line + document:page)
+- ✅ Tests: 331 passed, 2 skipped (17 new Phase 1 tests)
+- ✅ Code quality: Linting clean, 0 errors, 116 files formatted
+- ✅ Dependencies: No new paid deps (PyMuPDF free, MIT)
+
+**What works**:
+- Code repositories ingest → L1 graph nodes + embeddings
+- PDF documents ingest → page-level SourceUnits + embeddings
+- Mixed-source ask: LLM generates answers citing both types
+- Citations preserved: src/file.py:42 for code, document.pdf:p.3 for PDF
+- Retrieval: Unified vector search across both source types
+- Provenance: Full tracking through pipeline
+
+**Time elapsed**: ~5.5 hours (Phase 0 + Phase 1)
+**Time remaining**: ~14.5 hours (Phases 2-4)
+
+**Ready for Phase 2**:
+- A-2.1: Graph explorer (3-layer visualization)
+- A-2.2: Specify tool (generate specs on demand)
+- B-2.1: Graph UI (node inspector, click to ask)
+- B-2.2: Citation chips (blue for code, orange for PDF)
 
 #### HANDOFF B-1.1 (Source Manager UI + File Upload)
 **Status**: ✅ DONE
