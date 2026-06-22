@@ -25,7 +25,9 @@ ANSWER_SCHEMA = {
                     "claim": {"type": "string", "description": "A specific claim or fact"},
                     "source": {
                         "type": "string",
-                        "description": "Source file and line number in format file.py:123",
+                        "description": (
+                            "Source locator: file:line for code, document:page for PDFs, etc"
+                        ),
                     },
                 },
                 "required": ["claim", "source"],
@@ -199,13 +201,14 @@ class AnswerEngine:
             [
                 "\nAnswer the question based on the context. If unsure, say 'I don't know'.",
                 "Every claim must be grounded in the provided context.",
-                "Include file:line receipt for each claim.\n",
+                "Include source receipt for each claim (file:line for code, document:page, etc).\n",
                 "Output JSON format:",
                 json.dumps(
                     {
                         "answer": "Your answer text here",
                         "claims": [
                             {"claim": "A specific claim", "source": "file.py:42"},
+                            {"claim": "Another claim from PDF", "source": "document.pdf:p.3"},
                         ],
                     },
                     indent=2,
