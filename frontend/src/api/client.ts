@@ -221,13 +221,14 @@ class ApiClient {
     })
   }
 
-  async uploadPDFSource(
+  private async uploadFileSource(
     projectId: string,
+    sourceType: 'pdf' | 'excel' | 'markdown',
     file: File
   ): Promise<IngestResponse> {
     const formData = new FormData()
     formData.append('project_id', projectId)
-    formData.append('source_type', 'pdf')
+    formData.append('source_type', sourceType)
     formData.append('file', file)
 
     const url = `${this.baseUrl}/api/ingest`
@@ -248,6 +249,27 @@ class ApiClient {
     }
 
     return response.json()
+  }
+
+  async uploadPDFSource(
+    projectId: string,
+    file: File
+  ): Promise<IngestResponse> {
+    return this.uploadFileSource(projectId, 'pdf', file)
+  }
+
+  async uploadExcelSource(
+    projectId: string,
+    file: File
+  ): Promise<IngestResponse> {
+    return this.uploadFileSource(projectId, 'excel', file)
+  }
+
+  async uploadMarkdownSource(
+    projectId: string,
+    file: File
+  ): Promise<IngestResponse> {
+    return this.uploadFileSource(projectId, 'markdown', file)
   }
 
   async getGraphNodes(projectId: string, layers?: string[]): Promise<any[]> {
