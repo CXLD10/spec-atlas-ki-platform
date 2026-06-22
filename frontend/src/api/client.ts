@@ -224,6 +224,28 @@ class ApiClient {
 
     return response.json()
   }
+
+  async getGraphNodes(projectId: string, layers?: string[]): Promise<any[]> {
+    const query = new URLSearchParams({ project_id: projectId })
+    if (layers && layers.length > 0) {
+      layers.forEach((layer) => query.append('layer', layer))
+    }
+    const path = `/api/graph/nodes?${query}`
+    return this.request('GET', path)
+  }
+
+  async getGraphEdges(projectId: string, limit?: number): Promise<any[]> {
+    const query = new URLSearchParams({ project_id: projectId })
+    if (limit) query.append('limit', limit.toString())
+    const path = `/api/graph/edges?${query}`
+    return this.request('GET', path)
+  }
+
+  async getNodeNeighbors(projectId: string, nodeId: string): Promise<any> {
+    const query = new URLSearchParams({ project_id: projectId })
+    const path = `/api/graph/node/${nodeId}/neighbors?${query}`
+    return this.request('GET', path)
+  }
 }
 
 export const client = new ApiClient()
