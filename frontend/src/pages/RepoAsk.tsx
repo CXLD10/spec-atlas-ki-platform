@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Send, Copy, Check } from 'lucide-react';
 import { TopBar } from '../components/layout/TopBar';
+import { CitationChip } from '../components/qa/CitationChip';
 import { client, Claim } from '../api/client';
 import './RepoAsk.css';
 
@@ -91,16 +92,15 @@ export function RepoAsk() {
         {msg.claims && msg.claims.length > 0 && (
           <div className="mt-4 pt-3 border-t border-slate-600 space-y-2">
             <p className="text-xs font-semibold text-slate-300 uppercase tracking-wide">Sources</p>
-            <div className="space-y-1">
+            <div className="flex flex-wrap gap-2">
               {msg.claims.map((claim, i) => (
-                <a
+                <CitationChip
                   key={i}
-                  href="#"
-                  className="text-xs text-cyan-400 hover:text-cyan-300 block truncate"
-                  title={claim.text}
-                >
-                  📄 {claim.source}
-                </a>
+                  source={claim.source}
+                  onClick={() => {
+                    console.log('Clicked citation:', claim.source);
+                  }}
+                />
               ))}
             </div>
           </div>
