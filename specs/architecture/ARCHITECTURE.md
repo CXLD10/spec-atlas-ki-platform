@@ -35,26 +35,107 @@ question
         └─ vector search over L4 group.md  ──► matched group(s)
               └─ descend the tree: group → sub-group → spec → code span
                     └─ assemble grounded context (specs + summaries + spans)
-                          └─ Answerer (LLM) ─► answer + provenance
+                          └─ (optional) retrieve memory facts from prior sessions
+                                └─ Answerer (LLM) ─► answer + provenance (code + doc citations)
 ```
-No live graph traversal. Retrieval cost ≈ one ANN search + a bounded descent.
+No live graph traversal. Retrieval cost ≈ one ANN search + a bounded descent + optional memory fetch.
+
+## Three-Layer Graph-RAG Architecture (Phase 1–3)
+
+Spec-Atlas integrates a **three-layer graph** with **multi-source RAG** to ground answers in code, docs, and memory:
+
+```
+┌─────────────────────────────────────────────────────┐
+│ L1: Code Knowledge Graph (tree-sitter)              │
+│   Nodes: modules, classes, functions                │
+│   Edges: imports, calls, inherits, defines          │
+│   Source: Python, TypeScript, Go (tree-sitter)      │
+└─────────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────┐
+│ L2: Spec Layer (LLM-generated, versioned)           │
+│   Specs: purpose, inputs/outputs, invariants        │
+│   Provenance: file:line spans in code               │
+│   Storage: Spec DB (separate from L1)               │
+└─────────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────┐
+│ L3: Spec Graph + Multi-Source Links                 │
+│   Spec-to-spec edges: depends-on, part-of, uses    │
+│   Multi-source edges: code ↔ PDF, Markdown, Excel  │
+│   Dual-locator citations:                           │
+│     - Code: {file, start_line, end_line}            │
+│     - PDF: {source, page, bbox}                     │
+│     - Markdown/Excel: {source, section}             │
+│   Memory facts: {fact, sources, relevance}          │
+└─────────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────┐
+│ L4: Knowledge Synthesis (group.md tree + memory)    │
+│   Hierarchical summaries: system → group → subgroup │
+│   Embedded for vector search                        │
+│   Memory facts retrieved by relevance               │
+│   Output: answer with mixed citations               │
+└─────────────────────────────────────────────────────┘
+```
+
+### Multi-Source Ingestion (Phase 1)
+
+**SourceUnit abstraction** normalizes ingestion across code, PDF, Markdown, Excel, Jira, git history:
+
+```python
+class SourceUnit:
+    source_id: str          # unique per project
+    type: str               # "code", "pdf", "markdown", "excel", "jira", "git_history"
+    name: str               # file name or URL
+    metadata: Dict          # language, pages, encoding, etc.
+    locator: Union[CodeLocator, PDFLocator, TextLocator]  # how to cite
+
+class CodeLocator:
+    file: str
+    start_line: int
+    end_line: int
+
+class PDFLocator:
+    page: int
+    bbox: Tuple[float, float, float, float]  # normalized [x0, y0, x1, y1]
+```
+
+Each source is embedded + indexed for retrieval; answers cite sources with proper locators.
+
+### Conversation Memory (Phase 3)
+
+```python
+class MemoryFact:
+    fact: str               # "entry point is main.py"
+    sources: List[str]      # ["code", "pdf", "memory"]
+    provenance: Dict        # {source: locator}
+    relevance: float        # 0.0–1.0
+    created_at: datetime
+    project_id: str
+```
+
+Facts are extracted from each conversation turn, stored in a durable facts DB, and retrieved by relevance in subsequent sessions. Agents access memory via API + MCP.
 
 ## Components & responsibilities
 1. **Ingestor** — resolves repo (local path / public git URL), inventories files, detects language, hashes.
 2. **Parser (tree-sitter)** — language-agnostic CST → L1 nodes; per-language query packs extract symbols/edges.
 3. **Edge Extractor** — imports/calls/inherits/defines with confidence (best-effort cross-file).
 4. **Graph Store (Analysis DB)** — persists L1; supports the bounded lookups used during index-time spec generation.
-5. **Specify engine (L2)** — LLM generates specs from graph regions; schema-validated; provenance-bound.
-6. **Spec Graph builder (L3)** — links specs into the parent graph.
-7. **Group/Summary builder (L4)** — clusters into a tree and writes `group.md` rollups; embeds them.
-8. **Embedder** — vectors for `group.md` (primary) and specs (for direct lookup) → pgvector.
-9. **Retriever** — vector search over L4, then tree descent into L3/L2/L1.
-10. **Answerer** — grounded answer + provenance.
-11. **Spec Store (Spec DB, separate)** — per-user, versioned specs + the spec graph.
-12. **Spec Verifier** — checks invariants/claims against code before marking `verified`.
-13. **Drift Detector** — commit diff → stale specs/groups → regenerate affected subtree only.
-14. **MCP Server (local)** — tools: `search` (vector+descend), `get_spec`, `get_group`, `list_stale_specs`.
-15. **API Gateway (FastAPI)** + **Web UI (TS/React)**.
+5. **SourceUnit Registry** *(Phase 1)* — abstracts multi-source ingestion (code, PDF, Markdown, Excel, Jira, git). Per-source adapters extract + normalize text + metadata + locators.
+6. **PDF Adapter** *(Phase 1)* — PyMuPDF extracts text + preserves page/bbox citations.
+7. **Specify engine (L2)** — LLM generates specs from graph regions; schema-validated; provenance-bound.
+8. **Spec Graph builder (L3)** — links specs into the parent graph; includes multi-source edges (code ↔ PDF).
+9. **Group/Summary builder (L4)** — clusters into a tree and writes `group.md` rollups; embeds them.
+10. **Embedder** — vectors for `group.md` (primary) and specs (for direct lookup) → pgvector. Handles multi-source text normalization.
+11. **Retriever** — vector search over L4, then tree descent into L3/L2/L1. Retrieves memory facts by relevance *(Phase 3)*.
+12. **Answerer** — grounded answer + provenance. Formats citations by source type (code, PDF, Markdown, etc.).
+13. **Memory Store** *(Phase 3)* — durable facts DB; extracts facts from conversations, retrieves by relevance.
+14. **Spec Store (Spec DB, separate)** — per-user, versioned specs + the spec graph.
+15. **Spec Verifier** — checks invariants/claims against code before marking `verified`.
+16. **Drift Detector** — commit diff → stale specs/groups → regenerate affected subtree only.
+17. **MCP Server (local)** — tools: `search` (vector+descend), `get_spec`, `get_group`, `list_stale_specs`, `get_memory_facts` *(Phase 3)*.
+18. **API Gateway (FastAPI)** + **Web UI (TS/React)** — source manager UI, graph explorer, specify tool, conversation history + memory sidebar *(Phases 1–3)*.
 
 ## Stack
 - Backend: Python 3.12 + FastAPI (+ tree-sitter bindings, fastembed).
