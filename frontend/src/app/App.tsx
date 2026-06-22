@@ -7,6 +7,7 @@ import RepoExplore from '../pages/RepoExplore'
 import RepoSpec from '../pages/RepoSpec'
 import RepoGraphify from '../pages/RepoGraphify'
 import SpecifyTool from '../pages/SpecifyTool'
+import SpecView from '../pages/SpecView'
 import Docs from '../pages/Docs'
 import IndexProgress from '../pages/IndexProgress'
 import '../styles/global.css'
@@ -32,6 +33,7 @@ export function App() {
             <Route path="/repo/:repoId/ask" element={<RepoAsk />} />
             <Route path="/repo/:repoId/graphify" element={<RepoGraphify />} />
             <Route path="/repo/:repoId/specify" element={<SpecifyTool />} />
+            <Route path="/repo/:repoId/specify/:specId" element={<SpecView />} />
             <Route path="/repo/:repoId/explore" element={<RepoExplore />} />
             <Route path="/repo/:repoId/explore/specs/:specRef" element={<RepoSpec />} />
           </Routes>
