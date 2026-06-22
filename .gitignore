@@ -130,3 +130,7 @@ node_modules
 dist/
 build/
 coverage/
+
+# Local context folders (never commit)
+context-folder-dont-commit-or-push/
+new-context-files/
