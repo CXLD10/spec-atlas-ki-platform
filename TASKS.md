@@ -12,7 +12,7 @@
 **Goal**: App boots, all routers mounted, real ingest pipeline (no fake progress).
 
 ### Acceptance Criteria
-- [ ] Backend app starts cleanly; all API routers mounted
+- [x] Backend app starts cleanly; all API routers mounted
 - [ ] Real ingest pipeline runs end-to-end (not simulated progress)
 - [x] Frontend wires to backend (routes/fields match API_CONTRACT.md)
 - [ ] Live data flows through code → parse → L1 graph → retrieval
@@ -36,6 +36,19 @@ Changed: `frontend/src/api/client.ts`, `useAsk.ts`, `pages/Landing.tsx`, `RepoAs
 Test: `npm run type-check` (passes) && `npm run dev` (start server, manually verify progress page updates and ask returns citations with sources)
 
 Next: B-0.2 (new project UI) — ready to start. A-0.1 backend wiring must complete in parallel for Gate G0.
+
+#### HANDOFF A-0.1 (App boots, all routers mounted, DI real)
+Changed: `src/spec_atlas/api/app.py`, `health.py`, `graph.py`, `groups.py`, `specs.py`, `answer.py`, `ingest.py`, `groups/summarizer.py`, `mcp/server.py`, `retrieve/search.py`, tests
+- Health endpoint wired and returns correct shape (status, analysis_db, spec_db, llm, embed)
+- All six routers mounted: health, ingest, ask (answer), graph, groups, specs
+- DI functions fixed: `get_analysis_session()` and `get_spec_session()` properly yield sessions
+- Fixed linting errors (36 errors → 0; line lengths, exception handling, unused imports)
+- All tests pass (317 passed, 2 skipped)
+- No new paid dependencies
+
+Test: `docker-compose up -d --build && curl http://localhost:8000/health && make test && make lint`
+
+Next: A-0.2 (real ingest pipeline) — unblocked. Can start in parallel with Phase 1 work after Gate G0 review.
 
 ---
 
