@@ -335,6 +335,49 @@ Next: A-0.2 (real ingest pipeline) — unblocked. Can start in parallel with Pha
 ### Gate G2
 ✓ 3-layer graph renders on real data; click-through works; specs persist and reuse
 
+#### HANDOFF B-2.1 (Graph Explorer: 3-Layer Rendering)
+**Status**: ✅ DONE
+
+**Changes**:
+- `frontend/src/api/useGraph.ts` (NEW): React Query hooks for graph data
+  - useGraphNodes(projectId, layers): Fetches nodes with layer filtering
+  - useGraphEdges(projectId): Fetches edges for visible nodes
+  - GraphNode interface: id, label, kind, layer (L1|L3|L4), file_path
+  - GraphEdge interface: id, source, target, kind, confidence
+  
+- `frontend/src/api/client.ts` (UPDATED):
+  - getGraphNodes(projectId, layers?): Fetch nodes with layer filtering
+  - getGraphEdges(projectId, limit?): Fetch edges with limit
+  - getNodeNeighbors(projectId, nodeId): Fetch node neighbors
+  
+- `frontend/src/pages/RepoGraphify.tsx` (UPDATED):
+  - Migrated from hardcoded fetch to useGraphNodes/useGraphEdges hooks
+  - Layer-based coloring: L1=gray (#6b7280), L3=green (#10b981), L4=blue (#3b82f6)
+  - Reactive layer toggles filter nodes/edges in real-time
+  - Updated legend and stats to reflect layer-based visualization
+  - Removed local GraphNode/GraphEdge interfaces; now imports from useGraph
+
+**Acceptance Criteria Met**:
+- ✅ Graph loads nodes from backend `/api/graph/nodes?project_id=X&layer=...`
+- ✅ L4 (groups) renders as blue, L3 (specs) as green, L1 (sources) as gray
+- ✅ Edges load and render between nodes
+- ✅ Layer toggles filter nodes ON/OFF
+- ✅ Graph is interactive: left-click rotate, right-click pan, scroll zoom
+- ✅ Node labels are readable (label field displayed on hover)
+- ✅ No console errors
+- ✅ TypeScript clean (npm run type-check passes)
+- ✅ No new npm dependencies
+
+**Design**:
+- Layer color scheme: Gray for L1 (code), Green for L3 (specs), Blue for L4 (groups)
+- Force-directed layout: Nodes repel each other, edges attract connected nodes
+- Raycasting for hover/click detection: Smooth interaction without lag
+- Physics simulation runs every 2 frames for performance
+
+**Ready for**:
+- B-2.2: Node inspector/click to ask (click handler ready)
+- Gate G2 validation: Visual inspection of 3-layer structure
+
 ---
 
 ## PHASE 3: Breadth + Persistence (13–17 hrs)
