@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from './theme/ThemeProvider'
 import Landing from '../pages/Landing'
+import Projects from '../pages/Projects'
 import RepoAsk from '../pages/RepoAsk'
 import RepoExplore from '../pages/RepoExplore'
 import RepoSpec from '../pages/RepoSpec'
@@ -28,6 +29,10 @@ export function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/graph" element={<RepoGraphify />} />
+            <Route path="/ask" element={<RepoAsk />} />
+            <Route path="/specify" element={<SpecifyTool />} />
             <Route path="/docs" element={<Docs />} />
             <Route path="/index/:jobId" element={<IndexProgress />} />
             <Route path="/repo/:repoId/ask" element={<RepoAsk />} />

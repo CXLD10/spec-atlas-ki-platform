@@ -3,7 +3,7 @@ import { ThemeToggle } from './ThemeToggle'
 import './TopBar.css'
 
 interface TopBarProps {
-  variant?: 'marketing' | 'workspace'
+  variant?: 'marketing' | 'workspace' | 'default'
 }
 
 export function TopBar({ variant = 'marketing' }: TopBarProps) {
@@ -21,7 +21,7 @@ export function TopBar({ variant = 'marketing' }: TopBarProps) {
               <Link to={`/repo/default/graphify`}>Graph Explorer</Link>
               <Link to={`/repo/default/specify`}>Specify Tool</Link>
               <Link to={`/docs`}>Docs</Link>
-              <a href="https://github.com/anthropics/spec-atlas" target="_blank" rel="noreferrer">
+              <a href="https://github.com/CXLD10/spec-atlas-ki-platform" target="_blank" rel="noreferrer">
                 GitHub
               </a>
             </>
@@ -32,6 +32,7 @@ export function TopBar({ variant = 'marketing' }: TopBarProps) {
               <Link to={`/repo/default/explore`}>Explore</Link>
             </>
           )}
+          {variant === 'default' && null}
         </nav>
 
         <ThemeToggle />
