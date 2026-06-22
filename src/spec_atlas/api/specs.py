@@ -458,3 +458,103 @@ def get_spec_graph(
         dependencies=dep_specs,
         dependents=dependent_specs,
     )
+
+
+class VerifySpecRequest(BaseModel):
+    """Request to verify a spec."""
+
+    repo: str = Query(...)
+
+
+class VerificationIssue(BaseModel):
+    """A single verification issue."""
+
+    claim: str
+    reason: str
+    severity: str
+
+
+class VerifySpecResponse(BaseModel):
+    """Response from verification."""
+
+    component_ref: str
+    version: int
+    status: str
+    confidence: float
+    is_grounded: bool
+    issues: list[VerificationIssue]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+@router.post("/{component_ref}/verify", response_model=VerifySpecResponse)
+def verify_spec(
+    component_ref: str = Path(...),
+    repo: str = Query(...),
+    version: int = Query(...),
+    spec_session: Session = Depends(get_spec_session),  # noqa: B008
+    analysis_session: Session = Depends(get_analysis_session),  # noqa: B008
+) -> VerifySpecResponse:
+    """Verify that a spec's claims are grounded in source code.
+
+    Runs rule-based checks on the spec and updates status if verification passes.
+
+    Args:
+        component_ref: Component reference (qualified name).
+        repo: Repository name.
+        version: Spec version to verify.
+        spec_session: Spec DB session.
+        analysis_session: Analysis DB session.
+
+    Returns:
+        VerifySpecResponse with confidence score, pass/fail, and issues.
+
+    Raises:
+        HTTPException: 404 if spec not found, 503 if verifier unavailable.
+    """
+    from spec_atlas.verify.verifier import SpecVerifier
+
+    if not spec_session:
+        raise HTTPException(status_code=503, detail="Spec database not available")
+
+    if not analysis_session:
+        raise HTTPException(status_code=503, detail="Analysis database not available")
+
+    # Fetch spec
+    store = SpecStore(spec_session)
+    spec = store.get_version("default", repo, component_ref, version)
+
+    if not spec:
+        raise HTTPException(status_code=404, detail="Spec not found") from None
+
+    # Run verification
+    verifier = SpecVerifier(analysis_session)
+    result = verifier.verify(spec, repo, component_ref)
+
+    # Update spec status based on verification result
+    # Mark as verified if confidence > 0.8 and no errors
+    if result.confidence > 0.8 and result.is_grounded:
+        new_status = "verified"
+    elif result.confidence >= 0.5:
+        new_status = "draft"  # Can be re-verified later
+    else:
+        new_status = "draft"  # Low confidence, needs review
+
+    spec.status = new_status
+    spec_session.commit()
+
+    return VerifySpecResponse(
+        component_ref=component_ref,
+        version=version,
+        status=new_status,
+        confidence=result.confidence,
+        is_grounded=result.is_grounded,
+        issues=[
+            VerificationIssue(
+                claim=issue.claim,
+                reason=issue.reason,
+                severity=issue.severity,
+            )
+            for issue in result.issues
+        ],
+    )
