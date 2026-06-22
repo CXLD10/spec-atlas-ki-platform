@@ -93,3 +93,30 @@ DoD: unit test with a small fixture repo (create temp files, compute hashes, ups
 **Next can assume:** `spec_atlas.ingest.RepoResolver` is importable; both methods work for local paths and git URLs; file paths are sorted and relative to repo root; temp directories are cleaned up on error.
 
 **Follow-ups:** none inside this task.
+
+## HANDOFF 2026-06-22 — claude
+**Task:** Phase 3 — Excel and Markdown adapters (breadth expansion)
+
+**Built:**
+- `src/spec_atlas/ingest/adapters/excel.py` — `ExcelAdapter` class for .xlsx files
+  - Parses sheets → rows → SourceUnits with provenance `filename:sheet=SheetName:row=N`
+  - Captures headers and row data in structure field
+  - Async-compatible, follows SourceAdapter abstraction
+- `src/spec_atlas/ingest/adapters/markdown.py` — `MarkdownAdapter` class for .md files
+  - Parses files → sections (by heading level) → SourceUnits with provenance `filename:section=HeadingName`
+  - Regex-based heading detection (# through ######)
+  - Async-compatible, follows SourceAdapter abstraction
+- `tests/ingest/test_excel_adapter.py` — 8 tests (parsing, provenance, structure, multi-sheet)
+- `tests/ingest/test_markdown_adapter.py` — 8 tests (sections, provenance, content, headings)
+
+**Changes:**
+- `pyproject.toml` — Added `openpyxl>=3.0` dependency (free, MIT license)
+
+**Verify:** 390 tests passing (up from 376); linting clean; both adapters follow the same SourceUnit abstraction as Code and PDF adapters.
+
+**Next can assume:** 
+- SourceUnit abstraction now supports: Code, PDF, Excel, Markdown (4 source types)
+- Graph ingestion now spans multiple formats (breadth-enabled)
+- All adapters have consistent provenance format and structure
+
+**Integration note:** These adapters are available but not yet wired into `/api/ingest` endpoint routing. API integration is a future task (would require updating api/ingest.py to recognize source_type=excel and source_type=markdown).
