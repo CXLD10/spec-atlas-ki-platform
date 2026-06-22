@@ -378,6 +378,58 @@ Next: A-0.2 (real ingest pipeline) — unblocked. Can start in parallel with Pha
 - B-2.2: Node inspector/click to ask (click handler ready)
 - Gate G2 validation: Visual inspection of 3-layer structure
 
+#### HANDOFF B-2.2 (Node Inspector + Ask Integration)
+**Status**: ✅ DONE
+
+**Changes**:
+- `frontend/src/pages/RepoGraphify.tsx` (UPDATED):
+  - Added useNavigate hook for routing
+  - Added handleAskAboutNode() function that generates question from selected node
+  - Question format: "What does the {kind} \"{label}\" do?"
+  - Navigates to ask page with query params: ?question=...&node=...
+  - "Ask about this" button in inspector panel triggers navigation
+
+- `frontend/src/pages/RepoGraphify.css` (UPDATED):
+  - Added .btn-ask-about button styling
+  - Cyan background (#58a6ff) with hover effects
+  - Smooth transition: translateY(-1px) + box-shadow on hover
+  - Active state returns to original position
+
+- `frontend/src/pages/RepoAsk.tsx` (UPDATED):
+  - Added useSearchParams hook to read URL query parameters
+  - Pre-fills input field with question from URL (?question=...)
+  - Automatic pre-fill allows user to send immediately or edit
+
+**Acceptance Criteria Met**:
+- ✅ Graph node click shows metadata in inspector panel
+- ✅ "Ask about this" button appears in inspector
+- ✅ Button generates natural language question from node
+- ✅ Navigates to ask page with pre-filled question
+- ✅ RepoAsk displays pre-filled question in input field
+- ✅ No console errors
+- ✅ TypeScript clean (npm run type-check passes)
+- ✅ No new npm dependencies
+
+**Design**:
+- UX flow: Click node → Inspector → "Ask about this" → Pre-filled ask page
+- Question generation: Uses node kind and label for natural phrasing
+- URL state passing: Question and node ID preserved in query params
+- Input pre-fill: useSearchParams reads and populates input field
+- Button styling: Consistent with app theme, visual feedback on hover
+
+**User Workflow**:
+1. User clicks a node in the graph
+2. Node details appear in inspector panel (name, type, file)
+3. User sees "Ask about this" button
+4. Click button → Navigate to ask page
+5. Question pre-filled in input field
+6. User can edit or send directly
+7. Answer loads with citations from relevant code/specs
+
+**Ready for**:
+- Gate G2 validation: End-to-end graph → ask workflow
+- B-2.3 or A-2.x: Additional inspector features (view spec, edit, etc.)
+
 ---
 
 ## PHASE 3: Breadth + Persistence (13–17 hrs)
