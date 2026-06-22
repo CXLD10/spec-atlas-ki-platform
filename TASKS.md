@@ -111,6 +111,42 @@ Next: A-0.2 (real ingest pipeline) — unblocked. Can start in parallel with Pha
 
 ---
 
+### A-1.2: PDF Adapter with Page Citations
+**Status**: ✅ DONE
+
+**Changes**:
+- `src/spec_atlas/ingest/adapters/pdf.py` (NEW): PDFAdapter using PyMuPDF
+- `tests/ingest/test_pdf_adapter.py` (NEW): 5 tests for PDF parsing, locators, page extraction
+- `pyproject.toml`: Added PyMuPDF>=1.23.0 (free, MIT license)
+- `src/spec_atlas/ingest/adapters/__init__.py`: Export PDFAdapter
+
+**Acceptance Criteria Met**:
+- ✅ PDF file parsing via PyMuPDF (fitz)
+- ✅ Each page (or content block) becomes a SourceUnit
+- ✅ Provenance locator format: `filename.pdf:p.N` (1-indexed pages)
+- ✅ Adapters emit normalized SourceUnits
+- ✅ Tests pass: 325 passed, 2 skipped (added 5 new PDF adapter tests)
+- ✅ Linting: Clean (all checks passed)
+- ✅ PyMuPDF only new dependency (free, no API keys)
+
+**Design**:
+- PDFAdapter: async ingest() opens PDF, extracts text per page, emits SourceUnit per page
+- Provenance locator: `{filename}:p.{page_number}` (1-indexed)
+- Skips blank pages (if no extractable text)
+- Logs page count and handles errors gracefully
+
+**Key Features**:
+- Page-accurate citations (`:p.3` points to page 3)
+- Text extraction from PDF content (not image-based PDFs)
+- Full provenance tracking for multi-format queries
+
+**Ready for**:
+- A-1.3 (dual-source queries) — code + PDF together
+- Retrieval pipeline: can now cite both code (file:line) and PDF (document:page)
+- Demo: upload PDF, ask question, get answer with `:p.N` citation
+
+---
+
 ## PHASE 1: Multi-Source Ingestion (3–8 hrs)
 
 **Goal**: Ingest from code + PDF; dual-locator citations.
