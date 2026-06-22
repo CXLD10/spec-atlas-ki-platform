@@ -1,0 +1,6 @@
+Resolved 1 package in 236ms
+Downloading pymupdf (23.8MiB)
+ Downloaded pymupdf
+Prepared 1 package in 2.25s
+Installed 1 package in 9ms
+ + pymupdf==1.27.2.3
