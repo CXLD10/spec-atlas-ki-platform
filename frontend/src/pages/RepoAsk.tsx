@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Send, Copy, Check } from 'lucide-react';
 import { TopBar } from '../components/layout/TopBar';
 import { CitationChip } from '../components/qa/CitationChip';
@@ -18,11 +18,20 @@ interface Message {
 
 export function RepoAsk() {
   const { repoId = 'default' } = useParams<{ repoId: string }>();
+  const [searchParams] = useSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Pre-fill input from URL query params (from graph node click)
+  useEffect(() => {
+    const question = searchParams.get('question');
+    if (question) {
+      setInput(decodeURIComponent(question));
+    }
+  }, [searchParams]);
 
   // Auto-scroll to bottom
   useEffect(() => {

@@ -267,6 +267,30 @@
   word-break: break-all;
 }
 
+.btn-ask-about {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--cyan);
+  color: var(--bg);
+  border: none;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-ask-about:hover {
+  background: #2e8dd9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(88, 166, 255, 0.3);
+}
+
+.btn-ask-about:active {
+  transform: translateY(0);
+}
+
 /* ============ HELP TEXT ============ */
 .info-help {
   padding: 1rem;

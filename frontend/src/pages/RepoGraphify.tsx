@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import { TopBar } from '../components/layout/TopBar'
 import { useGraphNodes, useGraphEdges, type GraphNode } from '../api/useGraph'
@@ -98,6 +98,7 @@ const NODE_COLORS: { [key: string]: number } = {
 
 export default function RepoGraphify() {
   const { repoId = 'default' } = useParams<{ repoId: string }>()
+  const navigate = useNavigate()
   const mountRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<THREE.Scene | null>(null)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
@@ -133,6 +134,17 @@ export default function RepoGraphify() {
 
   const nodes = nodesData
   const edges = edgesData
+
+  const handleAskAboutNode = () => {
+    if (!selectedNode) return
+
+    // Generate a question based on the selected node
+    const question = `What does the ${selectedNode.kind} "${selectedNode.label}" do?`
+
+    // Navigate to ask page with the question
+    // URL encode the question and pass repoId as query param
+    navigate(`/repo/${repoId}/ask?question=${encodeURIComponent(question)}&node=${encodeURIComponent(selectedNode.id)}`)
+  }
 
   // Update stats when nodes or edges change
   useEffect(() => {
@@ -606,6 +618,9 @@ export default function RepoGraphify() {
                     <span className="meta-value code">{selectedNode.file_path}</span>
                   </div>
                 </div>
+                <button className="btn-ask-about" onClick={handleAskAboutNode}>
+                  💭 Ask about this
+                </button>
               </div>
             </div>
           )}
