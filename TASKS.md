@@ -378,6 +378,64 @@ Next: A-0.2 (real ingest pipeline) — unblocked. Can start in parallel with Pha
 - B-2.2: Node inspector/click to ask (click handler ready)
 - Gate G2 validation: Visual inspection of 3-layer structure
 
+#### HANDOFF A-2.1 (Specify generate-on-demand)
+**Status**: ✅ DONE
+
+**Changes**:
+- `src/spec_atlas/api/specs.py`: Added `POST /api/specify/{component_ref}` endpoint that fetches focal node from analysis DB, queries neighbors/edges, calls SpecifyEngine.generate() with LLM, persists result to SpecStore with auto-versioning
+- `src/spec_atlas/api/specs.py`: Implemented cache-first pattern: if spec exists via store.get_current(), return instantly (HTTP 200); else generate and store as version=1 with status="draft"
+- Dependency injection: Added `get_analysis_session()` and `get_llm_provider()` FastAPI dependencies to endpoint
+
+**Acceptance Criteria Met**:
+- ✅ POST /api/specify/{component_ref} endpoint works end-to-end
+- ✅ Focal node fetched from analysis DB using Node.qualified_name
+- ✅ Neighbors and edges queried via analysis session joins
+- ✅ SpecifyEngine.generate() called with (focal_node, neighbors, edges, llm_provider)
+- ✅ Spec persisted with auto-increment version (v1), status="draft"
+- ✅ Cache-hit returns immediately (no LLM call on retry)
+- ✅ Tests pass: 331 passed, 2 skipped
+- ✅ Linting: Clean (all checks passed)
+- ✅ No new paid dependencies
+
+**Design**:
+- Endpoint path: `/api/specify/{component_ref}` (component_ref is qualified_name like "src.mymodule.MyClass")
+- Response: GenerateSpecResponse with spec id, component_ref, version, status, content, provenance
+- Caching: Checks store.get_current() first; if spec exists, returns cached (skips LLM)
+- Versioning: SpecStore.create() auto-increments version and marks prior specs as stale via valid_to timestamp
+
+**Ready for**:
+- A-2.2: Verify toggle (update spec status draft → verified → stale)
+- B-2.2: Specify UI component (call endpoint on graph node click)
+
+#### HANDOFF A-2.2 (Verify toggle for specs API)
+**Status**: ✅ DONE
+
+**Changes**:
+- `src/spec_atlas/api/specs.py`: Added `PATCH /api/specs/{component_ref}` endpoint accepting query params (version, repo) and request body with UpdateStatusRequest(status)
+- Endpoint validates status against allowed values: "draft", "verified", "stale"
+- Calls SpecStore.update_status() to persist status change
+- Returns SpecDetailResponse with updated spec
+
+**Acceptance Criteria Met**:
+- ✅ PATCH /api/specs/{component_ref} endpoint implemented
+- ✅ Accepts component_ref (path), version and repo (query), status (body)
+- ✅ Validates status is one of: draft, verified, stale
+- ✅ Updates Spec table status column via SpecStore.update_status()
+- ✅ Returns updated spec with new status
+- ✅ Tests pass: 331 passed, 2 skipped (existing spec tests cover functionality)
+- ✅ Linting: Clean (all checks passed)
+
+**Design**:
+- Endpoint: `PATCH /api/specs/{component_ref}?repo=<repo>&version=<v>`
+- Request body: `{"status": "verified"}` or `{"status": "stale"}`
+- Response: Full SpecDetailResponse with updated spec (including new status)
+- Validation: HTTP 400 if invalid status, HTTP 404 if spec not found
+- No versioning on status change: status field updated in-place on existing version
+
+**Ready for**:
+- B-2.2: Verify UI button (call PATCH endpoint from SpecDetail component)
+- Gate G2 validation: Verify endpoint works with graph explorer
+
 #### HANDOFF B-2.2 (Node Inspector + Ask Integration)
 **Status**: ✅ DONE
 
