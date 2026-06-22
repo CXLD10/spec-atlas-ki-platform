@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import * as THREE from 'three'
 import { TopBar } from '../components/layout/TopBar'
-import { useGraphNodes, useGraphEdges } from '../api/useGraph'
+import { useGraphNodes, useGraphEdges, type GraphNode } from '../api/useGraph'
 import './RepoGraphify.css'
 
 // OrbitControls for camera manipulation
@@ -78,23 +78,6 @@ class OrbitControls {
   }
 }
 
-interface GraphNode {
-  id: string
-  label: string
-  kind: string
-  file_path: string
-  layer?: 'L1' | 'L3' | 'L4' // L1=code, L3=spec, L4=groups
-}
-
-interface GraphEdge {
-  id: string
-  source: string
-  target: string
-  kind: string
-  confidence: number
-  layer?: 'L1' | 'L3' | 'L4'
-}
-
 // Color scheme for layers
 const LAYER_COLORS: { [key: string]: number } = {
   L1: 0x6b7280,        // Gray - Code/Sources
@@ -151,16 +134,12 @@ export default function RepoGraphify() {
   const nodes = nodesData
   const edges = edgesData
 
-  // Update stats when layer visibility changes
+  // Update stats when nodes or edges change
   useEffect(() => {
-    const visibleNodes = nodes.filter((node) => {
-      const layer = node.layer || 'L1'
-      return layerVisibility[layer as keyof typeof layerVisibility]
-    })
-    const visibleNodeIds = new Set(visibleNodes.map((n) => n.id))
+    const visibleNodeIds = new Set(nodes.map((n) => n.id))
     const visibleEdges = edges.filter((edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target))
-    setStats({ nodes: visibleNodes.length, edges: visibleEdges.length })
-  }, [nodes, edges, layerVisibility])
+    setStats({ nodes: nodes.length, edges: visibleEdges.length })
+  }, [nodes, edges])
 
   // Initialize Three.js scene
   useEffect(() => {
