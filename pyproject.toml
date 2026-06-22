@@ -39,6 +39,7 @@ dependencies = [
   "jsonschema>=4.21",
   # Multi-source adapters (Phase 1+)
   "PyMuPDF>=1.23.0",  # PDF parsing
+  "openpyxl>=3.0",  # Excel parsing
 ]
 
 [project.optional-dependencies]
