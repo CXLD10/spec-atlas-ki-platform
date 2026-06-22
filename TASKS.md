@@ -79,6 +79,40 @@ Next: A-0.2 (real ingest pipeline) — unblocked. Can start in parallel with Pha
 
 ## PHASE 1: Multi-Source Ingestion (3–8 hrs)
 
+### A-1.1: SourceUnit Abstraction
+**Status**: ✅ DONE
+
+**Changes**:
+- `src/spec_atlas/ingest/source_unit.py` (NEW): SourceUnit class with Provenance
+- `src/spec_atlas/ingest/adapters/base.py` (NEW): SourceAdapter abstract base class
+- `src/spec_atlas/ingest/adapters/code.py` (NEW): CodeAdapter implementation
+- `tests/ingest/test_source_unit.py` (NEW): Unit tests for SourceUnit
+
+**Acceptance Criteria Met**:
+- ✅ SourceUnit class with fields: source_id, text, structure (optional), provenance
+- ✅ Provenance has: source_type (code|pdf|excel|markdown|jira|git), locator, source_id
+- ✅ SourceAdapter base class defined (async ingest() → List[SourceUnit])
+- ✅ CodeAdapter produces SourceUnits
+- ✅ Tests pass: 320 passed, 2 skipped (added 3 new SourceUnit tests)
+- ✅ Linting: Clean (all checks passed)
+- ✅ No new paid dependencies
+
+**Design**:
+- SourceType: StrEnum for source formats
+- Provenance: dataclass with source_type, locator (file:line, document:page, etc.), source_id
+- SourceUnit: dataclass with source_id, text, optional structure, optional provenance
+- SourceAdapter: ABC with async ingest() method
+- CodeAdapter: reads files from repo, emits SourceUnits with code provenance
+
+**Ready for**:
+- A-1.2 (PDF adapter) — SourceUnit abstraction now foundation
+- A-1.3, A-1.4 (Excel, Markdown, Jira adapters) — can build in parallel
+- All adapters emit normalized SourceUnits → downstream (parse, graph, embed) unchanged
+
+---
+
+## PHASE 1: Multi-Source Ingestion (3–8 hrs)
+
 **Goal**: Ingest from code + PDF; dual-locator citations.
 
 ### Key Features
