@@ -488,6 +488,66 @@ Next: A-0.2 (real ingest pipeline) — unblocked. Can start in parallel with Pha
 - Gate G2 validation: End-to-end graph → ask workflow
 - B-2.3 or A-2.x: Additional inspector features (view spec, edit, etc.)
 
+#### HANDOFF B-2.3 (SpecView UI for Generated Specs)
+**Status**: ✅ DONE
+
+**Changes**:
+- `frontend/src/pages/SpecView.tsx` (NEW): Display individual generated specs
+  - Fetches spec from `/api/projects/{projectId}/specs/{specId}`
+  - Renders markdown content with simple HTML conversion
+  - Shows metadata: spec_id, node_id, version, status, created_at
+  - Displays citations with file paths and line ranges
+  - Copy button for spec content
+  - Back navigation to spec list
+
+- `frontend/src/pages/SpecView.css` (NEW): Styling for spec view
+  - Metadata panel with grid layout
+  - Status badges with color coding (draft=yellow, review=red, approved=green)
+  - Markdown content rendering with proper typography
+  - Citations list with file paths and line ranges
+  - Responsive design for mobile
+
+- `frontend/src/api/client.ts` (UPDATED):
+  - Added GeneratedSpec interface: spec_id, node_id, content, version, status, created_at, citations
+  - Added GeneratedSpecsListResponse interface
+  - Added getGeneratedSpec(projectId, specId): Fetch single spec
+  - Added getGeneratedSpecs(projectId): Fetch all specs
+  - Kept old Spec interface for backward compatibility
+
+- `frontend/src/app/App.tsx` (UPDATED):
+  - Imported SpecView component
+  - Added route `/repo/:repoId/specify/:specId` → SpecView
+
+**Acceptance Criteria Met**:
+- ✅ SpecView component created and routed
+- ✅ Calls `/api/projects/{projectId}/specs/{specId}` on mount
+- ✅ Renders markdown content from spec.content
+- ✅ Shows status and version metadata
+- ✅ Displays citations with file and line info
+- ✅ Copy button for spec content
+- ✅ TypeScript clean (npm run type-check passes)
+- ✅ No new npm dependencies
+- ✅ Back navigation to spec list works
+
+**Design**:
+- Metadata section: spec_id, version, status, created_at
+- Content area: Markdown HTML rendering
+- Citations: File paths with line ranges
+- Status colors: Yellow (draft), Red (review), Green (approved)
+- Interactive: Copy button, back button, responsive layout
+
+**User Workflow**:
+1. User in SpecifyTool clicks "View Full Spec"
+2. Navigate to `/repo/{repoId}/specify/{specId}`
+3. SpecView loads spec details from backend
+4. Read full markdown content
+5. See citations and metadata
+6. Copy content or return to list
+
+**Ready for**:
+- Gate G2 validation: 3-layer graph with full click-through to specs works
+- B-2.4+: Edit spec status, compare versions, etc.
+
 ---
 
 ## PHASE 3: Breadth + Persistence (13–17 hrs)
