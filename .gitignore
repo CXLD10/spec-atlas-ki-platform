@@ -1,9 +1,12 @@
-# Environment variables
+# Environment variables (secrets)
 .env
 .env.local
 .env.*.local
-.env.*.example
 env.sh
+
+# BUT ALLOW examples (no secrets, for documentation)
+!.env.example
+!.env.production.example
 
 # API Keys and Credentials
 *.key
