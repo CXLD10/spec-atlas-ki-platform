@@ -72,6 +72,8 @@ class AskResponse(BaseModel):
     strategy: str = Field(default="")
     status: str = Field(default="success")  # success, empty_db, no_results, error
     suggestions: list[str] = Field(default_factory=list)
+    disclaimer: str = Field(default="")  # For Deep Wiki fallback
+    source: str = Field(default="spec_atlas")  # spec_atlas or deep_wiki
 
 
 class AnswerRouter:
@@ -173,17 +175,36 @@ class AnswerRouter:
             # Step 4: Generate answer using LLM
             answer_obj = await AnswerEngine.answer_async(question, context, self.llm_provider)
 
-            # Step 5: Format response
-            claims = [
-                ClaimResponse(text=claim.claim, source=claim.source) for claim in answer_obj.claims
-            ]
+            # Step 5: Check confidence and use Deep Wiki fallback if needed
+            confidence = similarity  # Use top group similarity as confidence
+            source = "spec_atlas"
+            disclaimer = ""
+
+            if confidence < 0.4:
+                # Try Deep Wiki fallback for general knowledge questions
+                dw_answer = await self._get_deep_wiki_answer(question)
+                if dw_answer:
+                    answer_obj = dw_answer['answer_obj']
+                    claims = [
+                        ClaimResponse(text=dw_answer['answer'], source="deep_wiki")
+                    ]
+                    confidence = dw_answer['confidence']
+                    source = "deep_wiki"
+                    disclaimer = "⚠️ This answer is from general knowledge (Deep Wiki), not your codebase. For project-specific info, ask about indexed components."
+            else:
+                # Format response with Spec-Atlas claims
+                claims = [
+                    ClaimResponse(text=claim.claim, source=claim.source) for claim in answer_obj.claims
+                ]
 
             return AskResponse(
-                answer=answer_obj.text,
+                answer=answer_obj.text if hasattr(answer_obj, 'text') else answer_obj,
                 claims=claims,
-                confidence=similarity,  # Use top group similarity as confidence
+                confidence=confidence,
                 strategy=strategy,
                 status="success",
+                disclaimer=disclaimer,
+                source=source,
             )
         except Exception as e:
             logger.error(f"Error answering question: {e}", exc_info=True)
@@ -194,6 +215,31 @@ class AnswerRouter:
             )
         finally:
             analysis_db.close()
+
+    async def _get_deep_wiki_answer(self, question: str) -> dict | None:
+        """Get fallback answer from Deep Wiki or mock.
+
+        Args:
+            question: User question.
+
+        Returns:
+            Dict with answer, confidence, or None if fallback fails.
+        """
+        try:
+            # For demo/offline mode: use mock response
+            # In production, integrate with actual Deep Wiki API
+            import os
+            if os.getenv("LLM_PROVIDER") == "fake":
+                # Return mock answer for testing
+                return {
+                    "answer": f"Based on general knowledge about '{question[:50]}...': This relates to general software concepts. For specific details about your codebase, try asking about indexed components or modules.",
+                    "answer_obj": f"Based on general knowledge about '{question[:50]}...': This relates to general software concepts. For specific details about your codebase, try asking about indexed components or modules.",
+                    "confidence": 0.3,
+                }
+        except Exception as e:
+            logger.warning(f"Deep Wiki fallback failed: {e}")
+
+        return None
 
 
 # Dependency: get answer router instance
