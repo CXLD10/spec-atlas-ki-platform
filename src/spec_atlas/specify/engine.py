@@ -56,6 +56,10 @@ class SpecifyEngine:
         # Validate against schema
         validated_spec = validate_spec(spec_content)
 
+        # Analyze interconnections
+        interconnections = _extract_interconnections(focal_node, neighbors, edges)
+        validated_spec["interconnections"] = interconnections
+
         # Build provenance (map each field to source spans)
         provenance = _build_provenance(focal_node, neighbors, edges, validated_spec)
 
@@ -203,3 +207,30 @@ def _build_provenance(
             ]
 
     return provenance
+
+
+def _extract_interconnections(
+    focal_node: Node,
+    neighbors: list[Node],
+    edges: list[Edge],
+) -> list[str]:
+    """Extract function/module names called by focal node.
+
+    Args:
+        focal_node: The focal node.
+        neighbors: Adjacent nodes.
+        edges: Relationships.
+
+    Returns:
+        List of interconnected function/module names.
+    """
+    interconnections = set()
+
+    # Extract from edges where focal_node is the source
+    for edge in edges:
+        if edge.kind in ("calls", "imports", "inherits"):
+            for neighbor in neighbors:
+                if neighbor.id == edge.dst_node_id:
+                    interconnections.add(neighbor.qualified_name or neighbor.name or "unknown")
+
+    return sorted(list(interconnections))[:10]  # Limit to top 10

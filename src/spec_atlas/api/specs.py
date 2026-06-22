@@ -552,3 +552,93 @@ def verify_spec(
             for issue in result.issues
         ],
     )
+
+
+@router.get("/project-specs")
+async def get_project_specs(
+    project_id: str = Query(...),
+    db: Session = Depends(get_spec_session),
+) -> dict:
+    """Get all specs for a project."""
+    from spec_atlas.db.spec import Spec
+
+    specs = db.query(Spec).filter(Spec.repo == project_id).all()
+
+    return {
+        "specs": [
+            {
+                "component_ref": s.component_ref,
+                "status": s.status,
+                "version": s.version,
+                "confidence": s.content.get("confidence", 0),
+                "interconnections": s.content.get("interconnections", []),
+                "markdown": s.content.get("markdown", ""),
+            }
+            for s in specs
+            if s.valid_to is None  # Current version only
+        ],
+        "total": len(specs),
+        "verified_count": sum(
+            1 for s in specs if s.status == "verified" and s.valid_to is None
+        ),
+    }
+
+
+@router.post("/project-notes")
+async def save_project_notes(
+    project_id: str = Query(...),
+    notes: str = Query(...),
+    db: Session = Depends(get_spec_session),
+) -> dict:
+    """Save research notes for project."""
+    from spec_atlas.db.spec import Spec
+
+    # Store notes as a special spec document
+    from datetime import datetime
+    from spec_atlas.db.spec import Spec as SpecModel
+    import uuid
+
+    notes_spec = SpecModel(
+        id=uuid.uuid4(),
+        user_id="system",
+        repo=project_id,
+        component_ref="__notes__",
+        version=1,
+        status="draft",
+        content={"notes": notes, "type": "research_notes"},
+        provenance=[],
+    )
+
+    # Invalidate old notes
+    db.query(SpecModel).filter(
+        SpecModel.repo == project_id, SpecModel.component_ref == "__notes__"
+    ).update({"valid_to": datetime.now()})
+
+    db.add(notes_spec)
+    db.commit()
+
+    return {"success": True}
+
+
+@router.get("/project-notes")
+async def get_project_notes(
+    project_id: str = Query(...),
+    db: Session = Depends(get_spec_session),
+) -> dict:
+    """Get research notes for project."""
+    from spec_atlas.db.spec import Spec
+
+    notes_spec = (
+        db.query(Spec)
+        .filter(
+            Spec.repo == project_id,
+            Spec.component_ref == "__notes__",
+            Spec.valid_to.is_(None),
+        )
+        .first()
+    )
+
+    return {
+        "notes": notes_spec.content.get("notes", "") if notes_spec else "",
+        "project_id": project_id,
+    }
