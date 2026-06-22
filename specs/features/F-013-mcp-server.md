@@ -138,8 +138,31 @@ DoD: locally runnable test; a human can follow `MCP_USAGE.md` and successfully c
 
 **Blockers:** None. F-013 is complete and independent. F-009 backend wiring will wire these handlers to real endpoints.
 
+**UPDATED HANDOFF — 2026-06-22 (claude)**
+
+Re-implemented T-013.1 with improved architecture:
+
+✅ **T-013.1 (MCP Server Core Tools)** — RE-DONE
+- Updated tool names to match current use case: `search_knowledge`, `get_spec`, `get_graph`, `ask_question`
+- Added `MCPHandlers` class with direct database access (Session + embedding/LLM providers)
+- Tool implementations using QueryRouter, SpecStore, TreeDescent, AnswerEngine
+- Comprehensive test coverage: 20 tests in test_server_endpoints.py
+- All 376 tests passing, linting clean
+- Handlers properly typed and async-compatible
+
+**Key changes from previous implementation:**
+1. Replaced HTTP-based handlers with direct DB access for better performance
+2. Updated tool schemas to match actual workflow (search_knowledge instead of search)
+3. Added get_graph tool for graph structure queries
+4. Improved error handling and type safety
+5. Comprehensive test coverage for all four tools
+
+**Commit:** e67d50a (feat(mcp): implement core MCP server with four tools)
+
+**Current state:** MCP server with core tools fully implemented and tested. All acceptance criteria met.
+
 **Next phases:**
-1. **F-009.1–F-009.3** (Backend HTTP endpoints): POST `/api/ask`, GET `/api/specs/{ref}`, GET `/api/groups`
-2. **F-017** (Deploy backend): Docker, Render/Fly, rate limiting
-3. Wire MCP handlers to live backend endpoints (no code changes, just config)
+1. Complete T-013.2 and T-013.3 (if needed) with updated implementations
+2. **F-009** (Backend HTTP endpoints) can wire to these MCP tools
+3. **F-017** (Deploy backend): Docker, Render/Fly, rate limiting
 4. Test end-to-end: agent calls MCP tool → backend returns real data
