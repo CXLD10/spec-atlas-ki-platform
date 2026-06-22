@@ -47,6 +47,13 @@ export function Sidebar() {
           <span>Ask</span>
         </Link>
         <Link
+          to="/dashboard"
+          className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}
+        >
+          <span>📊</span>
+          <span>Dashboard</span>
+        </Link>
+        <Link
           to="/docs"
           className={`nav-link ${isActive('/docs') ? 'active' : ''}`}
         >

@@ -10,6 +10,7 @@ import RepoGraphify from '../pages/RepoGraphify'
 import SpecifyTool from '../pages/SpecifyTool'
 import SpecView from '../pages/SpecView'
 import Docs from '../pages/Docs'
+import Dashboard from '../pages/Dashboard'
 import IndexProgress from '../pages/IndexProgress'
 import '../styles/global.css'
 
@@ -33,6 +34,7 @@ export function App() {
             <Route path="/graph" element={<RepoGraphify />} />
             <Route path="/ask" element={<RepoAsk />} />
             <Route path="/specify" element={<SpecifyTool />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/docs" element={<Docs />} />
             <Route path="/index/:jobId" element={<IndexProgress />} />
             <Route path="/repo/:repoId/ask" element={<RepoAsk />} />
