@@ -1,0 +1,95 @@
+.repo-explore-page {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.repo-explore-main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  z-index: 5;
+}
+
+.explore-content {
+  width: 100%;
+  display: flex;
+  gap: 0;
+  overflow: hidden;
+}
+
+.detail-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  color: var(--ink-dim);
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--ink-faint);
+  border-top-color: var(--cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--ink-dim);
+  text-align: center;
+  padding: 2rem;
+}
+
+.error-message {
+  padding: 1rem;
+  background: rgba(255, 50, 50, 0.1);
+  border: 1px solid rgba(255, 50, 50, 0.3);
+  border-radius: 6px;
+  color: #ff6b6b;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 1rem;
+}
+
+/* Mobile: stack layout */
+@media (max-width: 768px) {
+  .explore-content {
+    flex-direction: column;
+  }
+
+  /* Hide tree on mobile, show in modal/drawer instead (future enhancement) */
+  .group-tree {
+    display: none;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-top-color: var(--ink-faint);
+  }
+}

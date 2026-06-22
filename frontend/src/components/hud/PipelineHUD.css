@@ -1,0 +1,61 @@
+.pipeline-hud {
+  position: fixed;
+  left: 2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.stages-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.stage {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  transition: color 0.3s ease;
+}
+
+.stage.active {
+  color: var(--stage-color);
+}
+
+.stage.done {
+  color: var(--stage-color);
+  opacity: 0.7;
+}
+
+.stage-indicator {
+  display: inline-block;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.stage-label {
+  font-family: var(--font-mono);
+}
+
+/* Mobile: hide HUD */
+@media (max-width: 768px) {
+  .pipeline-hud {
+    display: none;
+  }
+}
+
+/* Reduced motion: simpler transitions */
+@media (prefers-reduced-motion: reduce) {
+  .stage {
+    transition: none;
+  }
+}

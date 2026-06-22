@@ -1,0 +1,47 @@
+.citation-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  background: transparent;
+  border: 1px solid var(--chip-color);
+  border-radius: 4px;
+  color: var(--chip-color);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.citation-chip:hover {
+  background: var(--chip-color);
+  color: var(--bg);
+  box-shadow: 0 0 12px var(--chip-color);
+}
+
+.citation-chip:focus-visible {
+  outline: 2px solid var(--chip-color);
+  outline-offset: 2px;
+}
+
+.chip-marker {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.chip-text {
+  font-size: 0.7rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Reduced motion: simplify */
+@media (prefers-reduced-motion: reduce) {
+  .citation-chip {
+    transition: none;
+  }
+}
