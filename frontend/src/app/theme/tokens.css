@@ -1,0 +1,105 @@
+/* Design tokens extracted from spec-atlas-hero.html prototype */
+/* Source: docs/frontend/design/DESIGN-TOKENS.md */
+
+/* GitHub Dark Theme (default) */
+:root,
+[data-theme="dark"] {
+  /* Background & surfaces */
+  --bg: #0d1117;
+  --bg-grid: rgba(88, 166, 255, 0.03);
+  --panel: rgba(22, 27, 34, 0.8);
+  --panel-border: rgba(48, 54, 61, 0.4);
+
+  /* Text */
+  --ink: #c9d1d9;
+  --ink-dim: #8b949e;
+  --ink-faint: #484f58;
+
+  /* Primary accent (GitHub Blue) */
+  --cyan: #58a6ff;
+  --cyan-bright: #79c0ff;
+  --cyan-glow: rgba(88, 166, 255, 0.4);
+
+  /* Layer colors (immutable per spec) */
+  --l1: #58a6ff;      /* Code layer (L1) - cyan */
+  --l3: #3fb950;      /* Specs layer (L3) - green */
+  --l4: #d291f2;      /* Groups layer (L4) - purple */
+
+  /* Additional colors */
+  success: #3fb950;
+  warning: #d29922;
+  danger: #f85149;
+}
+
+/* GitHub Light Theme */
+[data-theme="light"] {
+  /* Background & surfaces */
+  --bg: #ffffff;
+  --bg-grid: rgba(9, 105, 218, 0.03);
+  --panel: rgba(246, 248, 250, 0.8);
+  --panel-border: rgba(48, 54, 61, 0.15);
+
+  /* Text */
+  --ink: #24292f;
+  --ink-dim: #57606a;
+  --ink-faint: #8c959f;
+
+  /* Primary accent (GitHub Blue) */
+  --cyan: #0969da;
+  --cyan-bright: #0860ca;
+  --cyan-glow: rgba(9, 105, 218, 0.3);
+
+  /* Layer colors (immutable per spec) */
+  --l1: #0969da;      /* Code layer (L1) - blue */
+  --l3: #1a7f37;      /* Specs layer (L3) - green */
+  --l4: #8957e5;      /* Groups layer (L4) - purple */
+
+  /* Additional colors */
+  success: #1a7f37;
+  warning: #9e6a03;
+  danger: #da3633;
+}
+
+/* Typography */
+:root {
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* Motion timings (exact, from prototype feedback iterations) */
+:root {
+  /* Intro particle convergence */
+  --timing-intro-particles: 1300ms;
+  --timing-intro-to-hero: 1700ms;
+  --easing-particle: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* Intro element snap-in */
+  --timing-snapin-mark: 680ms;
+  --timing-snapin-title: 780ms;
+  --timing-snapin-sub: 860ms;
+  --easing-snapin: cubic-bezier(0.2, 0.85, 0.25, 1.25);
+
+  /* Intro to hero fade */
+  --timing-fade-transition: 400ms;
+  --easing-fade: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Theme toggle */
+  --timing-toggle: 350ms;
+  --easing-toggle: cubic-bezier(0.6, 0.2, 0.1, 1);
+
+  /* Per-layer build phase */
+  --timing-phase: 1700ms;
+
+  /* Q&A section */
+  --timing-qa-delay: 600ms;
+  --timing-typewriter: 16ms;
+  --timing-typewriter-pause: 60ms;
+  --timing-typewriter-hold: 420ms;
+
+  /* Citation fly-to-node */
+  --timing-fly-hold: 700ms;
+
+  /* Scene auto-settle */
+  --timing-settle-trigger: 6000ms;
+  --timing-settle-fade: 0.018;
+}

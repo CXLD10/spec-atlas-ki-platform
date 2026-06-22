@@ -1,0 +1,153 @@
+.answer-dock {
+  position: fixed;
+  right: 2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 380px;
+  max-height: 70vh;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.dock-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.dock-title {
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
+.question-section {
+  border-bottom: 1px solid var(--panel-border);
+  padding-bottom: 1rem;
+}
+
+.question-text {
+  margin: 0;
+  color: var(--ink-dim);
+  font-size: 0.875rem;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.answer-loading {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+  color: var(--ink-dim);
+  font-size: 0.875rem;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--ink-faint);
+  border-top-color: var(--cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.answer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.answer-text {
+  color: var(--ink);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.confidence-bar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.confidence-label {
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.confidence-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--ink-faint);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.confidence-fill {
+  height: 100%;
+  background: var(--l1);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.confidence-value {
+  align-self: flex-end;
+  color: var(--ink-dim);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Mobile: reposition to bottom */
+@media (max-width: 768px) {
+  .answer-dock {
+    position: fixed;
+    right: auto;
+    left: 1rem;
+    top: auto;
+    bottom: 1rem;
+    transform: none;
+    width: calc(100% - 2rem);
+    max-height: 40vh;
+  }
+}
+
+/* Reduced motion: simplify */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-top-color: var(--ink-faint);
+  }
+
+  .confidence-fill {
+    transition: none;
+  }
+}
