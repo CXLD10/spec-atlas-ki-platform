@@ -166,3 +166,63 @@ DoD: unit test: verify a spec, then fetch its report; confirm all fields present
 - `test_verifier_checks_output_claims`: Return type validation
 - `test_verifier_result_structure`: VerificationResult schema
 - `test_verifier_multiple_claims`: Multi-claim spec handling
+
+### T-012.2 — Status transition + API (DONE 2026-06-22)
+
+**Status**: ✅ DONE
+
+**Changes**:
+- `src/spec_atlas/spec/store.py`: Added `verify_spec()` method to SpecStore
+- `src/spec_atlas/api/specs.py`: Updated PATCH endpoint to use SpecStore.verify_spec()
+- `tests/spec/test_store_verification.py` (NEW): 5 integration tests for verification workflow
+
+**Verification Workflow (Idempotent)**:
+1. Check if spec.status == "verified" (already verified)
+2. If yes: return cached result from spec.content._verification_metadata
+3. If no: call SpecVerifier.verify(), update status + store metadata, commit
+4. Safe to call multiple times (returns same result on retries)
+
+**Status Transition Rules**:
+- confidence > 0.8 AND is_grounded → status="verified"
+- 0.5 <= confidence <= 0.8 → status="review"
+- confidence < 0.5 → status="draft" (stays draft)
+
+**Acceptance Criteria Met**:
+- ✅ `SpecStore.verify_spec(user_id, repo, component_ref, version, analysis_session)` exists
+- ✅ Calling verify 2× on same spec returns identical result (cached)
+- ✅ Spec status changes based on confidence thresholds
+- ✅ Verified specs can't be overwritten (versions are immutable)
+- ✅ PATCH `/api/specs/{ref}/verify` uses SpecStore (not direct verifier)
+- ✅ Works for specific version or latest (version=None uses get_current)
+- ✅ Tests pass: 344 passed, 2 skipped (5 new integration tests)
+- ✅ Linting: Clean (all checks passed)
+
+**Idempotency Implementation**:
+- Metadata stored in `spec.content["_verification_metadata"]`
+- Fields: confidence, is_grounded, verified_at, issues (list)
+- On retry with status=="verified", skip verifier and return cached result
+- No side effects on repeated calls
+
+**Design Decisions**:
+- Metadata in JSONB content field (avoids schema migration)
+- Immutable versions (each new generation = new version)
+- Status field tracks latest verification result
+- Analysis session required (verifier needs code graph)
+
+**API Integration**:
+- Endpoint: `POST /api/specs/{component_ref}/verify?repo=X&version=V`
+- Returns: status, confidence, is_grounded, issues
+- Idempotent: same call 2× returns identical response
+- Side effect: spec.status updated if confidence > 0.8
+
+**Ready for**:
+- T-012.3: Verification report API (fetch history, trends)
+- Phase 3 (Excel/Markdown adapters) → full multi-source story
+- T-013.1 (MCP server): Expose /verify endpoint
+
+**Tests**:
+- `test_verify_spec_idempotent`: Calling verify 2× returns same result
+- `test_verify_raises_without_analysis_session`: Error when analysis DB unavailable
+- `test_verify_raises_on_missing_spec`: 404 when spec not found
+- `test_verify_already_verified_returns_cached`: Cached result for verified specs
+- `test_spec_store_has_verify_spec_method`: Method exists and callable
