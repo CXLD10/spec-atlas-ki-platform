@@ -78,7 +78,10 @@ class SpecAtlasMCPServer:
         self.server.register_tool(
             Tool(
                 name="search",
-                description="Search specs and groups by query. Routes query → retrieves context → generates answer.",
+                description=(
+                    "Search specs and groups by query. "
+                    "Routes query → retrieves context → generates answer."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {

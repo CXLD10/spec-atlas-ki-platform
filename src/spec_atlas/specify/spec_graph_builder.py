@@ -53,11 +53,7 @@ class SpecGraphBuilder:
 
         try:
             # Get all edges in the code graph
-            all_edges = (
-                analysis_session.query(Edge)
-                .filter(Edge.repo_id == repo_id)
-                .all()
-            )
+            all_edges = analysis_session.query(Edge).filter(Edge.repo_id == repo_id).all()
 
             report["total_edges"] = len(all_edges)
             logger.info(f"Building spec graph from {len(all_edges)} code edges")
@@ -80,14 +76,10 @@ class SpecGraphBuilder:
                 try:
                     # Get source and target nodes
                     src_node = (
-                        analysis_session.query(Node)
-                        .filter(Node.id == edge.src_node_id)
-                        .first()
+                        analysis_session.query(Node).filter(Node.id == edge.src_node_id).first()
                     )
                     dst_node = (
-                        analysis_session.query(Node)
-                        .filter(Node.id == edge.dst_node_id)
-                        .first()
+                        analysis_session.query(Node).filter(Node.id == edge.dst_node_id).first()
                     )
 
                     if not src_node or not dst_node:

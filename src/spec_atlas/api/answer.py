@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
+from sqlalchemy import func
 
 from spec_atlas.answer.engine import AnswerEngine
 from spec_atlas.db.analysis import Group, Node
-from sqlalchemy import func, select
 
 # Rate limiter (optional; requires slowapi)
 try:
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["answer"])
 
 
-def _build_context_from_node(group: Group, session) -> "TreeDescent.Context":
+def _build_context_from_node(group: Group, session) -> TreeDescent.Context:
     """Build context from a node when tree descent fails."""
     from spec_atlas.retrieve.descent import Context
 
@@ -123,7 +123,9 @@ class AnswerRouter:
 
             if group_count == 0 and node_count == 0:
                 return AskResponse(
-                    answer="Database is empty. Please index a repository first using the Index page.",
+                    answer=(
+                        "Database is empty. Please index a repository first using the Index page."
+                    ),
                     status="empty_db",
                     suggestions=[
                         "Go to the Index page to ingest a repository",
@@ -144,7 +146,10 @@ class AnswerRouter:
 
             if not search_results:
                 return AskResponse(
-                    answer="No matching results found. Try rephrasing your question or ask about different aspects of the code.",
+                    answer=(
+                        "No matching results found. Try rephrasing your question or ask about "
+                        "different aspects of the code."
+                    ),
                     status="no_results",
                     suggestions=[
                         "Ask about specific modules or functions",
@@ -183,7 +188,7 @@ class AnswerRouter:
         except Exception as e:
             logger.error(f"Error answering question: {e}", exc_info=True)
             return AskResponse(
-                answer=f"Error processing your question. Please try again.",
+                answer="Error processing your question. Please try again.",
                 status="error",
                 suggestions=["Check that the database is properly configured"],
             )
@@ -225,7 +230,7 @@ def _apply_rate_limit(func):
 @_apply_rate_limit
 async def ask(
     request: AskRequest,
-    answer_router: AnswerRouter = Depends(get_answer_router),
+    answer_router: AnswerRouter = Depends(get_answer_router),  # noqa: B008
 ) -> AskResponse:
     """Answer a question about the codebase."""
     return await answer_router.answer(request.question, request.repo)

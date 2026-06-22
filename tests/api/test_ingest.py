@@ -29,7 +29,7 @@ class TestIngestAPI:
 
         try:
             IngestRequest(repo_url="")
-            assert False, "Should reject empty repo_url"
+            raise AssertionError("Should reject empty repo_url")
         except ValidationError:
             pass  # Expected
 

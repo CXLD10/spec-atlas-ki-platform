@@ -69,7 +69,7 @@ def get_analysis_session(request: Request):
 @router.get("", response_model=GroupTreeResponse)
 def get_group_tree(
     repo: str = Query("default"),
-    session_factory=Depends(get_analysis_session),
+    session_factory=Depends(get_analysis_session),  # noqa: B008
 ) -> GroupTreeResponse:
     """Fetch the group tree hierarchy (root + nested children).
 
@@ -116,7 +116,7 @@ def get_group_tree(
 
         return GroupTreeResponse(root=build_tree_node(root))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch group tree: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch group tree: {str(e)}") from e
     finally:
         session.close()
 
@@ -125,7 +125,7 @@ def get_group_tree(
 def get_group_detail(
     group_id: str,
     repo: str = Query("default"),
-    session_factory=Depends(get_analysis_session),
+    session_factory=Depends(get_analysis_session),  # noqa: B008
 ) -> GroupDetailResponse:
     """Fetch a single group with its details.
 
@@ -149,8 +149,8 @@ def get_group_detail(
         # Convert string group_id to UUID
         try:
             group_uuid = uuid.UUID(group_id)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid group ID format")
+        except ValueError as ve:
+            raise HTTPException(status_code=400, detail="Invalid group ID format") from ve
 
         # Fetch the group
         from spec_atlas.db.analysis import Group
@@ -177,6 +177,6 @@ def get_group_detail(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch group: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch group: {str(e)}") from e
     finally:
         session.close()

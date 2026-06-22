@@ -111,8 +111,9 @@ class VectorSearch:
 
         # Create synthetic groups from top nodes (for compatibility with TreeDescent)
         result = []
-        for i, (node, score) in enumerate(top_nodes):
+        for _i, (node, score) in enumerate(top_nodes):
             # Create a synthetic group from the node
+            docstring_str = node.docstring or "(none)"
             synthetic_group = Group(
                 id=node.id,
                 repo_id=node.repo_id,
@@ -121,7 +122,10 @@ class VectorSearch:
                 title=node.name or "unknown",
                 parent_id=None,
                 member_spec_refs=[],
-                summary_md=f"Symbol: {node.qualified_name or node.name}\nKind: {node.kind}\nDocstring: {node.docstring or '(none)'}",
+                summary_md=(
+                    f"Symbol: {node.qualified_name or node.name}\nKind: {node.kind}\n"
+                    f"Docstring: {docstring_str}"
+                ),
             )
 
             # Normalize score to [0, 1]

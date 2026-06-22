@@ -58,7 +58,11 @@ class IngestJobStore:
 
     @staticmethod
     def update_job_status(
-        session: Session, job_id: str, status: str, progress_pct: int = 0, error_message: str | None = None
+        session: Session,
+        job_id: str,
+        status: str,
+        progress_pct: int = 0,
+        error_message: str | None = None,
     ) -> bool:
         """Update an ingest job's status.
 

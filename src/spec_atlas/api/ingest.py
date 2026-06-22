@@ -27,6 +27,7 @@ from spec_atlas.embed.pipeline import EmbeddingPipeline
 from spec_atlas.graph.edges_crossfile import CrossFileEdgeExtractor
 from spec_atlas.graph.edges_intrafile import IntraFileEdgeExtractor
 from spec_atlas.groups.clustering import GroupClustering
+from spec_atlas.groups.group_writer import GroupWriter
 from spec_atlas.groups.summarizer import GroupSummarizer
 from spec_atlas.ingest.inventory import FileInventory
 from spec_atlas.ingest.job_store import IngestJobStore
@@ -35,7 +36,6 @@ from spec_atlas.ingest.resolver import RepoResolver
 from spec_atlas.parse.python_symbols import PythonSymbolExtractor
 from spec_atlas.parse.ts_symbols import TypeScriptSymbolExtractor
 from spec_atlas.specify.batch_generator import BatchSpecGenerator
-from spec_atlas.groups.group_writer import GroupWriter
 from spec_atlas.specify.spec_graph_builder import SpecGraphBuilder
 
 # Rate limiter (optional; requires slowapi) — mirrors api/answer.py's pattern.
@@ -130,8 +130,11 @@ def _to_job_status(job) -> JobStatus:
     )
 
 
-def _run_ingest_sync(job_id: str, repo_url: str, session_factory, spec_session_factory=None, llm_provider=None) -> None:
-    """Synchronous ingest work: resolve, inventory, detect languages, parse, cluster, embed, spec, and build graphs.
+def _run_ingest_sync(
+    job_id: str, repo_url: str, session_factory, spec_session_factory=None, llm_provider=None
+) -> None:
+    """Synchronous ingest work: resolve, inventory, detect languages, parse, cluster, embed,
+    spec, and build graphs.
 
     Phases:
     1. Resolve git repo (10-40%)
@@ -253,9 +256,13 @@ def _run_ingest_sync(job_id: str, repo_url: str, session_factory, spec_session_f
         session.close()
 
 
-async def _process_ingest_job(job_id: str, repo_url: str, session_factory, spec_session_factory=None, llm_provider=None) -> None:
+async def _process_ingest_job(
+    job_id: str, repo_url: str, session_factory, spec_session_factory=None, llm_provider=None
+) -> None:
     """Background task: real ingest work, run off the event loop."""
-    await asyncio.to_thread(_run_ingest_sync, job_id, repo_url, session_factory, spec_session_factory, llm_provider)
+    await asyncio.to_thread(
+        _run_ingest_sync, job_id, repo_url, session_factory, spec_session_factory, llm_provider
+    )
 
 
 def _extract_symbols(job_id: str, repo_id, repo_path: str, files, session) -> None:
@@ -291,12 +298,16 @@ def _extract_symbols(job_id: str, repo_id, repo_path: str, files, session) -> No
         # Create Node objects for each symbol (with deduplication)
         for sym in symbols:
             # Check if this node already exists
-            existing = session.query(Node).filter(
-                Node.repo_id == repo_id,
-                Node.language == file.language,
-                Node.qualified_name == sym.qualified_name,
-                Node.kind == sym.kind,
-            ).first()
+            existing = (
+                session.query(Node)
+                .filter(
+                    Node.repo_id == repo_id,
+                    Node.language == file.language,
+                    Node.qualified_name == sym.qualified_name,
+                    Node.kind == sym.kind,
+                )
+                .first()
+            )
 
             if existing:
                 # Update existing node
@@ -395,6 +406,7 @@ def _form_groups(job_id: str, repo_id, repo_path: str, session) -> list:
 
         # Collect all groups
         from spec_atlas.db.analysis import Group
+
         groups = session.query(Group).filter(Group.repo_id == repo_id).all()
 
         session.commit()
@@ -463,9 +475,9 @@ async def start_ingest(
     llm_provider = None
 
     # Get spec session factory and LLM provider from app state if available
-    if hasattr(http_request.app.state, 'spec_session_factory'):
+    if hasattr(http_request.app.state, "spec_session_factory"):
         spec_session_factory = http_request.app.state.spec_session_factory
-    if hasattr(http_request.app.state, 'llm_provider'):
+    if hasattr(http_request.app.state, "llm_provider"):
         llm_provider = http_request.app.state.llm_provider
 
     session = session_factory()
@@ -476,7 +488,14 @@ async def start_ingest(
     finally:
         session.close()
 
-    background_tasks.add_task(_process_ingest_job, job_id, request.repo_url, session_factory, spec_session_factory, llm_provider)
+    background_tasks.add_task(
+        _process_ingest_job,
+        job_id,
+        request.repo_url,
+        session_factory,
+        spec_session_factory,
+        llm_provider,
+    )
     logger.info(f"Started ingest job {job_id} for {request.repo_url}")
 
     return status_response

@@ -15,8 +15,6 @@ from collections.abc import Sequence
 
 from alembic import op
 
-from spec_atlas.db.analysis import AnalysisBase
-
 # revision identifiers, used by Alembic.
 revision: str = "0002"
 down_revision: str | None = "0001"

@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from spec_atlas.db.analysis import Node
 from spec_atlas.db.spec import Spec
-from spec_atlas.specify.engine import SpecifyEngine
 from spec_atlas.graph.store import GraphStore
+from spec_atlas.specify.engine import SpecifyEngine
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
+
     from spec_atlas.llm import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -61,10 +62,14 @@ class BatchSpecGenerator:
 
         # Find focal nodes (top-level modules, classes, major functions)
         # For now: all nodes with no parent class (top-level or class-level)
-        focal_nodes = analysis_session.query(Node).filter(
-            Node.repo_id == repo_id,
-            Node.kind.in_(["module", "class"]),  # Focus on top-level structures
-        ).all()
+        focal_nodes = (
+            analysis_session.query(Node)
+            .filter(
+                Node.repo_id == repo_id,
+                Node.kind.in_(["module", "class"]),  # Focus on top-level structures
+            )
+            .all()
+        )
 
         logger.info(f"Batch spec generation: found {len(focal_nodes)} focal nodes")
 
@@ -77,7 +82,9 @@ class BatchSpecGenerator:
 
         for idx, focal_node in enumerate(focal_nodes, 1):
             try:
-                logger.debug(f"Generating spec {idx}/{len(focal_nodes)}: {focal_node.qualified_name}")
+                logger.debug(
+                    f"Generating spec {idx}/{len(focal_nodes)}: {focal_node.qualified_name}"
+                )
 
                 # Get neighbors and edges
                 neighbors_result = store.neighbors(focal_node.id, direction="both")
@@ -115,11 +122,13 @@ class BatchSpecGenerator:
                 logger.debug(f"Spec generated and stored: {component_ref}")
 
                 report["succeeded"] += 1
-                report["specs"].append({
-                    "component_ref": component_ref,
-                    "version": 1,
-                    "path": str(spec_file),
-                })
+                report["specs"].append(
+                    {
+                        "component_ref": component_ref,
+                        "version": 1,
+                        "path": str(spec_file),
+                    }
+                )
 
             except Exception as e:
                 logger.error(f"Failed to generate spec for {focal_node.qualified_name}: {e}")
@@ -153,10 +162,12 @@ def _spec_to_markdown(spec: dict, component_ref: str, provenance: dict) -> str:
     ]
 
     if spec.get("inputs"):
-        lines.extend([
-            "## Inputs",
-            "",
-        ])
+        lines.extend(
+            [
+                "## Inputs",
+                "",
+            ]
+        )
         for inp in spec["inputs"]:
             lines.append(f"- **{inp.get('name', 'param')}** ({inp.get('type', 'unknown')})")
             if inp.get("description"):
@@ -164,10 +175,12 @@ def _spec_to_markdown(spec: dict, component_ref: str, provenance: dict) -> str:
         lines.append("")
 
     if spec.get("outputs"):
-        lines.extend([
-            "## Outputs",
-            "",
-        ])
+        lines.extend(
+            [
+                "## Outputs",
+                "",
+            ]
+        )
         for out in spec["outputs"]:
             lines.append(f"- **{out.get('name', 'result')}** ({out.get('type', 'unknown')})")
             if out.get("description"):
@@ -175,46 +188,56 @@ def _spec_to_markdown(spec: dict, component_ref: str, provenance: dict) -> str:
         lines.append("")
 
     if spec.get("dependencies"):
-        lines.extend([
-            "## Dependencies",
-            "",
-        ])
+        lines.extend(
+            [
+                "## Dependencies",
+                "",
+            ]
+        )
         for dep in spec["dependencies"]:
             lines.append(f"- `{dep}`")
         lines.append("")
 
     if spec.get("invariants"):
-        lines.extend([
-            "## Invariants",
-            "",
-        ])
+        lines.extend(
+            [
+                "## Invariants",
+                "",
+            ]
+        )
         for inv in spec["invariants"]:
             lines.append(f"- {inv}")
         lines.append("")
 
     if spec.get("side_effects"):
-        lines.extend([
-            "## Side Effects",
-            "",
-        ])
+        lines.extend(
+            [
+                "## Side Effects",
+                "",
+            ]
+        )
         for se in spec["side_effects"]:
             lines.append(f"- {se}")
         lines.append("")
 
     if spec.get("failure_modes"):
-        lines.extend([
-            "## Failure Modes",
-            "",
-        ])
+        lines.extend(
+            [
+                "## Failure Modes",
+                "",
+            ]
+        )
         for fm in spec["failure_modes"]:
             lines.append(f"- {fm}")
         lines.append("")
 
     # Add provenance footer
-    lines.extend([
-        "---",
-        "",
-        "**Provenance:** Generated by Spec-Atlas at indexing time.",
-    ])
+    lines.extend(
+        [
+            "---",
+            "",
+            "**Provenance:** Generated by Spec-Atlas at indexing time.",
+        ]
+    )
 
     return "\n".join(lines)
