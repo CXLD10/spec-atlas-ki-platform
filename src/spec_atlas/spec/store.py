@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import and_, desc, func
 from sqlalchemy.orm import Session
 
 from spec_atlas.db.spec import Spec, SpecEdge
+
+if TYPE_CHECKING:
+    from spec_atlas.verify.verifier import VerificationResult
 
 
 class SpecStore:
@@ -211,3 +215,99 @@ class SpecStore:
             )
             .all()
         )
+
+    def verify_spec(
+        self,
+        user_id: str,
+        repo: str,
+        component_ref: str,
+        version: int | None = None,
+        analysis_session: Session | None = None,
+    ) -> VerificationResult:
+        """Verify a spec against source code (idempotent).
+
+        Runs rule-based verification and updates spec status.
+        Safe to call multiple times (returns cached result if already verified).
+
+        Args:
+            user_id: User ID (fixed to "default" in v1).
+            repo: Repository name.
+            component_ref: Component reference.
+            version: Specific version to verify (latest if None).
+            analysis_session: Analysis DB session for verifier (required).
+
+        Returns:
+            VerificationResult with confidence, is_grounded, issues.
+
+        Raises:
+            ValueError: If spec not found or analysis_session not provided.
+        """
+        if not analysis_session:
+            raise ValueError("analysis_session required for verification")
+
+        # Get spec (use provided version or latest)
+        if version is not None:
+            spec = self.get_version(user_id, repo, component_ref, version)
+        else:
+            spec = self.get_current(user_id, repo, component_ref)
+
+        if not spec:
+            raise ValueError(f"Spec not found: {component_ref} v{version or 'current'}")
+
+        # Idempotency: if already verified, return cached result
+        if spec.status == "verified":
+            # Return cached result from metadata
+            verification_meta = spec.content.get("_verification_metadata", {})
+            if verification_meta:
+                from spec_atlas.verify.verifier import (
+                    VerificationIssue,
+                    VerificationResult,
+                )
+
+                return VerificationResult(
+                    is_grounded=True,
+                    confidence=verification_meta.get("confidence", 1.0),
+                    issues=[
+                        VerificationIssue(
+                            claim=i.get("claim", ""),
+                            reason=i.get("reason", ""),
+                            severity=i.get("severity", "warning"),
+                        )
+                        for i in verification_meta.get("issues", [])
+                    ],
+                )
+
+        # Run verification
+        from spec_atlas.verify.verifier import SpecVerifier
+
+        verifier = SpecVerifier(analysis_session)
+        result = verifier.verify(spec, repo, component_ref)
+
+        # Determine new status based on confidence
+        if result.confidence > 0.8 and result.is_grounded:
+            new_status = "verified"
+        elif result.confidence >= 0.5:
+            new_status = "review"
+        else:
+            new_status = "draft"
+
+        # Update spec with status and verification metadata
+        if new_status != spec.status:
+            spec.status = new_status
+
+        # Store verification metadata in spec content for idempotency
+        if "content" not in dir(spec):
+            spec.content = {}
+        spec.content["_verification_metadata"] = {
+            "confidence": result.confidence,
+            "is_grounded": result.is_grounded,
+            "verified_at": datetime.utcnow().isoformat(),
+            "issues": [
+                {"claim": i.claim, "reason": i.reason, "severity": i.severity}
+                for i in result.issues
+            ],
+        }
+
+        self.session.commit()
+
+        return result
