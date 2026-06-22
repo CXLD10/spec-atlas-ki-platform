@@ -143,7 +143,11 @@ export default function RepoGraphify() {
 
     // Navigate to ask page with the question
     // URL encode the question and pass repoId as query param
-    navigate(`/repo/${repoId}/ask?question=${encodeURIComponent(question)}&node=${encodeURIComponent(selectedNode.id)}`)
+    if (repoId === 'default') {
+      navigate(`/ask?question=${encodeURIComponent(question)}&node=${encodeURIComponent(selectedNode.id)}`)
+    } else {
+      navigate(`/repo/${repoId}/ask?question=${encodeURIComponent(question)}&node=${encodeURIComponent(selectedNode.id)}`)
+    }
   }
 
   // Update stats when nodes or edges change
