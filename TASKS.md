@@ -206,6 +206,36 @@ Next: A-0.2 (real ingest pipeline) — unblocked. Can start in parallel with Pha
 ### Gate G1
 ✓ Single project ingests code + PDF; ask returns both citation types with correct provenance
 
+#### HANDOFF B-1.1 (Source Manager UI + File Upload)
+**Status**: ✅ DONE
+
+**Changes**:
+- `frontend/src/api/client.ts`: Added Source interface, listSources(), addCodeSource(), uploadPDFSource() methods
+- `frontend/src/api/useSources.ts` (NEW): React Query hooks for fetching and adding sources
+- `frontend/src/components/sources/` (NEW): SourceManager, SourceList, AddSourceForm components with CSS
+- `frontend/src/pages/ProjectDetail.tsx` (NEW): Project detail page with SourceManager integration
+
+**Acceptance Criteria Met**:
+- ✅ Project detail page has Sources section
+- ✅ List shows all sources with status (queued, ingesting, done, failed)
+- ✅ Add source button opens form with git URL or PDF upload tabs
+- ✅ Form submission triggers ingest via client (code → addCodeSource, PDF → uploadPDFSource)
+- ✅ Ingest job appears in list with progress bar
+- ✅ Status indicators (spinning icon for ingesting, checkmark for done)
+- ✅ TypeScript clean (npm run type-check passes)
+- ✅ No new npm dependencies
+
+**Design**:
+- SourceManager: Container managing form visibility and mutations
+- SourceList: Displays all sources with color-coded status badges
+- AddSourceForm: Conditional form for git URL or PDF file input
+- Polling: useSources() refetches every 2s while ingesting
+- Styling: Tailwind-like CSS with status colors (green=done, yellow=ingesting, red=failed, blue=queued)
+
+**Ready for**:
+- B-1.2 (citation chips) — source integration UI complete, can now render citations from backend
+- Gate G1 validation — add git repo + PDF, verify both ingested with correct status
+
 ---
 
 ## PHASE 2: Graph + Specify (8–13 hrs)
