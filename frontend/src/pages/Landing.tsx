@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GitFork, ChevronDown, Code2, Zap, Database, Brain, Shield } from 'lucide-react'
 import { TopBar } from '../components/layout/TopBar'
+import { client } from '../api/client'
 import './Landing.css'
 
 interface RepoInput {
@@ -45,18 +46,7 @@ export function Landing() {
     setError('')
 
     try {
-      const response = await fetch('http://localhost:8000/api/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repo_url: repo.url }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.detail || 'Failed to start indexing')
-      }
-
-      const data = await response.json()
+      const data = await client.postIngest(repo.url)
       navigate(`/index/${data.job_id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')

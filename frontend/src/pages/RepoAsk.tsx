@@ -2,12 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Send, Copy, Check } from 'lucide-react';
 import { TopBar } from '../components/layout/TopBar';
+import { client, Claim } from '../api/client';
 import './RepoAsk.css';
-
-interface Claim {
-  text: string;
-  source: string;
-}
 
 interface Message {
   id: string;
@@ -42,7 +38,6 @@ export function RepoAsk() {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    // Add user message
     const userMsg: Message = {
       id: `msg-${Date.now()}`,
       role: 'user',
@@ -56,13 +51,10 @@ export function RepoAsk() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/ask`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, repo: repoId || 'default' }),
+      const data = await client.ask({
+        question,
+        project_id: repoId || 'default',
       });
-
-      const data = await response.json();
 
       const assistantMsg: Message = {
         id: `msg-${Date.now() + 1}`,
