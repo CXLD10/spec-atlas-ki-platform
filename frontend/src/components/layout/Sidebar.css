@@ -62,6 +62,29 @@
   font-size: 14px;
 }
 
+.mcp-section {
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid #2d3748;
+}
+
+.btn-mcp {
+  width: 100%;
+  background: #7c3aed;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+  font-size: 14px;
+}
+
+.btn-mcp:hover {
+  background: #6d28d9;
+}
+
 /* Responsive: hide sidebar on mobile */
 @media (max-width: 768px) {
   .sidebar {

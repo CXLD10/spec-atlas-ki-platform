@@ -1,10 +1,12 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { FileText, GitBranch, Settings, MessageSquare, Book, Github } from 'lucide-react'
+import MCPModal from '../MCPModal'
 import './Sidebar.css'
 
 export function Sidebar() {
   const location = useLocation()
+  const [showMCPModal, setShowMCPModal] = useState(false)
 
   const isActive = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + '/')
@@ -61,6 +63,19 @@ export function Sidebar() {
           <span>GitHub</span>
         </a>
       </nav>
+
+      {/* MCP section */}
+      <div className="mcp-section">
+        <button
+          className="btn-mcp"
+          onClick={() => setShowMCPModal(true)}
+        >
+          🤖 MCP Server
+        </button>
+      </div>
+
+      {/* MCP Modal */}
+      {showMCPModal && <MCPModal onClose={() => setShowMCPModal(false)} />}
     </div>
   )
 }
