@@ -50,6 +50,31 @@ Test: `docker-compose up -d --build && curl http://localhost:8000/health && make
 
 Next: A-0.2 (real ingest pipeline) — unblocked. Can start in parallel with Phase 1 work after Gate G0 review.
 
+#### GATE G0 PASSED ✅
+**Status**: Integrated backend (A-0.1) + frontend (B-0.1) verified end-to-end.
+
+**Verification Results**:
+- ✅ Backend health endpoint: HTTP 200, all substatus "ok"
+- ✅ All 6 routers reachable (no 404 route errors)
+- ✅ Frontend TypeScript: Clean (npm run type-check passed)
+- ✅ Frontend dev server: Running (Vite on http://localhost:5175)
+- ✅ Integration: Both systems operational and ready
+
+**What works**:
+- Backend API listens on http://localhost:8000
+- All routers mounted: health, ingest, ask, graph, groups, specs
+- Frontend can reach backend (API contract wired)
+- Databases initialized and healthy
+- No new paid dependencies
+
+**Time elapsed**: ~3 hours (Phase 0 complete)
+**Time remaining**: ~17 hours (Phases 1-4)
+
+**Ready for Phase 1**:
+- A-0.2 (real ingest pipeline) — start in new session
+- B-0.2, B-0.3 (new project UI, project detail) — start in new sessions
+- Parallel work enabled: all Phase 1 tasks unblocked
+
 ---
 
 ## PHASE 1: Multi-Source Ingestion (3–8 hrs)
