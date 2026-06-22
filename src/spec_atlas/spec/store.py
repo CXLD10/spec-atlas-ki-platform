@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -311,3 +312,154 @@ class SpecStore:
         self.session.commit()
 
         return result
+
+    def get_verification_report(self, user_id: str, repo: str) -> dict:
+        """Get overall verification statistics for a repo.
+
+        Args:
+            user_id: User ID (fixed to "default" in v1).
+            repo: Repository name.
+
+        Returns:
+            Dict with verification statistics.
+        """
+        # Get all current specs for this repo
+        specs = (
+            self.session.query(Spec)
+            .filter(
+                and_(
+                    Spec.user_id == user_id,
+                    Spec.repo == repo,
+                    Spec.valid_to.is_(None),  # current versions only
+                )
+            )
+            .all()
+        )
+
+        if not specs:
+            return {
+                "total_specs": 0,
+                "verified_count": 0,
+                "review_count": 0,
+                "draft_count": 0,
+                "avg_confidence": 0.0,
+                "verification_rate": 0.0,
+                "specs_needing_review": 0,
+            }
+
+        verified = [s for s in specs if s.status == "verified"]
+        review = [s for s in specs if s.status == "review"]
+        draft = [s for s in specs if s.status == "draft"]
+
+        # Extract confidence from verification metadata
+        confidences = []
+        for spec in specs:
+            metadata = spec.content.get("_verification_metadata", {})
+            if metadata and "confidence" in metadata:
+                confidences.append(metadata["confidence"])
+
+        avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+
+        return {
+            "total_specs": len(specs),
+            "verified_count": len(verified),
+            "review_count": len(review),
+            "draft_count": len(draft),
+            "avg_confidence": round(avg_confidence, 3),
+            "verification_rate": (round(len(verified) / len(specs) * 100, 1) if specs else 0.0),
+            "specs_needing_review": len(review),
+        }
+
+    def get_verification_issues(self, user_id: str, repo: str, limit: int = 10) -> list[dict]:
+        """Get most common verification issues in a repo.
+
+        Args:
+            user_id: User ID.
+            repo: Repository name.
+            limit: Maximum number of issues to return.
+
+        Returns:
+            List of dicts with reason and count.
+        """
+        # Get all current specs
+        specs = (
+            self.session.query(Spec)
+            .filter(
+                and_(
+                    Spec.user_id == user_id,
+                    Spec.repo == repo,
+                    Spec.valid_to.is_(None),  # current versions only
+                )
+            )
+            .all()
+        )
+
+        all_issues = []
+        for spec in specs:
+            issues = spec.content.get("_verification_metadata", {}).get("issues", [])
+            all_issues.extend(issues)
+
+        # Count by reason
+        issue_reasons = Counter([i.get("reason", "unknown") for i in all_issues])
+
+        return [
+            {"reason": reason, "count": count} for reason, count in issue_reasons.most_common(limit)
+        ]
+
+    def get_confidence_distribution(self, user_id: str, repo: str, bins: int = 5) -> dict:
+        """Get histogram of confidence scores.
+
+        Args:
+            user_id: User ID.
+            repo: Repository name.
+            bins: Number of bins for histogram (default 5).
+
+        Returns:
+            Dict with bin edges and counts.
+        """
+        # Get all current specs
+        specs = (
+            self.session.query(Spec)
+            .filter(
+                and_(
+                    Spec.user_id == user_id,
+                    Spec.repo == repo,
+                    Spec.valid_to.is_(None),  # current versions only
+                )
+            )
+            .all()
+        )
+
+        # Extract confidence values
+        confidences = []
+        for spec in specs:
+            metadata = spec.content.get("_verification_metadata", {})
+            if metadata and "confidence" in metadata:
+                confidences.append(metadata["confidence"])
+
+        if not confidences:
+            return {"bins": [], "counts": []}
+
+        # Create bins: 0.0-1/n, 1/n-2/n, ..., (n-1)/n-1.0
+        bin_edges = [i / bins for i in range(bins + 1)]
+        bin_counts = [0] * bins
+
+        for conf in confidences:
+            # Find which bin this confidence falls into
+            bin_found = False
+            for i in range(len(bin_edges) - 1):
+                if bin_edges[i] <= conf < bin_edges[i + 1]:
+                    bin_counts[i] += 1
+                    bin_found = True
+                    break
+
+            # conf == 1.0, put in last bin
+            if not bin_found:
+                bin_counts[-1] += 1
+
+        return {
+            "bins": [
+                f"{bin_edges[i]:.1f}-{bin_edges[i + 1]:.1f}" for i in range(len(bin_edges) - 1)
+            ],
+            "counts": bin_counts,
+        }
