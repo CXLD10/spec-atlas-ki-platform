@@ -236,6 +236,50 @@ Next: A-0.2 (real ingest pipeline) — unblocked. Can start in parallel with Pha
 - B-1.2 (citation chips) — source integration UI complete, can now render citations from backend
 - Gate G1 validation — add git repo + PDF, verify both ingested with correct status
 
+#### HANDOFF B-1.2 (Citation Chips for Code + Document Sources)
+**Status**: ✅ DONE
+
+**Changes**:
+- `frontend/src/components/qa/CitationChip.tsx` (REWRITTEN): Now accepts `source` prop (string format)
+  - Auto-detects code citations (`file:line`) vs document citations (`document:page`)
+  - Code citations render with 💻 icon (blue badge)
+  - Document citations render with 📄 icon (orange badge)
+  - Removed sceneEvents dependency and layer-based styling
+  
+- `frontend/src/components/qa/CitationChip.css` (UPDATED): New styling system
+  - `.citation-chip--code`: Light blue background (#dbeafe), dark blue text (#1e40af)
+  - `.citation-chip--doc`: Light orange background (#fed7aa), dark orange text (#92400e)
+  - `.citation-chip--unknown`: Light gray (fallback for unexpected formats)
+  - Hover effects: opacity shift + subtle upward transform
+  
+- `frontend/src/pages/RepoAsk.tsx` (UPDATED):
+  - Now imports and uses CitationChip for rendering answer claims
+  - Changed layout from vertical list to flex grid with gap-2
+  - Click handler ready for future navigation (currently logs to console)
+  
+- `frontend/src/components/explore/SpecDetail.tsx` (UPDATED):
+  - Updated to construct `source` string from file/line fields
+  - Handles range citations: `file:line1-line2` format
+
+**Acceptance Criteria Met**:
+- ✅ CitationChip accepts both file:line and document:page formats
+- ✅ Code chips have blue visual style with 💻 icon
+- ✅ Document chips have orange visual style with 📄 icon
+- ✅ Chips are clickable with onClick callback
+- ✅ No console errors (TypeScript clean)
+- ✅ npm run type-check passes
+- ✅ No new dependencies
+
+**Design**:
+- Citation detection: Split on `:p.` for documents, `:` for code
+- Color scheme: Blue (code, #3b82f6), Orange (docs, #f97316), Gray (unknown, #6b7280)
+- Icon sizing: 1rem for emoji, 0.875rem for text
+- Responsive: Wraps on small screens, maintains monospace font for readability
+
+**Ready for**:
+- Gate G1 validation: Multi-source ingest + answer with mixed citations
+- B-1.3 (file/PDF viewers): Navigate to source on citation click
+
 ---
 
 ## PHASE 2: Graph + Specify (8–13 hrs)
