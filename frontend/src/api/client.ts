@@ -6,13 +6,14 @@ const API_URL =
 
 export interface AskRequest {
   question: string
-  repo?: string
+  project_id?: string
 }
 
 export interface Claim {
-  text: string
-  file: string
-  start_line: number
+  text?: string
+  source: string
+  file?: string
+  start_line?: number
   end_line?: number
   confidence?: number
 }
@@ -20,8 +21,10 @@ export interface Claim {
 export interface AskResponse {
   answer: string
   claims: Claim[]
-  confidence: number
-  route_used: string
+  confidence?: number
+  route_used?: string
+  status?: 'success' | 'empty_db' | 'no_results' | 'error'
+  suggestions?: string[]
 }
 
 export interface GroupNode {
@@ -127,7 +130,7 @@ class ApiClient {
   async ask(request: AskRequest): Promise<AskResponse> {
     return this.request('POST', '/api/ask', {
       question: request.question,
-      repo: request.repo || 'default',
+      project_id: request.project_id || 'default',
     })
   }
 
