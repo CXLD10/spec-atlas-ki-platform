@@ -226,3 +226,71 @@ DoD: unit test: verify a spec, then fetch its report; confirm all fields present
 - `test_verify_raises_on_missing_spec`: 404 when spec not found
 - `test_verify_already_verified_returns_cached`: Cached result for verified specs
 - `test_spec_store_has_verify_spec_method`: Method exists and callable
+
+### T-012.3 — Verification Report API (DONE 2026-06-22)
+
+**Status**: ✅ DONE
+
+**Changes**:
+- `src/spec_atlas/api/reports.py` (NEW): Three analytics endpoints
+- `src/spec_atlas/spec/store.py` (extended): Report generation methods
+- `tests/api/test_verification_reports.py` (NEW): 10 tests for analytics
+- `src/spec_atlas/api/app.py`: Mount reports router
+
+**Analytics Endpoints**:
+
+1. **GET /api/reports/verification?repo=X**
+   - Returns: total_specs, verified_count, review_count, draft_count, avg_confidence, verification_rate %, specs_needing_review
+   - Example response: `{"total_specs": 10, "verified_count": 8, "avg_confidence": 0.85, "verification_rate": 80.0}`
+
+2. **GET /api/reports/verification/issues?repo=X&limit=10**
+   - Returns: list of {reason, count} sorted by frequency
+   - Example: `{"issues": [{"reason": "Missing docstring", "count": 3}, ...], "count": 2}`
+
+3. **GET /api/reports/verification/confidence?repo=X&bins=5**
+   - Returns: histogram of confidence scores with bin edges
+   - Example: `{"bins": ["0.0-0.2", "0.2-0.4", ...], "counts": [0, 1, 2, 3, 4]}`
+
+**Acceptance Criteria Met**:
+- ✅ All three endpoints implemented and routed
+- ✅ Response includes all required fields
+- ✅ Issues endpoint returns top issues by frequency
+- ✅ Confidence endpoint returns proper histogram
+- ✅ All endpoints are read-only, no side effects
+- ✅ Tests pass: 354 passed, 2 skipped (10 new report tests)
+- ✅ Linting: Clean (all checks passed)
+
+**Report Methods (SpecStore)**:
+- `get_verification_report(user_id, repo)` → dict with stats
+- `get_verification_issues(user_id, repo, limit=10)` → list of issue dicts
+- `get_confidence_distribution(user_id, repo, bins=5)` → histogram dict
+
+**Data Processing**:
+- Queries current versions only (valid_to IS NULL)
+- Extracts metadata from spec.content._verification_metadata
+- Issues counted using Counter (frequency analysis)
+- Confidence histogram binned linearly (0.0-1/n, 1/n-2/n, ..., n-1/n-1.0)
+- Handles edge case: confidence=1.0 goes in last bin
+
+**API Design**:
+- Pydantic models: VerificationReport, VerificationIssue, VerificationIssuesReport, ConfidenceDistribution
+- Query params: repo (required), limit (optional, default 10, max 100), bins (optional, default 5, min 2, max 20)
+- All endpoints read-only (no POST/PATCH/DELETE)
+- No side effects; safe to call repeatedly
+
+**Ready for**:
+- T-013.1 (MCP server): Expose reporting endpoints via MCP
+- Dashboard/UI integration: Display reports as charts/tables
+- Future: Real-time streaming of verification events
+
+**Tests**:
+- `test_verification_report_response_model`: VerificationReport structure
+- `test_verification_issue_response_model`: VerificationIssue structure
+- `test_verification_issues_report_model`: VerificationIssuesReport structure
+- `test_confidence_distribution_model`: ConfidenceDistribution structure
+- `test_spec_store_verification_report`: Report generation logic
+- `test_spec_store_verification_report_empty`: Empty repo handling
+- `test_spec_store_verification_issues`: Issue frequency counting
+- `test_spec_store_confidence_distribution`: Histogram binning
+- `test_spec_store_confidence_distribution_empty`: Empty distribution
+- `test_verification_report_response_fields`: All fields accessible + JSON serializable
