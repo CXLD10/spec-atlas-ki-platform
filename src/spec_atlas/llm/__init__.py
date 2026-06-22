@@ -41,14 +41,13 @@ def get_llm_provider(settings: Settings | None = None) -> LLMProvider:
         return FakeLLMProvider()
     elif s.llm_provider == "ollama":
         from .ollama_provider import OllamaProvider
-        return OllamaProvider(
-            base_url=s.ollama_base_url,
-            model=s.ollama_model
-        )
+
+        return OllamaProvider(base_url=s.ollama_base_url, model=s.ollama_model)
     elif s.llm_provider == "groq":
         if not s.groq_api_key:
             raise ValueError("GROQ_API_KEY required for groq provider")
         from .ollama_provider import GroqProvider
+
         return GroqProvider(api_key=s.groq_api_key, model=s.groq_model)
     elif s.llm_provider == "gemini":
         from .gemini_provider import GeminiLLMProvider

@@ -37,6 +37,7 @@ def create_app(settings=None) -> FastAPI:
     # Initialize database session factories (needed by health/answer/graph/groups/specs)
     try:
         from spec_atlas.db import analysis_session, spec_session
+
         app.state.analysis_session_factory = (
             analysis_session(resolved) if resolved.analysis_db_url else None
         )
@@ -50,6 +51,7 @@ def create_app(settings=None) -> FastAPI:
     try:
         from spec_atlas.embed import get_embedding_provider
         from spec_atlas.llm import get_llm_provider
+
         app.state.llm_provider = get_llm_provider(resolved)
         app.state.embedding_provider = get_embedding_provider(resolved)
     except Exception as e:
@@ -69,6 +71,7 @@ def create_app(settings=None) -> FastAPI:
 
     # ── Health — plain function, not a router ────────────────────
     from spec_atlas.api.health import health
+
     app.add_api_route("/health", health, methods=["GET"], tags=["health"])
 
     # ── Routers ──────────────────────────────────────────────────
@@ -98,4 +101,5 @@ app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -113,7 +113,8 @@ class GroupSummarizer:
                 "- **Key Components**: Main items in the group",
                 "- **Dependencies**: What it depends on",
                 "- **Invariants**: Key properties that hold",
-                "\nBe grounded in the code. Each claim should be defensible from the component list.",
+                "\nBe grounded in the code. Each claim should be defensible from the "
+                "component list.",
                 "Return only the markdown, no preamble.",
             ]
         )

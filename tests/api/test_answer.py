@@ -36,7 +36,7 @@ class TestAskEndpoint:
 
         try:
             AskRequest(question="")
-            assert False, "Should reject empty question"
+            raise AssertionError("Should reject empty question")
         except ValidationError:
             pass  # Expected
 

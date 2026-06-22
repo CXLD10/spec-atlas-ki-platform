@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -16,30 +15,24 @@ if TYPE_CHECKING:
 ANSWER_SCHEMA = {
     "type": "object",
     "properties": {
-        "answer": {
-            "type": "string",
-            "description": "The answer text explaining the query"
-        },
+        "answer": {"type": "string", "description": "The answer text explaining the query"},
         "claims": {
             "type": "array",
             "description": "List of specific claims with their sources",
             "items": {
                 "type": "object",
                 "properties": {
-                    "claim": {
-                        "type": "string",
-                        "description": "A specific claim or fact"
-                    },
+                    "claim": {"type": "string", "description": "A specific claim or fact"},
                     "source": {
                         "type": "string",
-                        "description": "Source file and line number in format file.py:123"
-                    }
+                        "description": "Source file and line number in format file.py:123",
+                    },
                 },
-                "required": ["claim", "source"]
-            }
-        }
+                "required": ["claim", "source"],
+            },
+        },
     },
-    "required": ["answer", "claims"]
+    "required": ["answer", "claims"],
 }
 
 

@@ -14,6 +14,7 @@ class TestPathTraversalSecurity:
     def test_safe_resolve_rejects_parent_traversal(self) -> None:
         """Path with ../ to escape repo root is rejected."""
         from pathlib import Path
+
         from spec_atlas.api.ingest import _safe_resolve_path
 
         repo_root = Path("/safe/repo")
@@ -24,6 +25,7 @@ class TestPathTraversalSecurity:
     def test_safe_resolve_rejects_absolute_paths(self) -> None:
         """Absolute paths outside repo are rejected."""
         from pathlib import Path
+
         from spec_atlas.api.ingest import _safe_resolve_path
 
         repo_root = Path("/safe/repo")
@@ -34,6 +36,7 @@ class TestPathTraversalSecurity:
     def test_safe_resolve_allows_valid_paths(self) -> None:
         """Valid paths within repo root are allowed."""
         from pathlib import Path
+
         from spec_atlas.api.ingest import _safe_resolve_path
 
         repo_root = Path("/safe/repo")
@@ -44,6 +47,7 @@ class TestPathTraversalSecurity:
     def test_safe_resolve_allows_nested_valid_paths(self) -> None:
         """Valid nested paths within repo root are allowed."""
         from pathlib import Path
+
         from spec_atlas.api.ingest import _safe_resolve_path
 
         repo_root = Path("/safe/repo")
