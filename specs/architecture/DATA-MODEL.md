@@ -13,11 +13,27 @@ Cross-DB references are **by value (refs), never FK** — the Spec DB is indepen
 
 ## Analysis DB
 
+### `projects` (Phase 0, new in v2.0)
+`id` uuid pk · `name` · `description` · `created_at` · `ingest_status` (`queued|ingesting|complete|failed`) · `ingest_progress` real 0–1 · `indexed_at` timestamp null. **Root scope for all downstream data.** All repos, sources, specs, memory, embeddings are scoped to a project.
+
 ### `repos`
-`id` uuid pk · `name` · `source` (path/URL) · `default_branch` · `indexed_commit` (sha) · timestamps.
+`id` uuid pk · `project_id` fk · `name` · `source` (path/URL) · `default_branch` · `indexed_commit` (sha) · timestamps. **Scoped to project.**
 
 ### `files`
 `id` pk · `repo_id` fk · `path` · `language` · `content_hash` · `loc`. Unique `(repo_id, path)`.
+
+### `sources` (Phase 1, multi-source)
+`id` uuid pk · `project_id` fk · `type` enum (`code|pdf|markdown|excel|jira|git_history`) · `name` · `metadata` jsonb (language, pages, encoding) · `ingest_status` · `created_at`. **Each project can have multiple sources.** Code source is implicit; other sources are added explicitly.
+
+### `source_locators` (Phase 1, multi-source citations)
+Normalized representation of where content lives in each source type:
+```
+CodeLocator:      {source_id, file_path, start_line, end_line}
+PDFLocator:       {source_id, page_num, bbox: [x0,y0,x1,y1]}
+TextLocator:      {source_id, section_id, offset_start, offset_end}
+ExcelLocator:     {source_id, sheet_name, cell_start, cell_end}
+```
+Stored as polymorphic `locator_type` + `locator_data` jsonb in a single `source_locators` table or separate typed tables per source.
 
 ### `nodes` (L1 symbols)
 `id` pk · `repo_id` fk · `file_id` fk · `language` · `kind` (`module|class|function|method`) · `name` · `qualified_name` · `signature` · `docstring` · `start_line` · `end_line`.
@@ -42,6 +58,12 @@ Cross-DB references are **by value (refs), never FK** — the Spec DB is indepen
 ### `spec_edges` (L3 spec graph)
 `id` pk · `user_id` · `repo` · `src_component_ref` · `dst_component_ref` · `kind` (`depends-on|part-of|uses`) · `derived_from` (the L1 edge kind that produced it — links are from real code edges, never AI guesses). Index `(user_id, repo, src_component_ref)`.
 
+### `memory_facts` (Phase 3, conversation memory)
+`id` uuid pk · `user_id` · `project_id` fk · `fact` text (e.g., "entry point is main.py") · `sources` text[] (`code|pdf|markdown|excel|jira`) · `provenance` jsonb (list of locators: `{locator_type, locator_data}`) · `relevance_score` real 0–1 (TBD: static 1.0 or LLM-ranked) · `created_from_turn` (conversation_id + turn_num) · `created_at` · `last_used_at`. **Durable facts, not ephemeral.** Index `(user_id, project_id, created_at)` for retrieval.
+
+### `conversations` (Phase 3, conversation history)
+`id` uuid pk · `user_id` · `project_id` fk · `created_at` · `turns` jsonb (list of {query, answer, citations, memory_facts_used}). **For traceability and memory enrichment.**
+
 ### Spec `content` shape (validated by JSON Schema)
 ```
 {
@@ -61,5 +83,8 @@ Cross-DB references are **by value (refs), never FK** — the Spec DB is indepen
 - **Idempotency:** re-ingest upserts on the node stable key; unchanged files (same `content_hash`) are skipped.
 - **Versioning:** specs are immutable per version; an update creates a new version and sets the prior `valid_to`.
 - **Fingerprints / drift:** if a spec's or group's `source_fingerprint` no longer matches current source spans, mark it `stale`; only the affected subtree regenerates.
-- **Provenance:** every spec field, group claim, and answer carries `{file,start_line,end_line}`; without it, it is not allowed.
-- **Layer placement:** L1 + L4 + embeddings = Analysis DB (rebuildable index); L2 + L3 = Spec DB (durable). Groups reference specs by `component_ref`.
+- **Provenance:** every spec field, group claim, and answer carries provenance. For code: `{file, start_line, end_line}`. For multi-source: `{source_id, locator_type, locator_data}` (e.g., `{source_id: "pdf_001", locator_type: "PDFLocator", locator_data: {page: 5, bbox: [0.1, 0.2, 0.9, 0.8]}}`). Without it, it is not allowed.
+- **Layer placement:** L1 + L4 + embeddings = Analysis DB (rebuildable index); L2 + L3 + memory = Spec DB (durable). Groups reference specs by `component_ref`.
+- **Project scoping:** all data (repos, sources, specs, memory, embeddings) is scoped to a `project_id`. Multi-project deployments partition by project.
+- **Multi-source citations:** answers aggregate citations from all sources; frontend renders by source type (code snippet with file:line, PDF with page/bbox, Markdown with excerpt, etc.).
+- **Memory durability:** memory facts persist across sessions within a project. Relevance scores are computed at query time (vector similarity or LLM-ranked TBD).
