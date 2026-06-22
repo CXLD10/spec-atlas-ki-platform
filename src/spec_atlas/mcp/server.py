@@ -60,13 +60,15 @@ except ImportError:
 class SpecAtlasMCPServer:
     """MCP server exposing Spec-Atlas retrieval + spec access to agents."""
 
-    def __init__(self, backend_url: str = "http://localhost:8000"):
+    def __init__(self, handlers=None, backend_url: str = "http://localhost:8000"):
         """Initialize MCP server.
 
         Args:
-            backend_url: Backend API base URL (e.g., http://localhost:8000)
+            handlers: MCPHandlers instance (optional, for testing)
+            backend_url: Backend API base URL (only used if handlers not provided)
         """
         self.backend_url = backend_url
+        self.handlers = handlers
         self.server = Server("spec-atlas")
 
         # Register tools
@@ -74,25 +76,27 @@ class SpecAtlasMCPServer:
 
     def _register_tools(self) -> None:
         """Register MCP tools with stable schemas."""
-        # Tool 1: search
+        # Tool 1: search_knowledge
         self.server.register_tool(
             Tool(
-                name="search",
-                description=(
-                    "Search specs and groups by query. "
-                    "Routes query → retrieves context → generates answer."
-                ),
+                name="search_knowledge",
+                description="Search the knowledge graph for relevant specs and sources",
                 inputSchema={
                     "type": "object",
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "User question about the codebase",
+                            "description": "Search query",
                         },
                         "repo": {
                             "type": "string",
-                            "description": "Repository identifier (e.g., github.com/user/repo)",
+                            "description": "Repository identifier",
                             "default": "default",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum results to return",
+                            "default": 10,
                         },
                     },
                     "required": ["query"],
@@ -104,18 +108,22 @@ class SpecAtlasMCPServer:
         self.server.register_tool(
             Tool(
                 name="get_spec",
-                description="Fetch a spec by component reference.",
+                description="Retrieve a specification for a component",
                 inputSchema={
                     "type": "object",
                     "properties": {
                         "component_ref": {
                             "type": "string",
-                            "description": "Component reference (e.g., AuthService)",
+                            "description": "Component name",
                         },
                         "repo": {
                             "type": "string",
                             "description": "Repository identifier",
                             "default": "default",
+                        },
+                        "version": {
+                            "type": "integer",
+                            "description": "Spec version (optional)",
                         },
                     },
                     "required": ["component_ref"],
@@ -123,44 +131,54 @@ class SpecAtlasMCPServer:
             )
         )
 
-        # Tool 3: get_group
+        # Tool 3: get_graph
         self.server.register_tool(
             Tool(
-                name="get_group",
-                description="Fetch a group summary and its members.",
+                name="get_graph",
+                description="Retrieve knowledge graph structure",
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "group_path": {
-                            "type": "string",
-                            "description": "Group path (e.g., auth/tokens)",
-                        },
                         "repo": {
                             "type": "string",
                             "description": "Repository identifier",
                             "default": "default",
                         },
+                        "layer": {
+                            "type": "string",
+                            "description": "Layer: source, spec, group, or all",
+                            "default": "spec",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum nodes to return",
+                            "default": 100,
+                        },
                     },
-                    "required": ["group_path"],
+                    "required": [],
                 },
             )
         )
 
-        # Tool 4: list_stale_specs
+        # Tool 4: ask_question
         self.server.register_tool(
             Tool(
-                name="list_stale_specs",
-                description="List specs marked stale (source has changed).",
+                name="ask_question",
+                description="Ask a question about the project",
                 inputSchema={
                     "type": "object",
                     "properties": {
+                        "question": {
+                            "type": "string",
+                            "description": "User question",
+                        },
                         "repo": {
                             "type": "string",
                             "description": "Repository identifier",
                             "default": "default",
                         },
                     },
-                    "required": [],
+                    "required": ["question"],
                 },
             )
         )
@@ -179,31 +197,38 @@ class SpecAtlasMCPServer:
             Tool result (dict or error)
         """
         try:
-            if name == "search":
-                return await self._search_handler(
-                    arguments["query"], arguments.get("repo", "default")
+            if name == "search_knowledge":
+                return await self._search_knowledge_handler(
+                    arguments["query"],
+                    arguments.get("repo", "default"),
+                    arguments.get("limit", 10),
                 )
             elif name == "get_spec":
                 return await self._get_spec_handler(
-                    arguments["component_ref"], arguments.get("repo", "default")
+                    arguments["component_ref"],
+                    arguments.get("repo", "default"),
+                    arguments.get("version"),
                 )
-            elif name == "get_group":
-                return await self._get_group_handler(
-                    arguments["group_path"], arguments.get("repo", "default")
+            elif name == "get_graph":
+                return await self._get_graph_handler(
+                    arguments.get("repo", "default"),
+                    arguments.get("layer", "spec"),
+                    arguments.get("limit", 100),
                 )
-            elif name == "list_stale_specs":
-                return await self._list_stale_specs_handler(arguments.get("repo", "default"))
+            elif name == "ask_question":
+                return await self._ask_question_handler(
+                    arguments["question"], arguments.get("repo", "default")
+                )
             else:
                 return {"error": f"unknown tool: {name}"}
         except Exception as e:
             logger.error(f"Tool call error: {name}, {e}")
             return {"error": str(e), "code": "TOOL_CALL_FAILED"}
 
-    async def _search_handler(self, query: str, repo: str) -> dict:
-        """Search specs and groups.
-
-        (Placeholder: will wire to F-007/F-008 pipeline)
-        """
+    async def _search_knowledge_handler(self, query: str, repo: str, limit: int) -> dict:
+        """Search the knowledge graph."""
+        if self.handlers:
+            return await self.handlers.search_knowledge(query, repo, limit)
         return {
             "answer": "Search not yet implemented",
             "claims": [],
@@ -213,11 +238,10 @@ class SpecAtlasMCPServer:
             "query": query,
         }
 
-    async def _get_spec_handler(self, component_ref: str, repo: str) -> dict:
-        """Fetch a spec by reference.
-
-        (Placeholder: will wire to F-011 SpecStore)
-        """
+    async def _get_spec_handler(self, component_ref: str, repo: str, version: int | None) -> dict:
+        """Fetch a spec by reference."""
+        if self.handlers:
+            return await self.handlers.get_spec(component_ref, repo, version)
         return {
             "component_ref": component_ref,
             "repo": repo,
@@ -225,24 +249,29 @@ class SpecAtlasMCPServer:
             "error": "Spec not found",
         }
 
-    async def _get_group_handler(self, group_path: str, repo: str) -> dict:
-        """Fetch a group and its members.
-
-        (Placeholder: will wire to GroupClustering)
-        """
+    async def _get_graph_handler(self, repo: str, layer: str, limit: int) -> dict:
+        """Retrieve graph structure."""
+        if self.handlers:
+            return await self.handlers.get_graph(repo, layer, limit)
         return {
-            "group_path": group_path,
             "repo": repo,
-            "group": None,
-            "error": "Group not found",
+            "layer": layer,
+            "nodes": [],
+            "edges": [],
+            "node_count": 0,
+            "edge_count": 0,
         }
 
-    async def _list_stale_specs_handler(self, repo: str) -> dict:
-        """List stale specs.
-
-        (Placeholder: will wire to drift detection, returns empty until F-014)
-        """
-        return {"repo": repo, "stale_specs": []}
+    async def _ask_question_handler(self, question: str, repo: str) -> dict:
+        """Ask a question about the project."""
+        if self.handlers:
+            return await self.handlers.ask_question(question, repo)
+        return {
+            "question": question,
+            "answer": "",
+            "claims": [],
+            "confidence": 0.0,
+        }
 
     async def run(self) -> None:
         """Run the MCP server (stdio transport)."""
