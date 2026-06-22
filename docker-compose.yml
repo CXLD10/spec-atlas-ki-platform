@@ -1,0 +1,54 @@
+version: "3.8"
+
+services:
+  # PostgreSQL with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: spec-atlas-postgres
+    environment:
+      POSTGRES_USER: spec_atlas
+      POSTGRES_PASSWORD: spec_atlas_dev
+      POSTGRES_INITDB_ARGS: "-c shared_preload_libraries=vector"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spec_atlas"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Spec-Atlas backend API
+  spec-atlas:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spec-atlas-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Database URLs (using postgres service name as host)
+      ANALYSIS_DB_URL: "postgresql+psycopg://spec_atlas:spec_atlas_dev@postgres:5432/spec_atlas_analysis"
+      SPEC_DB_URL: "postgresql+psycopg://spec_atlas:spec_atlas_dev@postgres:5432/spec_atlas_spec"
+      # Providers
+      LLM_PROVIDER: "groq"
+      GROQ_API_KEY: "${GROQ_API_KEY}"
+      GROQ_MODEL: "llama-3.1-8b-instant"
+      EMBED_PROVIDER: "fake"
+      # CORS: allow localhost dev servers
+      ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:3000,http://localhost:8080"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+    driver: local

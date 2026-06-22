@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spec-Atlas</title>
+<style>
+  :root {
+    /* Dark mode (primary) — cyan-on-black mission control */
+    --bg: #04070d;
+    --bg-grid: rgba(46, 200, 255, 0.045);
+    --panel: rgba(10, 18, 30, 0.72);
+    --panel-border: rgba(60, 200, 255, 0.18);
+    --ink: #dff3ff;
+    --ink-dim: #6b8299;
+    --ink-faint: #3d5163;
+    --cyan: #2ec8ff;
+    --cyan-bright: #6fe0ff;
+    --cyan-glow: rgba(46, 200, 255, 0.55);
+    /* per-layer accents (subtle, cyan family stays dominant) */
+    --l1: #2ec8ff;
+    --l2: #36e0c8;
+    --l3: #ffc24d;
+    --l4: #b794ff;
+    --grain: 0.025;
+    --font-display: 'Space Grotesk', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  [data-theme="light"] {
+    --bg: #eef3f7;
+    --bg-grid: rgba(20, 90, 130, 0.06);
+    --panel: rgba(255, 255, 255, 0.82);
+    --panel-border: rgba(20, 110, 150, 0.18);
+    --ink: #0b2233;
+    --ink-dim: #5a7286;
+    --ink-faint: #9fb3c2;
+    --cyan: #0a93cc;
+    --cyan-bright: #0875a3;
+    --cyan-glow: rgba(10, 147, 204, 0.3);
+    --l1: #0a93cc;
+    --l2: #0b9d86;
+    --l3: #c8860a;
+    --l4: #7a52cc;
+    --grain: 0;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-display);
+    overflow-x: hidden;
+    transition: background 0.6s ease, color 0.6s ease;
+    position: relative;
+  }
+  /* ambient grid */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 100%);
+    pointer-events: none; z-index: 0;
+    transition: background-image 0.6s ease;
+  }
+
+  canvas#scene { position: fixed; inset: 0; z-index: 1; }
+
+  /* ===== Top bar ===== */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 30;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 32px;
+    pointer-events: none;
+  }
+  .brand { display: flex; align-items: center; gap: 11px; pointer-events: auto; }
+  .brand-mark {
+    width: 26px; height: 26px; position: relative;
+  }
+  .brand-mark svg { width: 100%; height: 100%; }
+  .brand-name {
+    font-weight: 600; font-size: 15px; letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .brand-name b { color: var(--cyan); font-weight: 600; }
+  .topbar-right { display: flex; align-items: center; gap: 18px; pointer-events: auto; }
+  .nav-link {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+    color: var(--ink-dim); text-decoration: none; text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-link:hover { color: var(--cyan); }
+  .theme-toggle {
+    width: 52px; height: 26px; border-radius: 13px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel); cursor: pointer; position: relative;
+    transition: all 0.3s;
+  }
+  .theme-toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--cyan); box-shadow: 0 0 12px var(--cyan-glow);
+    transition: transform 0.35s cubic-bezier(.6,.2,.1,1);
+  }
+  [data-theme="light"] .theme-toggle::after { transform: translateX(26px); }
+
+  /* ===== Intro overlay ===== */
+  .intro {
+    position: fixed; inset: 0; z-index: 50;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--bg);
+    transition: opacity 0.4s cubic-bezier(.4,0,.2,1), visibility 0.4s, filter 0.4s;
+  }
+  .intro.gone { opacity: 0; visibility: hidden; filter: blur(8px); }
+  #introCanvas { position: absolute; inset: 0; }
+  .intro-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
+  .intro-mark { width: 64px; height: 64px; margin-bottom: 28px; opacity: 0; }
+  .intro-mark.revealed { animation: snapIn 0.5s cubic-bezier(.2,.85,.25,1.25) forwards; }
+  .intro-title {
+    font-size: clamp(28px, 6vw, 56px); font-weight: 700; letter-spacing: 0.02em;
+    opacity: 0;
+  }
+  .intro-title.revealed { animation: snapIn 0.5s cubic-bezier(.2,.85,.25,1.25) forwards; }
+  .intro-title .accent { color: var(--cyan); }
+  .intro-sub {
+    font-family: var(--font-mono); font-size: clamp(11px, 1.6vw, 14px);
+    color: var(--ink-dim); letter-spacing: 0.18em; text-transform: uppercase;
+    margin-top: 16px; opacity: 0;
+  }
+  .intro-sub.revealed { animation: snapIn 0.45s cubic-bezier(.2,.85,.25,1.25) forwards; }
+  @keyframes snapIn {
+    0% { opacity: 0; transform: scale(0.82) translateY(8px); }
+    65% { opacity: 1; transform: scale(1.05) translateY(0); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* ===== Hero content ===== */
+  .hero {
+    position: relative; z-index: 20;
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 120px 24px 60px;
+    opacity: 0; transition: opacity 1.2s ease 0.2s;
+  }
+  .hero.show { opacity: 1; }
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--cyan);
+    display: inline-flex; align-items: center; gap: 10px; margin-bottom: 26px;
+  }
+  .eyebrow::before, .eyebrow::after {
+    content: ''; width: 28px; height: 1px; background: var(--cyan); opacity: 0.5;
+  }
+  .hero h1 {
+    font-size: clamp(38px, 8vw, 86px); font-weight: 700; line-height: 1.02;
+    letter-spacing: -0.02em; max-width: 16ch;
+  }
+  .hero h1 .grad {
+    background: linear-gradient(120deg, var(--cyan-bright), var(--cyan) 50%, var(--l4));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero p.lede {
+    margin-top: 26px; font-size: clamp(15px, 2.2vw, 19px); color: var(--ink-dim);
+    max-width: 56ch; line-height: 1.6;
+  }
+  /* the repo input */
+  .launch {
+    margin-top: 44px; display: flex; gap: 0; width: min(560px, 92vw);
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 12px; padding: 6px 6px 6px 18px; align-items: center;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 0 1px rgba(46,200,255,0.04), 0 20px 60px -20px rgba(0,0,0,0.6);
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .launch:focus-within {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 1px var(--cyan-glow), 0 0 40px -10px var(--cyan-glow);
+  }
+  .launch .prompt { font-family: var(--font-mono); color: var(--cyan); font-size: 14px; margin-right: 10px; }
+  .launch input {
+    flex: 1; background: none; border: none; outline: none;
+    color: var(--ink); font-family: var(--font-mono); font-size: 14px;
+  }
+  .launch input::placeholder { color: var(--ink-faint); }
+  .launch button {
+    font-family: var(--font-display); font-weight: 600; font-size: 14px;
+    color: #04070d; background: var(--cyan); border: none; cursor: pointer;
+    padding: 11px 22px; border-radius: 8px; letter-spacing: 0.02em;
+    transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+  }
+  .launch button:hover { background: var(--cyan-bright); box-shadow: 0 0 24px var(--cyan-glow); }
+  .launch button:active { transform: scale(0.97); }
+  .hero-hint {
+    margin-top: 18px; font-family: var(--font-mono); font-size: 11px;
+    color: var(--ink-faint); letter-spacing: 0.06em;
+  }
+  .hero-hint span { color: var(--cyan); cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+  .scroll-cue {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em;
+    color: var(--ink-faint); text-transform: uppercase; display: flex; flex-direction: column;
+    align-items: center; gap: 8px;
+  }
+  .scroll-cue .line { width: 1px; height: 30px; background: linear-gradient(var(--cyan), transparent); animation: cue 2s ease-in-out infinite; }
+  @keyframes cue { 0%,100%{opacity:0.3; transform:scaleY(0.6);} 50%{opacity:1; transform:scaleY(1);} }
+
+  /* ===== Pipeline stage panel (HUD) ===== */
+  .hud {
+    position: fixed; left: 32px; top: 50%; transform: translateY(-50%);
+    z-index: 25; display: flex; flex-direction: column; gap: 2px;
+    opacity: 0; transition: opacity 0.6s; pointer-events: none;
+  }
+  .hud.show { opacity: 1; }
+  .hud-stage {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; border-radius: 8px;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em;
+    color: var(--ink-faint); border: 1px solid transparent;
+    transition: all 0.4s;
+  }
+  .hud-stage .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--ink-faint);
+    transition: all 0.4s; flex-shrink: 0;
+  }
+  .hud-stage .label b { display:block; color: var(--ink-dim); font-weight:500; font-size: 12px; }
+  .hud-stage .label small { color: var(--ink-faint); font-size: 9.5px; letter-spacing: 0.06em; }
+  .hud-stage.active {
+    color: var(--ink); background: var(--panel); border-color: var(--panel-border);
+  }
+  .hud-stage.active .dot { box-shadow: 0 0 14px currentColor; }
+  .hud-stage.l1.active .dot, .hud-stage.l1.active .label b { color: var(--l1); }
+  .hud-stage.l2.active .dot, .hud-stage.l2.active .label b { color: var(--l2); }
+  .hud-stage.l3.active .dot, .hud-stage.l3.active .label b { color: var(--l3); }
+  .hud-stage.l4.active .dot, .hud-stage.l4.active .label b { color: var(--l4); }
+  .hud-stage.done { color: var(--ink-dim); }
+  .hud-stage.done .dot { background: var(--cyan); }
+
+  /* ===== Q&A dock ===== */
+  .qa {
+    position: fixed; right: 32px; top: 50%; transform: translateY(-50%);
+    z-index: 25; width: min(380px, 90vw);
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 14px; padding: 20px; backdrop-filter: blur(16px);
+    opacity: 0; transition: opacity 0.6s, transform 0.6s; transform: translateY(-50%) translateX(20px);
+    box-shadow: 0 30px 80px -30px rgba(0,0,0,0.7);
+  }
+  .qa.show { opacity: 1; transform: translateY(-50%) translateX(0); }
+  .qa-head { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .qa-head .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+  .qa-head span { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; color: var(--ink-dim); text-transform: uppercase; }
+  .qa-q {
+    font-family: var(--font-mono); font-size: 13px; color: var(--cyan);
+    padding: 12px 14px; background: rgba(46,200,255,0.06); border-radius: 8px;
+    border-left: 2px solid var(--cyan); margin-bottom: 14px; line-height: 1.5;
+  }
+  .qa-a { font-size: 14px; line-height: 1.65; color: var(--ink); min-height: 20px; }
+  .qa-a .cite {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--l3);
+    background: rgba(255,194,77,0.1); padding: 1px 7px; border-radius: 5px;
+    border: 1px solid rgba(255,194,77,0.25); cursor: pointer; margin: 0 2px;
+    transition: all 0.2s; vertical-align: baseline;
+  }
+  .qa-a .cite:hover { background: rgba(255,194,77,0.22); box-shadow: 0 0 12px rgba(255,194,77,0.3); }
+  .qa-conf {
+    margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--panel-border);
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: var(--font-mono); font-size: 10px; color: var(--ink-dim); letter-spacing: 0.08em;
+  }
+  .qa-conf .bar { width: 90px; height: 3px; background: var(--ink-faint); border-radius: 2px; overflow: hidden; }
+  .qa-conf .bar i { display: block; height: 100%; width: 0; background: var(--l2); box-shadow: 0 0 8px var(--l2); transition: width 1s ease; }
+
+  /* replay button */
+  .replay {
+    position: fixed; bottom: 28px; right: 32px; z-index: 26;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+    color: var(--ink-dim); background: var(--panel); border: 1px solid var(--panel-border);
+    padding: 9px 16px; border-radius: 8px; cursor: pointer; text-transform: uppercase;
+    opacity: 0; transition: all 0.4s; backdrop-filter: blur(10px);
+  }
+  .replay.show { opacity: 1; }
+  .replay:hover { color: var(--cyan); border-color: var(--cyan); }
+
+  @media (max-width: 880px) {
+    .hud { display: none; }
+    .qa { right: 50%; transform: translate(50%, 0); top: auto; bottom: 80px; }
+    .qa.show { transform: translate(50%, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.1ms !important; }
+  }
+</style>
+</head>
+<body data-theme="dark">
+
+  <!-- 3D-ish layered scene canvas -->
+  <canvas id="scene"></canvas>
+
+  <!-- Intro -->
+  <div class="intro" id="intro">
+    <canvas id="introCanvas"></canvas>
+    <div class="intro-content">
+      <svg class="intro-mark" id="introMark" viewBox="0 0 64 64" fill="none">
+        <circle cx="32" cy="32" r="4" fill="#2ec8ff"/>
+        <circle cx="14" cy="20" r="2.5" fill="#2ec8ff" opacity="0.7"/>
+        <circle cx="50" cy="18" r="2.5" fill="#36e0c8" opacity="0.7"/>
+        <circle cx="48" cy="48" r="2.5" fill="#b794ff" opacity="0.7"/>
+        <circle cx="16" cy="46" r="2.5" fill="#ffc24d" opacity="0.7"/>
+        <path d="M32 32 L14 20 M32 32 L50 18 M32 32 L48 48 M32 32 L16 46" stroke="#2ec8ff" stroke-width="1" opacity="0.4"/>
+      </svg>
+      <div class="intro-title" id="introTitle">SPEC<span class="accent">·</span>ATLAS</div>
+      <div class="intro-sub" id="introSub">From what the code is — to what it means</div>
+    </div>
+  </div>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 64 64" fill="none">
+          <circle cx="32" cy="32" r="4" fill="var(--cyan)"/>
+          <circle cx="14" cy="20" r="2.5" fill="var(--cyan)" opacity="0.7"/>
+          <circle cx="50" cy="18" r="2.5" fill="var(--cyan)" opacity="0.7"/>
+          <circle cx="48" cy="48" r="2.5" fill="var(--cyan)" opacity="0.7"/>
+          <circle cx="16" cy="46" r="2.5" fill="var(--cyan)" opacity="0.7"/>
+          <path d="M32 32 L14 20 M32 32 L50 18 M32 32 L48 48 M32 32 L16 46" stroke="var(--cyan)" stroke-width="1" opacity="0.4"/>
+        </svg>
+      </div>
+      <div class="brand-name">SPEC<b>·</b>ATLAS</div>
+    </div>
+    <div class="topbar-right">
+      <a class="nav-link" href="#">Docs</a>
+      <a class="nav-link" href="#">MCP</a>
+      <a class="nav-link" href="#">GitHub</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme"></button>
+    </div>
+  </div>
+
+  <!-- HUD pipeline stages -->
+  <div class="hud" id="hud">
+    <div class="hud-stage l1" data-stage="0"><span class="dot"></span><span class="label"><b>L1 · Code Graph</b><small>tree-sitter → symbols + edges</small></span></div>
+    <div class="hud-stage l2" data-stage="1"><span class="dot"></span><span class="label"><b>L2 · Specify</b><small>LLM → grounded specs</small></span></div>
+    <div class="hud-stage l3" data-stage="2"><span class="dot"></span><span class="label"><b>L3 · Spec Graph</b><small>linked from real edges</small></span></div>
+    <div class="hud-stage l4" data-stage="3"><span class="dot"></span><span class="label"><b>L4 · Group Tree</b><small>summaries + embeddings</small></span></div>
+  </div>
+
+  <!-- Q&A dock -->
+  <div class="qa" id="qa">
+    <div class="qa-head"><span class="pulse"></span><span>Grounded Answer</span></div>
+    <div class="qa-q" id="qaQ">How does authentication work in this repo?</div>
+    <div class="qa-a" id="qaA"></div>
+    <div class="qa-conf"><span>CONFIDENCE</span><div class="bar"><i id="confBar"></i></div></div>
+  </div>
+
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <span class="eyebrow">Local-first · Zero cost · Multi-language</span>
+    <h1>Your codebase, <span class="grad">understood</span>.</h1>
+    <p class="lede">Spec-Atlas maps any repository into a living knowledge graph, generates grounded specs with an LLM, and serves them to humans and AI agents — turning structure into meaning.</p>
+    <div class="launch">
+      <span class="prompt">❯</span>
+      <input id="repoInput" type="text" placeholder="github.com/your-org/your-repo" spellcheck="false">
+      <button id="indexBtn">Index repo</button>
+    </div>
+    <div class="hero-hint">No repo handy? <span id="demoLink">Watch a live index →</span></div>
+    <div class="scroll-cue"><span>Watch it build</span><span class="line"></span></div>
+  </section>
+
+  <button class="replay" id="replay">↻ Replay index</button>
+
+<script>
+// ============ Theme toggle ============
+const themeToggle = document.getElementById('themeToggle');
+themeToggle.addEventListener('click', () => {
+  const cur = document.body.getAttribute('data-theme');
+  document.body.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+});
+
+// ============ Fast intro: particle convergence + snap reveal (~1.7s total) ============
+(function() {
+  const c = document.getElementById('introCanvas');
+  const ictx = c.getContext('2d');
+  let iDPR = Math.min(devicePixelRatio || 1, 2);
+  function sizeIntro() {
+    iDPR = Math.min(devicePixelRatio || 1, 2);
+    c.width = innerWidth * iDPR; c.height = innerHeight * iDPR;
+    c.style.width = innerWidth + 'px'; c.style.height = innerHeight + 'px';
+  }
+  sizeIntro();
+  addEventListener('resize', sizeIntro);
+
+  const cx = () => c.width / 2, cy = () => c.height / 2;
+  const mr = () => Math.min(c.width, c.height) * 0.05;
+  const m = mr();
+  // converge toward the 5 points of the brand mark
+  const T = [
+    { x: 0, y: 0 }, { x: -m * 1.3, y: -m * 0.85 }, { x: m * 1.4, y: -m * 1.0 },
+    { x: m * 1.05, y: m * 1.3 }, { x: -m * 1.0, y: m * 1.2 }
+  ];
+  const particles = [];
+  const N = 130;
+  for (let i = 0; i < N; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.max(innerWidth, innerHeight) * iDPR * (0.55 + Math.random() * 0.45);
+    const pick = T[Math.floor(Math.random() * T.length)];
+    particles.push({
+      sx: cx() + Math.cos(angle) * dist, sy: cy() + Math.sin(angle) * dist,
+      tx: cx() + pick.x, ty: cy() + pick.y,
+      delay: Math.random() * 180,
+      dur: 600 + Math.random() * 260,
+      size: 1 + Math.random() * 1.8
+    });
+  }
+  let start = null;
+  function frame(now) {
+    if (!start) start = now;
+    const t = now - start;
+    ictx.fillStyle = 'rgba(4,7,13,0.32)';
+    ictx.fillRect(0, 0, c.width, c.height);
+    particles.forEach(p => {
+      const pt = t - p.delay; if (pt < 0) return;
+      const prog = Math.min(1, pt / p.dur);
+      const ease = 1 - Math.pow(1 - prog, 4);
+      const x = p.sx + (p.tx - p.sx) * ease, y = p.sy + (p.ty - p.sy) * ease;
+      const bx = p.sx + (p.tx - p.sx) * Math.max(0, ease - 0.05);
+      const by = p.sy + (p.ty - p.sy) * Math.max(0, ease - 0.05);
+      ictx.strokeStyle = 'rgba(110,224,255,' + (0.55 * (1 - prog * 0.4)) + ')';
+      ictx.lineWidth = p.size * iDPR;
+      ictx.beginPath(); ictx.moveTo(bx, by); ictx.lineTo(x, y); ictx.stroke();
+      ictx.fillStyle = '#bdf3ff';
+      ictx.beginPath(); ictx.arc(x, y, p.size * iDPR * 0.55, 0, 7); ictx.fill();
+    });
+    if (t < 1300) requestAnimationFrame(frame);
+    else ictx.clearRect(0, 0, c.width, c.height);
+  }
+  requestAnimationFrame(frame);
+
+  setTimeout(() => document.getElementById('introMark').classList.add('revealed'), 680);
+  setTimeout(() => document.getElementById('introTitle').classList.add('revealed'), 780);
+  setTimeout(() => document.getElementById('introSub').classList.add('revealed'), 860);
+
+  setTimeout(() => {
+    document.getElementById('intro').classList.add('gone');
+    document.getElementById('hero').classList.add('show');
+  }, 1700);
+})();
+
+// ============ Scene: layered neural build-up ============
+const canvas = document.getElementById('scene');
+const ctx = canvas.getContext('2d');
+let W, H, DPR;
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = canvas.width = innerWidth * DPR;
+  H = canvas.height = innerHeight * DPR;
+  canvas.style.width = innerWidth + 'px';
+  canvas.style.height = innerHeight + 'px';
+}
+resize();
+addEventListener('resize', resize);
+
+function cssVar(name) { return getComputedStyle(document.body).getPropertyValue(name).trim(); }
+
+// Layer config: 4 stacked planes at different depths
+const LAYERS = [
+  { id: 'l1', color: () => cssVar('--l1'), z: 0.0,  count: 34, label: 'CODE GRAPH' },
+  { id: 'l2', color: () => cssVar('--l2'), z: 0.33, count: 18, label: 'SPECS' },
+  { id: 'l3', color: () => cssVar('--l3'), z: 0.66, count: 12, label: 'SPEC GRAPH' },
+  { id: 'l4', color: () => cssVar('--l4'), z: 1.0,  count: 6,  label: 'GROUPS' },
+];
+
+let nodes = [];      // {x,y,layer,born,baseX,baseY,r,pulse}
+let edges = [];      // {a,b,born,layer}
+let camZ = 0;        // camera depth pan
+let camTargetZ = 0;
+let phase = -1;      // -1 idle, 0..3 building layers, 4 interactive
+let phaseStart = 0;
+let interactive = false;
+let mouse = { x: 0.5, y: 0.5, tx: 0.5, ty: 0.5 };
+let fadeOut = 1;       // 1 = full visibility, ramps to 0 to settle the scene back to calm
+let fading = false;
+
+addEventListener('pointermove', e => {
+  mouse.tx = e.clientX / innerWidth;
+  mouse.ty = e.clientY / innerHeight;
+});
+
+// project a layer-plane point into screen space with fake 3D depth
+function project(nx, ny, z) {
+  // z 0..1 maps to scale + vertical offset; camZ pans which layer is "front"
+  const rel = z - camZ;                       // -1..1 relative depth
+  const scale = 1 / (1 + rel * 0.55);          // closer = bigger
+  const parX = (mouse.x - 0.5) * 40 * DPR * (1 - z * 0.5);
+  const parY = (mouse.y - 0.5) * 30 * DPR * (1 - z * 0.5);
+  const cx = W / 2, cy = H / 2;
+  const spread = Math.min(W, H) * 0.34;
+  const x = cx + (nx - 0.5) * spread * 2 * scale + parX - rel * 60 * DPR;
+  const y = cy + (ny - 0.5) * spread * 1.3 * scale + parY + rel * 80 * DPR + z * 30 * DPR;
+  return { x, y, scale, rel };
+}
+
+function seedLayer(li) {
+  const L = LAYERS[li];
+  const newNodes = [];
+  for (let i = 0; i < L.count; i++) {
+    // cluster nodes a bit for higher layers (fewer, grouped)
+    let nx, ny;
+    if (li >= 2) {
+      const c = Math.floor(i / Math.max(1, L.count / 3));
+      nx = 0.5 + (c - 1) * 0.28 + (Math.random() - 0.5) * 0.16;
+      ny = 0.5 + (Math.random() - 0.5) * 0.5;
+    } else {
+      nx = Math.random(); ny = Math.random();
+    }
+    nx = Math.max(0.04, Math.min(0.96, nx));
+    ny = Math.max(0.06, Math.min(0.94, ny));
+    const n = { baseX: nx, baseY: ny, layer: li, born: performance.now() + i * 28, r: li === 0 ? 2.2 : 3 + li, pulse: Math.random() * Math.PI * 2 };
+    nodes.push(n);
+    newNodes.push(nodes.length - 1);
+  }
+  // edges within layer
+  const within = li === 0 ? 1.6 : 1.1;
+  newNodes.forEach((idx, k) => {
+    const links = Math.random() < 0.7 ? 1 : 2;
+    for (let l = 0; l < links; l++) {
+      const tgt = newNodes[(k + 1 + Math.floor(Math.random() * (newNodes.length - 1))) % newNodes.length];
+      if (tgt !== idx) edges.push({ a: idx, b: tgt, born: performance.now() + (k + 4) * 30, layer: li, cross: false });
+    }
+  });
+  // cross-layer edges (linking up from previous layer) — "derived from real edges"
+  if (li > 0) {
+    const prev = nodes.filter(n => n.layer === li - 1);
+    newNodes.forEach(idx => {
+      if (Math.random() < 0.8 && prev.length) {
+        const pIdx = nodes.indexOf(prev[Math.floor(Math.random() * prev.length)]);
+        edges.push({ a: idx, b: pIdx, born: performance.now() + 200, layer: li, cross: true });
+      }
+    });
+  }
+}
+
+function startBuild() {
+  nodes = []; edges = []; camZ = 0; camTargetZ = 0; interactive = false;
+  phase = 0; phaseStart = performance.now();
+  document.getElementById('hud').classList.add('show');
+  document.getElementById('qa').classList.remove('show');
+  document.getElementById('replay').classList.remove('show');
+  setStageUI(0);
+  seedLayer(0);
+}
+
+function setStageUI(active) {
+  document.querySelectorAll('.hud-stage').forEach((el, i) => {
+    el.classList.toggle('active', i === active);
+    el.classList.toggle('done', i < active);
+  });
+}
+
+const PHASE_DUR = 1700; // ms per layer
+function tickPhases(now) {
+  if (phase < 0 || phase > 3) return;
+  const elapsed = now - phaseStart;
+  // camera follows the layer being built
+  camTargetZ = LAYERS[phase].z;
+  if (elapsed > PHASE_DUR) {
+    phase++;
+    phaseStart = now;
+    if (phase <= 3) {
+      setStageUI(phase);
+      seedLayer(phase);
+    } else {
+      // done building → interactive + Q&A
+      document.querySelectorAll('.hud-stage').forEach(el => { el.classList.remove('active'); el.classList.add('done'); });
+      interactive = true;
+      camTargetZ = 0.5;
+      setTimeout(runQA, 600);
+      document.getElementById('replay').classList.add('show');
+    }
+  }
+}
+
+function draw(now) {
+  ctx.clearRect(0, 0, W, H);
+  camZ += (camTargetZ - camZ) * 0.05;
+  mouse.x += (mouse.tx - mouse.x) * 0.06;
+  mouse.y += (mouse.ty - mouse.y) * 0.06;
+
+  if (fading) {
+    fadeOut = Math.max(0, fadeOut - 0.018);
+    if (fadeOut <= 0) {
+      fading = false; fadeOut = 1;
+      nodes = []; edges = []; phase = -1; interactive = false; camTargetZ = 0;
+      document.getElementById('hud').classList.remove('show');
+    }
+  }
+
+  // draw edges first
+  edges.forEach(e => {
+    const na = nodes[e.a], nb = nodes[e.b];
+    if (!na || !nb) return;
+    const appear = Math.min(1, Math.max(0, (now - e.born) / 500));
+    if (appear <= 0) return;
+    const pa = project(na.baseX, na.baseY, LAYERS[na.layer].z);
+    const pb = project(nb.baseX, nb.baseY, LAYERS[nb.layer].z);
+    const col = e.cross ? cssVar('--cyan') : LAYERS[e.layer].color();
+    const depthFade = Math.max(0.12, 1 - Math.abs(LAYERS[e.layer].z - camZ) * 0.9);
+    ctx.globalAlpha = appear * depthFade * (e.cross ? 0.35 : 0.5) * fadeOut;
+    ctx.strokeStyle = col;
+    ctx.lineWidth = (e.cross ? 0.8 : 0.7) * DPR * pa.scale;
+    ctx.beginPath();
+    ctx.moveTo(pa.x, pa.y);
+    // slight curve
+    const mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2 - 14 * DPR;
+    ctx.quadraticCurveTo(mx, my, pb.x, pb.y);
+    ctx.stroke();
+    // signal pulse traveling along cross edges
+    if (e.cross && interactive) {
+      const t = (now / 1400 + (e.a % 7) / 7) % 1;
+      const sx = pa.x + (pb.x - pa.x) * t, sy = pa.y + (pb.y - pa.y) * t - Math.sin(t * Math.PI) * 14 * DPR;
+      ctx.globalAlpha = (1 - t) * depthFade * fadeOut;
+      ctx.fillStyle = cssVar('--cyan-bright');
+      ctx.beginPath(); ctx.arc(sx, sy, 1.6 * DPR, 0, 7); ctx.fill();
+    }
+  });
+
+  // draw nodes
+  nodes.forEach(n => {
+    const grow = Math.min(1, Math.max(0, (now - n.born) / 420));
+    if (grow <= 0) return;
+    const ease = 1 - Math.pow(1 - grow, 3);
+    const p = project(n.baseX, n.baseY, LAYERS[n.layer].z);
+    const col = LAYERS[n.layer].color();
+    const depthFade = Math.max(0.15, 1 - Math.abs(LAYERS[n.layer].z - camZ) * 0.85);
+    const r = n.r * DPR * p.scale * ease;
+    // glow
+    ctx.globalAlpha = depthFade * ease * 0.5 * fadeOut;
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(p.x, p.y, r * 3.5, 0, 7); ctx.fill();
+    // core
+    ctx.globalAlpha = depthFade * ease * fadeOut;
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.fill();
+    ctx.globalAlpha = depthFade * ease * fadeOut;
+    ctx.fillStyle = cssVar('--bg');
+    ctx.beginPath(); ctx.arc(p.x, p.y, r * 0.35, 0, 7); ctx.fill();
+  });
+
+  ctx.globalAlpha = 1;
+  tickPhases(now);
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+
+// ============ Q&A typewriter + citation ============
+const answerParts = [
+  { t: "Authentication is handled in the " },
+  { cite: "auth/tokens.py:24", layer: 1 },
+  { t: " module. Login flows through " },
+  { cite: "auth/session.py:88", layer: 3 },
+  { t: ", which validates credentials and issues a signed token. The token contract is grounded in " },
+  { cite: "auth/tokens.py:12", layer: 0 },
+  { t: "." },
+];
+function runQA() {
+  document.getElementById('qa').classList.add('show');
+  const aEl = document.getElementById('qaA');
+  aEl.innerHTML = '';
+  let pi = 0, ci = 0;
+  function step() {
+    if (pi >= answerParts.length) {
+      document.getElementById('confBar').style.width = '92%';
+      setTimeout(() => { fading = true; }, 6000);
+      return;
+    }
+    const part = answerParts[pi];
+    if (part.cite) {
+      const chip = document.createElement('span');
+      chip.className = 'cite';
+      chip.textContent = '◆ ' + part.cite;
+      chip.onclick = () => flyToCitation();
+      aEl.appendChild(chip);
+      flyToCitation();
+      pi++; setTimeout(step, 420);
+    } else {
+      if (ci < part.t.length) {
+        aEl.appendChild(document.createTextNode(part.t[ci]));
+        ci++; setTimeout(step, 16);
+      } else { ci = 0; pi++; setTimeout(step, 60); }
+    }
+  }
+  step();
+}
+function flyToCitation() {
+  // nudge camera to a random layer + jolt to simulate "flying to node"
+  camTargetZ = Math.random() * 0.8;
+  setTimeout(() => { camTargetZ = 0.5; }, 700);
+}
+
+// ============ Triggers ============
+function trigger() {
+  // wait for intro to finish if needed
+  if (document.getElementById('intro').classList.contains('gone')) startBuild();
+  else setTimeout(trigger, 300);
+}
+document.getElementById('indexBtn').addEventListener('click', trigger);
+document.getElementById('demoLink').addEventListener('click', trigger);
+document.getElementById('repoInput').addEventListener('keydown', e => { if (e.key === 'Enter') trigger(); });
+document.getElementById('replay').addEventListener('click', startBuild);
+
+// the scene stays calm until the user explicitly clicks "Index repo" —
+// no ambient motion behind the hero content.
+</script>
+</body>
+</html>
