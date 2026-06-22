@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
+from spec_atlas.db.analysis import Edge, Node
 from spec_atlas.spec.store import SpecStore
+from spec_atlas.specify.engine import SpecifyEngine
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/specs", tags=["specs"])
 
@@ -21,6 +27,26 @@ def get_spec_session(request: Request) -> Session:
         yield session
     finally:
         session.close()
+
+
+def get_analysis_session(request: Request) -> Session:
+    """Get Analysis DB session from app state."""
+    factory = request.app.state.analysis_session_factory
+    if not factory:
+        raise HTTPException(status_code=503, detail="Analysis database not configured")
+    session = factory()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+def get_llm_provider(request: Request):
+    """Get LLM provider from app state."""
+    provider = request.app.state.llm_provider
+    if not provider:
+        raise HTTPException(status_code=503, detail="LLM provider not configured")
+    return provider
 
 
 class SpecDetailResponse(BaseModel):
@@ -232,6 +258,123 @@ def update_spec_status(
         raise HTTPException(status_code=404, detail="Spec not found") from None
 
     return SpecDetailResponse.model_validate(spec)
+
+
+class GenerateSpecRequest(BaseModel):
+    """Request to generate a spec for a component."""
+
+    repo: str = Query(...)
+
+
+class GenerateSpecResponse(BaseModel):
+    """Response after generating a spec."""
+
+    component_ref: str
+    version: int
+    status: str
+    content: dict
+    provenance: list
+    created_at: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+@router.post("/generate/{component_ref}", response_model=GenerateSpecResponse)
+def generate_spec(
+    component_ref: str = Path(...),
+    repo: str = Query(...),
+    spec_session: Session = Depends(get_spec_session),  # noqa: B008
+    analysis_session: Session = Depends(get_analysis_session),  # noqa: B008
+    llm_provider=Depends(get_llm_provider),  # noqa: B008
+) -> GenerateSpecResponse:
+    """Generate or retrieve a spec for a component (generate-on-demand).
+
+    If spec exists: return cached (no LLM call).
+    If not: generate via LLM, persist as v1, return.
+
+    Args:
+        component_ref: Component reference (qualified name).
+        repo: Repository name.
+        spec_session: Spec DB session.
+        analysis_session: Analysis DB session.
+        llm_provider: LLM provider for generation.
+
+    Returns:
+        The spec (generated or cached).
+
+    Raises:
+        HTTPException: 404 if component not found, 500 on generation error.
+    """
+    if not spec_session or not analysis_session:
+        raise HTTPException(status_code=503, detail="Database session not available")
+
+    store = SpecStore(spec_session)
+
+    # Check if spec already exists (cache hit)
+    existing = store.get_current("default", repo, component_ref)
+    if existing:
+        logger.info(f"Spec cache hit: {component_ref} v{existing.version}")
+        return GenerateSpecResponse.model_validate(existing)
+
+    # Spec doesn't exist — generate via LLM
+    logger.info(f"Generating spec for {component_ref}")
+
+    try:
+        # Fetch focal node from analysis DB
+        focal_node = (
+            analysis_session.query(Node).filter(Node.qualified_name == component_ref).first()
+        )
+
+        if not focal_node:
+            raise HTTPException(
+                status_code=404, detail=f"Component not found: {component_ref}"
+            ) from None
+
+        # Fetch neighbors (related nodes) and edges
+        neighbors = (
+            analysis_session.query(Node)
+            .join(
+                Edge,
+                (Edge.src_node_id == Node.id) | (Edge.dst_node_id == Node.id),
+            )
+            .filter((Edge.src_node_id == focal_node.id) | (Edge.dst_node_id == focal_node.id))
+            .limit(20)
+            .all()
+        )
+
+        edges = (
+            analysis_session.query(Edge)
+            .filter((Edge.src_node_id == focal_node.id) | (Edge.dst_node_id == focal_node.id))
+            .limit(10)
+            .all()
+        )
+
+        # Generate spec via LLM
+        spec_content, provenance = SpecifyEngine.generate(
+            focal_node=focal_node,
+            neighbors=neighbors,
+            edges=edges,
+            llm_provider=llm_provider,
+        )
+
+        # Persist the spec (version=1, status=draft)
+        spec = store.create(
+            user_id="default",
+            repo=repo,
+            component_ref=component_ref,
+            spec_content=spec_content,
+            provenance=provenance,
+            status="draft",
+        )
+
+        logger.info(f"Spec generated and persisted: {component_ref} v{spec.version}")
+        return GenerateSpecResponse.model_validate(spec)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to generate spec for {component_ref}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to generate spec: {str(e)}") from e
 
 
 class SpecGraphResponse(BaseModel):

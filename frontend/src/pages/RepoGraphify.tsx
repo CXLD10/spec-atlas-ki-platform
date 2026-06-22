@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import * as THREE from 'three'
 import { TopBar } from '../components/layout/TopBar'
+import { useGraphNodes, useGraphEdges } from '../api/useGraph'
 import './RepoGraphify.css'
 
 // OrbitControls for camera manipulation
@@ -94,16 +95,23 @@ interface GraphEdge {
   layer?: 'L1' | 'L3' | 'L4'
 }
 
-// Color scheme for node types
-const NODE_COLORS: { [key: string]: number } = {
-  module: 0x58a6ff,    // Cyan - L1
-  class: 0x79c0ff,     // Light cyan
-  function: 0x58a6ff,  // Cyan
-  method: 0x3fb950,    // Green - L3
-  interface: 0xd291f2, // Purple - L4
+// Color scheme for layers
+const LAYER_COLORS: { [key: string]: number } = {
+  L1: 0x6b7280,        // Gray - Code/Sources
+  L3: 0x10b981,        // Green - Specs
+  L4: 0x3b82f6,        // Blue - Groups
 }
 
-const DEFAULT_NODE_COLOR = 0x8b949e // Gray for unknown
+const DEFAULT_NODE_COLOR = 0x6b7280 // Gray for unknown
+
+// Fallback for kind-based colors if layer is not set
+const NODE_COLORS: { [key: string]: number } = {
+  module: 0x58a6ff,
+  class: 0x79c0ff,
+  function: 0x58a6ff,
+  method: 0x3fb950,
+  interface: 0xd291f2,
+}
 
 export default function RepoGraphify() {
   const { repoId = 'default' } = useParams<{ repoId: string }>()
@@ -112,11 +120,7 @@ export default function RepoGraphify() {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
 
-  const [nodes, setNodes] = useState<GraphNode[]>([])
-  const [edges, setEdges] = useState<GraphEdge[]>([])
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [stats, setStats] = useState({ nodes: 0, edges: 0 })
   const [layerVisibility, setLayerVisibility] = useState({
     L1: true,
@@ -124,34 +128,28 @@ export default function RepoGraphify() {
     L4: true,
   })
 
-  // Fetch graph data
-  useEffect(() => {
-    const fetchGraph = async () => {
-      try {
-        const [nodesRes, edgesRes] = await Promise.all([
-          fetch('http://localhost:8000/api/graph/nodes?limit=500'),
-          fetch('http://localhost:8000/api/graph/edges?limit=1000'),
-        ])
+  // Fetch graph data using hooks
+  const visibleLayers = Object.entries(layerVisibility)
+    .filter(([_, visible]) => visible)
+    .map(([layer]) => layer)
 
-        if (!nodesRes.ok || !edgesRes.ok) {
-          throw new Error('Failed to fetch graph data')
-        }
+  const {
+    data: nodesData = [],
+    isLoading: nodesLoading,
+    error: nodesError,
+  } = useGraphNodes(repoId, visibleLayers)
 
-        const nodesData = await nodesRes.json()
-        const edgesData = await edgesRes.json()
+  const {
+    data: edgesData = [],
+    isLoading: edgesLoading,
+    error: edgesError,
+  } = useGraphEdges(repoId)
 
-        setNodes(nodesData)
-        setEdges(edgesData)
-        setStats({ nodes: nodesData.length, edges: edgesData.length })
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
-    }
+  const loading = nodesLoading || edgesLoading
+  const error = nodesError?.message || edgesError?.message || null
 
-    fetchGraph()
-  }, [])
+  const nodes = nodesData
+  const edges = edgesData
 
   // Update stats when layer visibility changes
   useEffect(() => {
@@ -220,7 +218,9 @@ export default function RepoGraphify() {
 
     // Initialize nodes with force-directed layout
     visibleNodes.forEach((node) => {
-      const color = NODE_COLORS[node.kind] || DEFAULT_NODE_COLOR
+      // Use layer-based colors, fall back to kind-based colors
+      const layer = node.layer || 'L1'
+      const color = LAYER_COLORS[layer] || NODE_COLORS[node.kind] || DEFAULT_NODE_COLOR
       const material = new THREE.MeshPhongMaterial({
         color,
         emissive: 0x000000,
@@ -328,7 +328,8 @@ export default function RepoGraphify() {
 
       // Reset colors
       Object.values(nodeMeshes).forEach((mesh) => {
-        const color = NODE_COLORS[mesh.userData.node.kind] || DEFAULT_NODE_COLOR
+        const layer = mesh.userData.node.layer || 'L1'
+        const color = LAYER_COLORS[layer] || NODE_COLORS[mesh.userData.node.kind] || DEFAULT_NODE_COLOR
         ;(mesh.material as THREE.MeshPhongMaterial).color.setHex(color)
         ;(mesh.material as THREE.MeshPhongMaterial).emissive.setHex(0x000000)
       })
@@ -590,22 +591,22 @@ export default function RepoGraphify() {
           </div>
 
           <div className="info-legend">
-            <h4>Node Types</h4>
+            <h4>Layers</h4>
             <div className="legend-items">
               <div className="legend-item">
-                <div className="legend-color" style={{ backgroundColor: '#58a6ff' }} />
-                <span>Module/Function (L1)</span>
+                <div className="legend-color" style={{ backgroundColor: '#6b7280' }} />
+                <span>L1 Code Graph (Sources)</span>
               </div>
               <div className="legend-item">
-                <div className="legend-color" style={{ backgroundColor: '#3fb950' }} />
-                <span>Spec (L3)</span>
+                <div className="legend-color" style={{ backgroundColor: '#10b981' }} />
+                <span>L3 Spec Graph</span>
               </div>
               <div className="legend-item">
-                <div className="legend-color" style={{ backgroundColor: '#d291f2' }} />
-                <span>Group (L4)</span>
+                <div className="legend-color" style={{ backgroundColor: '#3b82f6' }} />
+                <span>L4 Groups</span>
               </div>
               <div className="legend-item">
-                <div className="legend-color" style={{ backgroundColor: '#8b949e' }} />
+                <div className="legend-color" style={{ backgroundColor: '#6b7280' }} />
                 <span>Unknown</span>
               </div>
             </div>
