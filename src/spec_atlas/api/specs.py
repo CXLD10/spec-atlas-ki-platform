@@ -495,9 +495,10 @@ def verify_spec(
     spec_session: Session = Depends(get_spec_session),  # noqa: B008
     analysis_session: Session = Depends(get_analysis_session),  # noqa: B008
 ) -> VerifySpecResponse:
-    """Verify that a spec's claims are grounded in source code.
+    """Verify that a spec's claims are grounded in source code (idempotent).
 
-    Runs rule-based checks on the spec and updates status if verification passes.
+    Uses SpecStore to run rule-based checks and update status.
+    Safe to call multiple times (returns cached result if already verified).
 
     Args:
         component_ref: Component reference (qualified name).
@@ -510,43 +511,36 @@ def verify_spec(
         VerifySpecResponse with confidence score, pass/fail, and issues.
 
     Raises:
-        HTTPException: 404 if spec not found, 503 if verifier unavailable.
+        HTTPException: 404 if spec not found, 503 if databases unavailable.
     """
-    from spec_atlas.verify.verifier import SpecVerifier
-
     if not spec_session:
         raise HTTPException(status_code=503, detail="Spec database not available")
 
     if not analysis_session:
         raise HTTPException(status_code=503, detail="Analysis database not available")
 
-    # Fetch spec
+    # Use SpecStore for verification (idempotent)
     store = SpecStore(spec_session)
-    spec = store.get_version("default", repo, component_ref, version)
+    try:
+        result = store.verify_spec(
+            user_id="default",
+            repo=repo,
+            component_ref=component_ref,
+            version=version,
+            analysis_session=analysis_session,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from None
 
+    # Get updated spec to return current status
+    spec = store.get_version("default", repo, component_ref, version)
     if not spec:
         raise HTTPException(status_code=404, detail="Spec not found") from None
-
-    # Run verification
-    verifier = SpecVerifier(analysis_session)
-    result = verifier.verify(spec, repo, component_ref)
-
-    # Update spec status based on verification result
-    # Mark as verified if confidence > 0.8 and no errors
-    if result.confidence > 0.8 and result.is_grounded:
-        new_status = "verified"
-    elif result.confidence >= 0.5:
-        new_status = "draft"  # Can be re-verified later
-    else:
-        new_status = "draft"  # Low confidence, needs review
-
-    spec.status = new_status
-    spec_session.commit()
 
     return VerifySpecResponse(
         component_ref=component_ref,
         version=version,
-        status=new_status,
+        status=spec.status,
         confidence=result.confidence,
         is_grounded=result.is_grounded,
         issues=[
