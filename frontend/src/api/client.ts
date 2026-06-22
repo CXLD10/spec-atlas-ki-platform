@@ -92,6 +92,31 @@ export interface SourcesResponse {
   sources: Source[]
 }
 
+export interface GeneratedSpec {
+  spec_id: string
+  node_id: string
+  content: string
+  version: number
+  status?: 'draft' | 'review' | 'approved'
+  created_at?: string
+  citations?: Array<{
+    file: string
+    start_line: number
+    end_line: number
+  }>
+}
+
+export interface GeneratedSpecsListResponse {
+  specs: Array<{
+    spec_id: string
+    node_id: string
+    title: string
+    version: number
+    created_at: string
+    citations?: any[]
+  }>
+}
+
 class ApiClient {
   private baseUrl: string
 
@@ -244,6 +269,16 @@ class ApiClient {
   async getNodeNeighbors(projectId: string, nodeId: string): Promise<any> {
     const query = new URLSearchParams({ project_id: projectId })
     const path = `/api/graph/node/${nodeId}/neighbors?${query}`
+    return this.request('GET', path)
+  }
+
+  async getGeneratedSpecs(projectId: string): Promise<GeneratedSpecsListResponse> {
+    const path = `/api/projects/${projectId}/specs`
+    return this.request('GET', path)
+  }
+
+  async getGeneratedSpec(projectId: string, specId: string): Promise<GeneratedSpec> {
+    const path = `/api/projects/${projectId}/specs/${specId}`
     return this.request('GET', path)
   }
 }
