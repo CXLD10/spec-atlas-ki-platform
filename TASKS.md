@@ -14,7 +14,7 @@
 ### Acceptance Criteria
 - [ ] Backend app starts cleanly; all API routers mounted
 - [ ] Real ingest pipeline runs end-to-end (not simulated progress)
-- [ ] Frontend wires to backend (routes/fields match API_CONTRACT.md)
+- [x] Frontend wires to backend (routes/fields match API_CONTRACT.md)
 - [ ] Live data flows through code → parse → L1 graph → retrieval
 
 ### Tasks
@@ -24,6 +24,18 @@
 
 ### Gate G0
 ✓ End-to-end ingest + ask on live data works (no hardcoded responses)
+
+#### HANDOFF B-0.1 (Frontend Wiring to API_CONTRACT)
+Changed: `frontend/src/api/client.ts`, `useAsk.ts`, `pages/Landing.tsx`, `RepoAsk.tsx`
+- Fixed AskRequest to use `project_id` instead of `repo`
+- Updated Claim interface to include `source` field
+- Consolidated all API calls to use centralized `client.ts` (removed raw fetch from Landing and RepoAsk)
+- All TypeScript checks pass (`npm run type-check` clean), no new dependencies
+- Acceptance criteria met: routes/fields match API_CONTRACT.md, no raw fetch() in pages
+
+Test: `npm run type-check` (passes) && `npm run dev` (start server, manually verify progress page updates and ask returns citations with sources)
+
+Next: B-0.2 (new project UI) — ready to start. A-0.1 backend wiring must complete in parallel for Gate G0.
 
 ---
 
