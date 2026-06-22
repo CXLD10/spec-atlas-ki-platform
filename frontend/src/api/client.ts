@@ -79,6 +79,19 @@ export interface HealthResponse {
   embed: string
 }
 
+export interface Source {
+  source_id: string
+  type: 'code' | 'pdf' | 'markdown' | 'excel' | 'jira' | 'git_history'
+  name: string
+  status: 'queued' | 'ingesting' | 'done' | 'failed'
+  progress?: number
+  error?: string
+}
+
+export interface SourcesResponse {
+  sources: Source[]
+}
+
 class ApiClient {
   private baseUrl: string
 
@@ -166,6 +179,50 @@ class ApiClient {
 
   async health(): Promise<HealthResponse> {
     return this.request('GET', '/health')
+  }
+
+  async listSources(projectId: string): Promise<Source[]> {
+    const response = await this.request<SourcesResponse>(
+      'GET',
+      `/api/projects/${projectId}/sources`
+    )
+    return response.sources
+  }
+
+  async addCodeSource(projectId: string, repoUrl: string): Promise<IngestResponse> {
+    return this.request('POST', '/api/ingest', {
+      project_id: projectId,
+      repo_url: repoUrl,
+    })
+  }
+
+  async uploadPDFSource(
+    projectId: string,
+    file: File
+  ): Promise<IngestResponse> {
+    const formData = new FormData()
+    formData.append('project_id', projectId)
+    formData.append('source_type', 'pdf')
+    formData.append('file', file)
+
+    const url = `${this.baseUrl}/api/ingest`
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.detail || errorMessage
+      } catch {
+        // Ignore JSON parse errors
+      }
+      throw new Error(errorMessage)
+    }
+
+    return response.json()
   }
 }
 
