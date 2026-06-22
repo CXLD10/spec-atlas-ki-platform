@@ -16,10 +16,11 @@ function renderField(field: SpecField | undefined, index?: number) {
       <p className="field-text">{field.text}</p>
       {field.file && field.start_line && (
         <CitationChip
-          file={field.file}
-          startLine={field.start_line}
-          endLine={field.end_line}
-          layer={2}
+          source={
+            field.end_line && field.end_line !== field.start_line
+              ? `${field.file}:${field.start_line}-${field.end_line}`
+              : `${field.file}:${field.start_line}`
+          }
         />
       )}
     </div>
