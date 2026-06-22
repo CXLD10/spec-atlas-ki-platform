@@ -33,10 +33,10 @@ class TestMCPServerScaffold:
     def test_handler_methods_exist(self) -> None:
         """Server has handler methods for all tools."""
         server = SpecAtlasMCPServer()
-        assert hasattr(server, "_search_handler")
+        assert hasattr(server, "_search_knowledge_handler")
         assert hasattr(server, "_get_spec_handler")
-        assert hasattr(server, "_get_group_handler")
-        assert hasattr(server, "_list_stale_specs_handler")
+        assert hasattr(server, "_get_graph_handler")
+        assert hasattr(server, "_ask_question_handler")
         assert hasattr(server, "_handle_tool_call")
 
     def test_tool_schemas_structure(self) -> None:
