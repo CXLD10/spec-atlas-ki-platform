@@ -217,7 +217,7 @@ export function RepoAsk() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
 
       {/* Subheader */}
       <div className="flex-shrink-0 border-b border-slate-700 bg-slate-950 px-6 py-4">

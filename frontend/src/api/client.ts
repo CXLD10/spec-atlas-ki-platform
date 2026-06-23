@@ -286,6 +286,10 @@ class ApiClient {
     })
   }
 
+  async reingestSource(repoUrl: string): Promise<IngestResponse> {
+    return this.postIngest(repoUrl)
+  }
+
   async getIngestStatus(jobId: string): Promise<IngestStatus> {
     return this.request('GET', `/api/ingest/${jobId}`)
   }

@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, RefreshCw } from 'lucide-react'
 import { useSource, useCards } from '../lib/hooks'
+import { client } from '../api/client'
 import { TypeBadge } from '../components/sources/TypeBadge'
 import { StatusPill } from '../components/sources/StatusPill'
 import './SourceDetail.css'
@@ -10,10 +12,25 @@ export function SourceDetail() {
   const navigate = useNavigate()
   const { data: source, isLoading: loadingSource } = useSource(id)
   const { data: allCards = [] } = useCards()
+  const [isReingestingLoading, setIsReingestingLoading] = useState(false)
 
   const relatedCards = allCards.filter((c) =>
     c.provenance.some((p) => p.ref === source?.name)
   )
+
+  const handleReingest = async () => {
+    if (!source?.subtitle) return
+    setIsReingestingLoading(true)
+    try {
+      const result = await client.reingestSource(source.subtitle)
+      navigate(`/index/${result.job_id}`)
+    } catch (error) {
+      console.error('Reingest failed:', error)
+      alert('Reingest failed. Check the console for details.')
+    } finally {
+      setIsReingestingLoading(false)
+    }
+  }
 
   if (loadingSource) {
     return <div className="source-detail-loading">Loading source…</div>
@@ -48,9 +65,13 @@ export function SourceDetail() {
             <StatusPill source={source} />
           </div>
         </div>
-        <button className="reingest-btn">
-          <RefreshCw size={16} />
-          Re-ingest
+        <button
+          className="reingest-btn"
+          onClick={handleReingest}
+          disabled={isReingestingLoading}
+        >
+          <RefreshCw size={16} style={{ animation: isReingestingLoading ? 'spin 1s linear infinite' : 'none' }} />
+          {isReingestingLoading ? 'Reingesting...' : 'Re-ingest'}
         </button>
       </div>
 

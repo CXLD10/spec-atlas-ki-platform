@@ -75,10 +75,24 @@
   flex-shrink: 0;
 }
 
-.reingest-btn:hover {
+.reingest-btn:hover:not(:disabled) {
   border-color: var(--primary);
   color: var(--primary);
   background: var(--primary-soft);
+}
+
+.reingest-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .source-progress {
