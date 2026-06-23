@@ -139,7 +139,7 @@ export function Inspector({ node, allNodes, onSelectNode }: InspectorProps) {
       <footer className="inspector-footer">
         <button
           className="inspector-btn"
-          onClick={() => navigate(`/ask?scope=${encodeURIComponent(node.id)}`)}
+          onClick={() => navigate(`/ask?scope=${encodeURIComponent(node.label || node.id)}`)}
         >
           Ask Atlas about this
         </button>
