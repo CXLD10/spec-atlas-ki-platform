@@ -5,7 +5,7 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  transition: all 0.3s ease;
+  transition: width 0.3s ease;
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
@@ -65,8 +65,6 @@
   flex: 1;
   min-width: 0;
   height: 40px;
-  opacity: 0;
-  pointer-events: none;
 }
 
 .sidebar-home:hover {
@@ -94,22 +92,17 @@
   text-overflow: ellipsis;
 }
 
-/* When expanded (248px) - show as overlay panel */
-.sidebar[style*="248px"] {
+/* EXPANDED state (not collapsed) */
+.sidebar:not(.collapsed) {
+  width: 248px;
   background: rgba(13, 17, 23, 0.95);
   backdrop-filter: blur(8px);
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 2px 0 16px rgba(0, 0, 0, 0.3);
 }
 
-.sidebar[style*="248px"] .sidebar-header {
-  background: transparent;
+.sidebar:not(.collapsed) .sidebar-header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.sidebar[style*="248px"] .sidebar-home {
-  opacity: 1;
-  pointer-events: auto;
 }
 
 .sidebar-nav {
@@ -121,7 +114,7 @@
   gap: 0;
 }
 
-.sidebar[style*="248px"] .sidebar-nav {
+.sidebar:not(.collapsed) .sidebar-nav {
   padding: 1rem 0.5rem;
 }
 
@@ -145,27 +138,12 @@
   text-transform: uppercase;
   color: var(--dim);
   margin-bottom: 0.25rem;
-  opacity: 0;
-  height: 0;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.sidebar[style*="248px"] .nav-group-label {
-  opacity: 1;
-  height: auto;
 }
 
 .nav-group-divider {
   height: 1px;
   background: rgba(255, 255, 255, 0.1);
   margin: 0.5rem 0;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.sidebar[style*="248px"] .nav-group-divider {
-  opacity: 1;
 }
 
 .nav-item {
@@ -182,7 +160,7 @@
   border-left: 3px solid transparent;
 }
 
-.sidebar[style*="248px"] .nav-item {
+.sidebar:not(.collapsed) .nav-item {
   justify-content: flex-start;
 }
 
@@ -214,14 +192,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  opacity: 0;
-  width: 0;
-  transition: all 0.3s ease;
-}
-
-.sidebar[style*="248px"] .nav-label {
-  opacity: 1;
-  width: auto;
 }
 
 .sidebar-footer {
@@ -236,7 +206,7 @@
   transition: all 0.3s ease;
 }
 
-.sidebar[style*="248px"] .sidebar-footer {
+.sidebar:not(.collapsed) .sidebar-footer {
   flex-direction: row;
   justify-content: space-between;
 }
@@ -256,12 +226,6 @@
   gap: 0.5rem;
   font-size: 0.75rem;
   color: var(--mid);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.sidebar[style*="248px"] .footer-label {
-  opacity: 1;
 }
 
 .footer-label.healthy {
