@@ -364,8 +364,10 @@ export function GraphCanvas3D({ nodes, edges, onSelectNode, selectedNodeId }: Gr
     }
     // selectedNodeId intentionally excluded: handled per-frame inside animate()
     // so selection doesn't tear down and rebuild the whole WebGL scene.
+    // Use nodes.length/edges.length instead of array references to avoid
+    // rebuilding when parent component re-renders with new array instances.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, edges, onSelectNode])
+  }, [nodes.length, edges.length, onSelectNode])
 
   return <div ref={mountRef} className="graph-canvas-3d" role="img" aria-label="Knowledge graph" />
 }
