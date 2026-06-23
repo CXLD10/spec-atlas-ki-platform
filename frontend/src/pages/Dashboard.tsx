@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { GitBranch, MessageSquare, FileText, Plug } from 'lucide-react'
 import { useSources } from '../lib/hooks'
 import { OmniIngest } from '../components/ingest/OmniIngest'
 import { SourceCard } from '../components/sources/SourceCard'
@@ -129,22 +130,22 @@ export function Dashboard() {
           <h2>Capabilities</h2>
           <div className="caps-grid">
             <button className="cap-tile" onClick={() => navigate('/graph')}>
-              <div className="cap-icon">◆</div>
+              <div className="cap-icon"><GitBranch size={22} /></div>
               <h3>Knowledge Graph</h3>
               <p>Explore domains, specs, and relationships in 3D.</p>
             </button>
             <button className="cap-tile" onClick={() => navigate('/ask')}>
-              <div className="cap-icon">💬</div>
+              <div className="cap-icon"><MessageSquare size={22} /></div>
               <h3>Ask Atlas</h3>
               <p>Ask questions. Get grounded answers with citations.</p>
             </button>
             <button className="cap-tile" onClick={() => navigate('/specify')}>
-              <div className="cap-icon">✓</div>
+              <div className="cap-icon"><FileText size={22} /></div>
               <h3>Specify</h3>
               <p>Generate knowledge cards for any entity with one click.</p>
             </button>
             <button className="cap-tile" onClick={() => navigate('/mcp')}>
-              <div className="cap-icon">⚙</div>
+              <div className="cap-icon"><Plug size={22} /></div>
               <h3>MCP Server</h3>
               <p>Integration point for your CI/CD and IDE tools.</p>
             </button>

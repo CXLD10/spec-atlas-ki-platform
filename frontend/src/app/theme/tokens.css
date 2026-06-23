@@ -49,6 +49,37 @@
   --cyan-glow: rgba(68, 147, 248, 0.4);
 }
 
+/* Light mode token overrides */
+[data-theme="light"] {
+  --bg: #ffffff;
+  --bg-1: #f6f8fa;
+  --panel: #f6f8fa;
+  --panel-2: #eaeef2;
+
+  --border: #d0d7de;
+  --hair: #d8dee4;
+  --border-soft: #e1e7ec;
+
+  --hi: #1f2328;
+  --mid: #57606a;
+  --dim: #6e7781;
+  --faint: #8c959f;
+
+  --primary: #0969da;
+  --primary-soft: rgba(9, 105, 218, 0.1);
+
+  --l1: #0969da;
+  --l3: #1a7f37;
+  --l4: #8957e5;
+
+  --amber: #9e6a03;
+  --rose: #cf222e;
+
+  --cyan: #0969da;
+  --cyan-bright: #0860ca;
+  --cyan-glow: rgba(9, 105, 218, 0.3);
+}
+
 /* Motion timings (exact, from prototype feedback iterations) */
 :root {
   /* Intro particle convergence */

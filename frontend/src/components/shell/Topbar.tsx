@@ -30,7 +30,7 @@ export function Topbar() {
         onClick={() => navigate('/')}
         title="Go to Dashboard"
       >
-        <span className="topbar-logo">◆</span>
+        <img src="/spec-atlas-logo.png" alt="Spec-Atlas" className="topbar-logo" />
         <span className="breadcrumb-text">spec-atlas</span>
         {location.pathname !== '/' && (
           <>
