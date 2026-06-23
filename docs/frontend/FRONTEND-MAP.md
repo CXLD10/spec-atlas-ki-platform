@@ -95,6 +95,42 @@
 - **Chunking:** Three.js and React Router split into separate chunks
 - **TypeScript:** Strict mode, v5.3.0
 
+---
+
+## Document & KB Endpoints (Verify or Implement — P1)
+
+**Backend status:** Repo ingest via `/api/ingest` is live. PDF/Markdown adapters exist in backend. Specs endpoints serve code specs.
+
+**Frontend needs (mark `// BACKEND-DEP:` in client if missing):**
+
+| Endpoint | Purpose | Status |
+|---|---|---|
+| `POST /api/documents` (multipart) | Upload PDF/XLSX/MD | **NEEDED** — adapters exist, needs HTTP route |
+| `GET /api/documents` | List uploaded documents | **NEEDED** |
+| `GET /api/documents/:id` | Get one document metadata | **NEEDED** |
+| `GET /api/documents/:id/status` | Document ingestion progress | **NEEDED** (may reuse /api/ingest/:jobId/status) |
+| `GET /api/sources` | List both repos + documents (unified) | **NEEDED** (or merge /api/documents + repo listing) |
+| `GET /api/sources/:id` | Get source (repo or document) | **NEEDED** |
+| `GET /api/kb` | List knowledge cards/specs (all) | **NEEDS VERIFY** (may map to `/api/specs` listing endpoint) |
+| `GET /api/kb/:ref` | One knowledge card/spec + markdown | **VERIFY** (map to `/api/specs/{component_ref}` + markdown field) |
+| `GET /api/source-snippet?doc=:id&page=:n` | Citation preview (file:line or p.N) | **NEEDED** |
+
+**Known live endpoints:**
+- `POST /api/ingest` {repo_url} → JobStatus
+- `GET /api/ingest/:jobId/status` → JobStatus
+- `GET /api/specs/{component_ref}` → Spec (has summary, inputs, outputs, etc.)
+- `GET /api/specs/graph/{component_ref}` → relations
+- `GET /api/groups[/:id]` → Group/domain summaries
+- `POST /api/ask` {question, project_id} → answer + claims
+- `GET /health` → status
+
+**Frontend strategy:**
+- Ingest: use `/api/ingest` for repos; create `/api/documents` POST for files (POST endpoint will wire the adapters).
+- Sources: create a `/api/sources` endpoint that unions repo + document lists, or list documents + query repo separately.
+- KB: map `/api/kb/:ref` to `/api/specs/:ref` + ensure markdown field is populated.
+- Progress: reuse `/api/ingest/:jobId/status` for document uploads if document post returns same JobStatus.
+- Mock fallback: if VITE_API_URL is empty or endpoints fail, return MOCK_SOURCES, MOCK_CARDS, etc.
+
 ### Dependencies Summary
 - **React:** 18.2.0
 - **React Router:** 6.20.0
