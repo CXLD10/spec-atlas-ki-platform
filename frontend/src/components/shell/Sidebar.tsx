@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Menu, Zap, FileText, Network, BookOpen, MessageCircle, Wrench, Webhook, Library, ShieldCheck } from 'lucide-react'
 import { useSidebar } from './useSidebar'
@@ -8,6 +8,7 @@ import './Sidebar.css'
 export function Sidebar() {
   const { collapsed, toggleCollapsed } = useSidebar()
   const [mcpHealthy, setMcpHealthy] = useState(true)
+  const sidebarRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -20,6 +21,20 @@ export function Sidebar() {
     }
     checkHealth()
   }, [])
+
+  // Close sidebar when clicking outside of it
+  useEffect(() => {
+    if (collapsed) return
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
+        toggleCollapsed()
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [collapsed, toggleCollapsed])
 
   const navGroups = [
     {
@@ -44,7 +59,7 @@ export function Sidebar() {
   ]
 
   return (
-    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`} ref={sidebarRef}>
       <div className="sidebar-header">
         <button
           className="sidebar-hamburger"
