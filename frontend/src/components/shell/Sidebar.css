@@ -1,7 +1,7 @@
 .sidebar {
   background: transparent;
   border: none;
-  width: var(--rail, 0px);
+  width: var(--rail, 50px);
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -33,8 +33,8 @@
 }
 
 .sidebar:not(.collapsed) .sidebar-header {
-  padding: 0;
-  justify-content: center;
+  padding: 0.5rem;
+  justify-content: flex-start;
 }
 
 .sidebar-hamburger {
@@ -83,12 +83,12 @@
 }
 
 .sidebar:not(.collapsed) .sidebar-home {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  gap: 0;
-  justify-content: center;
-  margin: 2px;
+  width: 100%;
+  height: 44px;
+  padding: 0.5rem 0.75rem;
+  gap: 0.5rem;
+  justify-content: flex-start;
+  margin: 2px 0;
 }
 
 .sidebar-home:hover {
@@ -118,7 +118,7 @@
 
 /* EXPANDED state (not collapsed) */
 .sidebar:not(.collapsed) {
-  width: 50px;
+  width: 248px;
   background: rgba(13, 17, 23, 0.95);
   backdrop-filter: blur(8px);
   border-right: 1px solid rgba(255, 255, 255, 0.1);
@@ -143,8 +143,8 @@
 }
 
 .sidebar:not(.collapsed) .sidebar-nav {
-  align-items: center;
-  padding: 0.25rem 0;
+  align-items: stretch;
+  padding: 1rem 0.5rem;
 }
 
 .sidebar:not(.collapsed) .sidebar-nav {
@@ -198,12 +198,12 @@
 }
 
 .sidebar:not(.collapsed) .nav-item {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  gap: 0;
-  justify-content: center;
-  margin: 2px;
+  width: 100%;
+  height: 44px;
+  padding: 0.5rem 0.75rem;
+  gap: 0.75rem;
+  justify-content: flex-start;
+  margin: 2px 0;
 }
 
 .nav-item:hover {
