@@ -3,8 +3,59 @@ import { useSearchParams } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { ChatMessage } from '../components/ask/ChatMessage'
 import { Composer } from '../components/ask/Composer'
-import { client } from '../api/client'
 import './Ask.css'
+
+const API_URL =
+  ((import.meta as any).env?.VITE_API_URL as string | undefined) || 'http://localhost:8000'
+
+/** POST /api/ask/stream — consumes the SSE response token-by-token.
+ *  Calls onToken for each incremental word; resolves with the final payload. */
+async function streamAsk(
+  question: string,
+  onToken: (token: string) => void,
+): Promise<{ answer: string; claims: any[]; confidence: number; strategy: string; status: string }> {
+  const resp = await fetch(`${API_URL}/api/ask/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question, repo: 'default' }),
+  })
+
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '')
+    throw new Error(`HTTP ${resp.status}: ${text}`)
+  }
+
+  const reader = resp.body!.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let finalPayload: any = null
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+
+    // SSE lines end with \n\n; process complete events
+    const parts = buffer.split('\n\n')
+    buffer = parts.pop() ?? ''
+
+    for (const part of parts) {
+      for (const line of part.split('\n')) {
+        if (!line.startsWith('data: ')) continue
+        try {
+          const event = JSON.parse(line.slice(6))
+          if (event.type === 'token') {
+            onToken(event.token as string)
+          } else if (event.type === 'done') {
+            finalPayload = event
+          }
+        } catch { /* malformed JSON — skip */ }
+      }
+    }
+  }
+
+  return finalPayload ?? { answer: '', claims: [], confidence: 0, strategy: '', status: 'error' }
+}
 
 interface Message {
   id: string
@@ -30,7 +81,7 @@ export default function Ask() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -56,35 +107,51 @@ export default function Ask() {
     setInput('')
     setStreaming(true)
 
+    const assistantId = `msg-${Date.now() + 1}`
+
+    // Add a streaming placeholder immediately so the loading dots disappear
+    setMessages((prev) => [
+      ...prev,
+      { id: assistantId, role: 'assistant', text: '', streaming: true },
+    ])
+
     try {
-      const data = await client.ask({ question, project_id: scope || undefined })
+      const final = await streamAsk(question, (token) => {
+        // Append each token to the assistant message in-place
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, text: m.text + token } : m,
+          ),
+        )
+      })
 
-      const assistantMsg: Message = {
-        id: `msg-${Date.now() + 1}`,
-        role: 'assistant',
-        text: data.answer || 'No response',
-        streaming: true,
-        claims: data.claims || [],
-        confidence: data.confidence,
-        route: data.route_used,
-      }
-
-      setMessages((prev) => [...prev, assistantMsg])
-
-      // Wait for streaming to complete (text length * 20ms per char)
-      await new Promise((r) => setTimeout(r, (data.answer?.length || 0) * 20 + 100))
-
-      // Mark as done streaming
+      // Replace placeholder with the final complete message
       setMessages((prev) =>
-        prev.map((m) => (m.id === assistantMsg.id ? { ...m, streaming: false } : m))
+        prev.map((m) =>
+          m.id === assistantId
+            ? {
+                ...m,
+                text: final.answer || m.text || 'No response',
+                streaming: false,
+                claims: final.claims || [],
+                confidence: final.confidence,
+                route: final.strategy,
+              }
+            : m,
+        ),
       )
     } catch (err) {
-      const errorMsg: Message = {
-        id: `msg-${Date.now() + 1}`,
-        role: 'assistant',
-        text: `Error: ${err instanceof Error ? err.message : 'Unknown error'}`,
-      }
-      setMessages((prev) => [...prev, errorMsg])
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId
+            ? {
+                ...m,
+                text: `Error: ${err instanceof Error ? err.message : 'Unknown error'}`,
+                streaming: false,
+              }
+            : m,
+        ),
+      )
     } finally {
       setStreaming(false)
     }

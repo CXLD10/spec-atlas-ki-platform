@@ -7,24 +7,24 @@ import './MCPServer.css'
 
 const MCP_TOOLS = [
   {
-    name: 'search',
-    signature: 'search(query: string, repo?: string) → SearchResult[]',
-    description: 'Runs the full router→retriever→answerer pipeline and returns matched groups, specs and provenance.',
+    name: 'search_knowledge',
+    signature: 'search_knowledge(query: string, repo?: string, limit?: number) → SearchResult[]',
+    description: 'Runs the full router→retriever pipeline and returns matched groups and source units with relevance scores.',
   },
   {
     name: 'get_spec',
-    signature: 'get_spec(component_ref: string, repo?: string) → Spec',
-    description: 'Fetches the current spec/card with purpose, I/O, invariants, status and citations.',
+    signature: 'get_spec(component_ref: string, repo?: string, version?: number) → Spec',
+    description: 'Fetches the current spec/card with purpose, I/O, status and citations.',
   },
   {
-    name: 'get_group',
-    signature: 'get_group(group_path: string, repo?: string) → Group',
-    description: 'Returns a group/domain summary, child groups and member specs.',
+    name: 'get_graph',
+    signature: 'get_graph(repo?: string, layer?: string, limit?: number) → Graph',
+    description: 'Returns graph nodes and edges for the requested layer (source/group/all).',
   },
   {
-    name: 'list_stale_specs',
-    signature: 'list_stale_specs(repo?: string) → Spec[]',
-    description: 'Lists specs whose source has drifted and need regeneration.',
+    name: 'ask_question',
+    signature: 'ask_question(question: string, repo?: string) → Answer',
+    description: 'Answers a natural-language question using retrieval + LLM with real confidence scoring.',
   },
 ]
 

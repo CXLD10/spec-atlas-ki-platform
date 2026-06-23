@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 
@@ -355,3 +358,51 @@ async def ask(
 ) -> AskResponse:
     """Answer a question about the codebase."""
     return await answer_router.answer(request.question, request.repo)
+
+
+@router.post("/ask/stream")
+async def ask_stream(
+    request: AskRequest,
+    http_request: Request,
+) -> StreamingResponse:
+    """SSE streaming variant of POST /api/ask.
+
+    Emits ``{"type":"token","token":"..."}`` events as the answer is assembled
+    word-by-word, then a final ``{"type":"done","answer":"...","claims":[],
+    "confidence":..., "strategy":"...","status":"..."}`` event.
+
+    The consumer reads the stream with ``fetch()`` + ``response.body.getReader()``
+    (EventSource cannot POST).  Each SSE event is a ``data:`` line followed by
+    a blank line per the SSE spec.
+    """
+    # Resolve the router here; raise 503 before starting the stream if DB is absent.
+    if not http_request.app.state.analysis_session_factory:
+        raise HTTPException(status_code=503, detail="Analysis database not configured")
+
+    answer_router = get_answer_router(http_request)
+    result = await answer_router.answer(request.question, request.repo)
+
+    async def _generate():
+        # Emit the answer word-by-word so the client can render progressively.
+        words = result.answer.split()
+        for i, word in enumerate(words):
+            token = word if i == 0 else f" {word}"
+            yield f"data: {json.dumps({'type': 'token', 'token': token})}\n\n"
+            await asyncio.sleep(0)  # yield to the event loop between chunks
+
+        # Final event carries the full structured payload.
+        done: dict = {
+            "type": "done",
+            "answer": result.answer,
+            "claims": [{"text": c.text, "source": c.source} for c in result.claims],
+            "confidence": result.confidence,
+            "strategy": result.strategy,
+            "status": result.status,
+        }
+        yield f"data: {json.dumps(done)}\n\n"
+
+    return StreamingResponse(
+        _generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

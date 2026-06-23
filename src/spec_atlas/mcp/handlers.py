@@ -1,12 +1,12 @@
-"""Tool handlers: wire MCP tools to backend services."""
+"""MCP tool handlers — wired to the same code paths as AnswerRouter."""
 
 from __future__ import annotations
 
+import inspect
 import logging
 from typing import TYPE_CHECKING
 
 from spec_atlas.answer.engine import AnswerEngine
-from spec_atlas.retrieve.descent import TreeDescent
 from spec_atlas.retrieve.router import QueryRouter
 from spec_atlas.retrieve.search import VectorSearch
 from spec_atlas.spec.store import SpecStore
@@ -18,74 +18,61 @@ logger = logging.getLogger(__name__)
 
 
 class MCPHandlers:
-    """Handlers for MCP tools with direct database access."""
+    """Handlers for the four MCP tools; sessions are passed in at construction."""
 
     def __init__(
         self,
-        spec_session: Session,
+        spec_session: Session | None,
         analysis_session: Session,
         embedding_provider,
         llm_provider,
     ):
-        """Initialize handlers with database sessions.
-
-        Args:
-            spec_session: SQLAlchemy session for Spec DB.
-            analysis_session: SQLAlchemy session for Analysis DB.
-            embedding_provider: Embedding provider for vector search.
-            llm_provider: LLM provider for answer generation.
-        """
         self.spec_session = spec_session
         self.analysis_session = analysis_session
         self.embedding_provider = embedding_provider
         self.llm_provider = llm_provider
 
-    async def search_knowledge(self, query: str, repo: str = "default", limit: int = 10) -> dict:
-        """Search the knowledge graph.
+    # ------------------------------------------------------------------ #
+    # Tool 1: search_knowledge
+    # ------------------------------------------------------------------ #
 
-        Returns top matching specs/sources by relevance.
-
-        Args:
-            query: Search query
-            repo: Repository identifier
-            limit: Maximum results to return
-
-        Returns:
-            dict with query, results, and count
-        """
+    async def search_knowledge(
+        self, query: str, repo: str = "default", limit: int = 10
+    ) -> dict:
+        """Search the knowledge graph using the same path as AnswerRouter."""
         try:
-            # Route the query
             strategy = QueryRouter.route(query)
-
-            # For now, we'll use vector search as the primary retrieval method
-            # In a full implementation, this would integrate TreeDescent
-            search = VectorSearch(self.analysis_session, self.embedding_provider)
-
-            # Perform search
-            results = search.search(query, limit=limit)
-
+            results = VectorSearch.search(
+                query,
+                self.embedding_provider,
+                self.analysis_session,
+                k=min(limit, 20),
+            )
             return {
                 "query": query,
                 "strategy": strategy,
                 "results": [
                     {
-                        "id": str(r.get("id", "")),
-                        "label": r.get("name", ""),
-                        "relevance": r.get("score", 0.0),
-                        "kind": r.get("kind", ""),
+                        "id": str(owner.id),
+                        "label": (
+                            owner.title
+                            if hasattr(owner, "title")
+                            else getattr(owner, "source_id", "")
+                        ),
+                        "relevance": round(score, 4),
+                        "kind": "group" if hasattr(owner, "title") else "source_unit",
                     }
-                    for r in results
+                    for owner, score in results
                 ],
                 "count": len(results),
             }
         except Exception as e:
-            logger.error(f"Search failed: {e}")
-            return {
-                "error": f"Search failed: {str(e)}",
-                "query": query,
-                "results": [],
-                "count": 0,
-            }
+            logger.error(f"search_knowledge failed: {e}")
+            return {"error": str(e), "query": query, "results": [], "count": 0}
+
+    # ------------------------------------------------------------------ #
+    # Tool 2: get_spec
+    # ------------------------------------------------------------------ #
 
     async def get_spec(
         self,
@@ -93,131 +80,159 @@ class MCPHandlers:
         repo: str = "default",
         version: int | None = None,
     ) -> dict:
-        """Retrieve a specification.
-
-        Returns the full spec (purpose, inputs, outputs, dependencies, etc.)
-
-        Args:
-            component_ref: Component reference
-            repo: Repository identifier
-            version: Spec version (optional)
-
-        Returns:
-            dict with spec content and metadata
-        """
+        """Retrieve a spec using SpecStore."""
+        if not self.spec_session:
+            return {"error": "Spec DB not configured", "component_ref": component_ref}
         try:
             store = SpecStore(self.spec_session)
-
-            # Get current or specific version
-            if version is not None:
-                spec = store.get_version("default", repo, component_ref, version)
-            else:
-                spec = store.get_current("default", repo, component_ref)
-
+            spec = (
+                store.get_version("default", repo, component_ref, version)
+                if version is not None
+                else store.get_current("default", repo, component_ref)
+            )
             if not spec:
-                return {
-                    "error": f"Spec not found: {component_ref}",
-                    "component_ref": component_ref,
-                }
+                return {"error": f"Spec not found: {component_ref}", "component_ref": component_ref}
 
-            def get_content_field(name: str, default=None):
-                if isinstance(spec.content, dict):
-                    return spec.content.get(name, default)
-                return getattr(spec.content, name, default)
-
+            content = spec.content if isinstance(spec.content, dict) else {}
             return {
                 "component_ref": component_ref,
                 "version": spec.version,
                 "status": spec.status,
-                "confidence": get_content_field("confidence", 0.0),
-                "purpose": get_content_field("purpose", ""),
-                "inputs": get_content_field("inputs", []),
-                "outputs": get_content_field("outputs", []),
-                "dependencies": get_content_field("dependencies", []),
-                "markdown": get_content_field("markdown", ""),
+                "confidence": content.get("confidence", 0.0),
+                "purpose": content.get("purpose", ""),
+                "inputs": content.get("inputs", []),
+                "outputs": content.get("outputs", []),
+                "dependencies": content.get("dependencies", []),
+                "markdown": content.get("markdown", ""),
             }
         except Exception as e:
-            logger.error(f"Get spec failed: {e}")
-            return {
-                "error": f"Get spec failed: {str(e)}",
-                "component_ref": component_ref,
-            }
+            logger.error(f"get_spec failed: {e}")
+            return {"error": str(e), "component_ref": component_ref}
+
+    # ------------------------------------------------------------------ #
+    # Tool 3: get_graph
+    # ------------------------------------------------------------------ #
 
     async def get_graph(
-        self,
-        repo: str = "default",
-        layer: str = "spec",
-        limit: int = 100,
+        self, repo: str = "default", layer: str = "spec", limit: int = 100
     ) -> dict:
-        """Retrieve graph structure.
+        """Query L1 nodes/edges and L4 groups from the Analysis DB."""
+        from spec_atlas.db.analysis import Edge, Group, Node
 
-        Returns nodes and edges for visualization or analysis.
-        Layers: "source" (L1), "spec" (L2/L3), "group" (L4), or "all"
-
-        Args:
-            repo: Repository identifier
-            layer: Graph layer to retrieve
-            limit: Maximum nodes to return
-
-        Returns:
-            dict with nodes and edges
-        """
         try:
-            # For now, return an empty graph structure
-            # A full implementation would query the Analysis DB for nodes/edges
+            nodes: list[dict] = []
+            edges: list[dict] = []
+
+            want_l1 = layer in ("source", "all", "L1", "spec")
+            want_l4 = layer in ("group", "all", "L4", "spec")
+
+            per_kind = limit // 2 if (want_l1 and want_l4) else limit
+
+            if want_l1:
+                for n in self.analysis_session.query(Node).limit(per_kind).all():
+                    nodes.append(
+                        {
+                            "id": str(n.id),
+                            "label": n.qualified_name or n.name,
+                            "kind": n.kind,
+                            "layer": "L1",
+                        }
+                    )
+                for e in self.analysis_session.query(Edge).limit(per_kind).all():
+                    edges.append(
+                        {
+                            "src": str(e.src_node_id),
+                            "dst": str(e.dst_node_id),
+                            "kind": e.kind,
+                            "layer": "L1",
+                        }
+                    )
+
+            if want_l4:
+                for g in self.analysis_session.query(Group).limit(per_kind).all():
+                    nodes.append(
+                        {
+                            "id": str(g.id),
+                            "label": g.title or g.path,
+                            "kind": "group",
+                            "layer": "L4",
+                        }
+                    )
+                    if g.parent_id:
+                        edges.append(
+                            {
+                                "src": str(g.parent_id),
+                                "dst": str(g.id),
+                                "kind": "contains",
+                                "layer": "L4",
+                            }
+                        )
+
             return {
                 "repo": repo,
                 "layer": layer,
-                "nodes": [],
-                "edges": [],
-                "node_count": 0,
-                "edge_count": 0,
+                "nodes": nodes[:limit],
+                "edges": edges[:limit],
+                "node_count": len(nodes),
+                "edge_count": len(edges),
             }
         except Exception as e:
-            logger.error(f"Get graph failed: {e}")
-            return {
-                "error": f"Get graph failed: {str(e)}",
-                "repo": repo,
-                "nodes": [],
-                "edges": [],
-            }
+            logger.error(f"get_graph failed: {e}")
+            return {"error": str(e), "repo": repo, "nodes": [], "edges": []}
+
+    # ------------------------------------------------------------------ #
+    # Tool 4: ask_question
+    # ------------------------------------------------------------------ #
 
     async def ask_question(self, question: str, repo: str = "default") -> dict:
-        """Ask a question about the project.
+        """Answer a question using the same retrieval pipeline as AnswerRouter."""
+        from spec_atlas.db.analysis import SourceUnit as SourceUnitModel
 
-        Returns an answer with citations.
-
-        Args:
-            question: User question
-            repo: Repository identifier
-
-        Returns:
-            dict with answer, claims, and confidence
-        """
         try:
-            # Route the query
             strategy = QueryRouter.route(question)
+            results = VectorSearch.search(
+                question, self.embedding_provider, self.analysis_session, k=1
+            )
 
-            # Use TreeDescent for context retrieval
-            descent = TreeDescent(self.analysis_session)
+            if not results:
+                return {
+                    "question": question,
+                    "answer": "No matching content found in the knowledge base.",
+                    "claims": [],
+                    "confidence": 0.0,
+                    "strategy": strategy,
+                }
 
-            # Retrieve context
-            context = descent.retrieve(question, repo_id=None)  # TODO: Get repo_id from repo
+            top_match, similarity = results[0]
 
-            # Generate answer using AnswerEngine
-            answer = AnswerEngine.answer(question, context, self.llm_provider)
+            # Build context — same branch logic as AnswerRouter.answer()
+            if isinstance(top_match, SourceUnitModel):
+                from spec_atlas.api.answer import _build_context_from_source_unit
+
+                context = _build_context_from_source_unit(top_match)
+            else:
+                from spec_atlas.api.answer import _build_context_from_node
+                from spec_atlas.retrieve.descent import TreeDescent
+
+                try:
+                    context = TreeDescent.descend(top_match.id, self.analysis_session)
+                except Exception:
+                    context = _build_context_from_node(top_match, self.analysis_session)
+
+            maybe_answer = AnswerEngine.answer_async(question, context, self.llm_provider)
+            answer_obj = await maybe_answer if inspect.isawaitable(maybe_answer) else maybe_answer
 
             return {
                 "question": question,
-                "answer": answer.text,
-                "claims": [{"claim": c.claim, "source": c.source} for c in answer.claims],
-                "confidence": 1.0,  # TODO: Extract from answer
+                "answer": answer_obj.text,
+                "claims": [{"claim": c.claim, "source": c.source} for c in answer_obj.claims],
+                "confidence": round(similarity, 4),
                 "strategy": strategy,
             }
         except Exception as e:
-            logger.error(f"Ask question failed: {e}")
+            logger.error(f"ask_question failed: {e}")
             return {
-                "error": f"Answer generation failed: {str(e)}",
+                "error": str(e),
                 "question": question,
                 "answer": "",
                 "claims": [],
@@ -225,51 +240,28 @@ class MCPHandlers:
             }
 
 
-# Backwards compatibility: keep old HTTP-based handlers for existing tests
+# ---------------------------------------------------------------------------
+# Backwards-compat stub — kept so existing tests/imports don't break.
+# MCPToolHandlers was the old HTTP-proxy-based handler; real work moved to
+# MCPHandlers above. Remove after tests/mcp/test_handlers.py is updated.
+# ---------------------------------------------------------------------------
 class MCPToolHandlers:
-    """Handlers for MCP tools, wired to backend services (HTTP-based)."""
+    """Legacy HTTP-based stub. Do not use for new code."""
 
     def __init__(self, backend_url: str = "http://localhost:8000"):
-        """Initialize handlers.
-
-        Args:
-            backend_url: Backend API URL (e.g., http://localhost:8000)
-        """
         self.backend_url = backend_url
 
     async def search(self, query: str, repo: str = "default") -> dict:
-        """Search specs and groups (stub)."""
-        return {
-            "answer": "Search not yet implemented",
-            "claims": [],
-            "confidence": 0.0,
-            "strategy": "vector_search",
-            "repo": repo,
-            "query": query,
-        }
+        return {"answer": "stub", "claims": [], "confidence": 0.0, "query": query}
 
     async def get_spec(self, component_ref: str, repo: str = "default") -> dict:
-        """Fetch a spec by reference (stub)."""
-        return {
-            "component_ref": component_ref,
-            "repo": repo,
-            "spec": None,
-            "error": "Spec not found",
-        }
+        return {"component_ref": component_ref, "error": "stub"}
 
     async def get_group(self, group_path: str, repo: str = "default") -> dict:
-        """Fetch a group and its members (stub)."""
-        return {
-            "group_path": group_path,
-            "repo": repo,
-            "group": None,
-            "error": "Group not found",
-        }
+        return {"group_path": group_path, "error": "stub"}
 
     async def list_stale_specs(self, repo: str = "default") -> dict:
-        """List stale specs (stub)."""
         return {"repo": repo, "stale_specs": []}
 
     async def close(self) -> None:
-        """Close HTTP client connection (stub)."""
         pass

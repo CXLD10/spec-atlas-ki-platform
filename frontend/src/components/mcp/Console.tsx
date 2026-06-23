@@ -2,6 +2,17 @@ import { useState, useRef } from 'react'
 import { Copy, Check } from 'lucide-react'
 import './Console.css'
 
+const API_URL =
+  ((import.meta as any).env?.VITE_API_URL as string | undefined) || 'http://localhost:8000'
+
+// Maps the single text argument to the right field name per tool.
+const TOOL_ARG_KEY: Record<string, string> = {
+  search_knowledge: 'query',
+  get_spec: 'component_ref',
+  get_graph: 'layer',
+  ask_question: 'question',
+}
+
 interface ConsoleProps {
   tools: Array<{ name: string; signature: string; description: string }>
 }
@@ -70,61 +81,26 @@ export function Console({ tools }: ConsoleProps) {
     setOutput(null)
 
     try {
-      // Simulate API call with delay
-      await new Promise((r) => setTimeout(r, 800))
+      const argKey = TOOL_ARG_KEY[selectedTool] ?? 'query'
+      const resp = await fetch(`${API_URL}/api/mcp/call`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: selectedTool, args: { [argKey]: toolArg } }),
+      })
 
-      // Mock responses for each tool
-      const mockResponses: Record<string, unknown> = {
-        search: {
-          status: 'ok',
-          tool: selectedTool,
-          query: toolArg,
-          results: [
-            {
-              ref: 'hf-transformers-tokenizer',
-              title: 'Tokenizer: BPE to SentencePiece',
-              score: 0.94,
-              source: 'huggingface/transformers',
-              provenance: 'src/transformers/tokenization_utils.py:45',
-            },
-          ],
-        },
-        get_spec: {
-          status: 'ok',
-          ref: toolArg,
-          title: 'Tokenizer Architecture',
-          status_badge: 'verified',
-          purpose: 'The tokenizer layer implements multiple strategies for subword segmentation.',
-          inputs: ['text: str'],
-          outputs: ['tokens: List[int]'],
-          dependencies: ['SentencePiece'],
-          provenance: [
-            { ref: 'huggingface/transformers', loc: 'src/transformers/tokenization_utils.py:45' },
-          ],
-        },
-        get_group: {
-          status: 'ok',
-          path: toolArg,
-          summary: 'Tokenization and preprocessing layer for NLP models',
-          member_count: 8,
-          members: [
-            { ref: 'tokenizer-bpe', title: 'BPE Tokenizer' },
-            { ref: 'tokenizer-sentencepiece', title: 'SentencePiece Tokenizer' },
-          ],
-          children: ['tokenization/bpe', 'tokenization/wordpiece'],
-        },
-        list_stale_specs: {
-          status: 'ok',
-          stale_count: 3,
-          stale_specs: [
-            { ref: 'retrieval-old', title: 'Retrieval (outdated)', last_verified: '2025-04-01' },
-            { ref: 'embedding-v1', title: 'Embeddings v1', last_verified: '2025-03-15' },
-          ],
-        },
+      let data: unknown
+      if (resp.ok) {
+        data = await resp.json()
+      } else {
+        let detail = `HTTP ${resp.status}`
+        try {
+          const err = await resp.json()
+          detail = err.detail || detail
+        } catch { /* ignore */ }
+        data = { error: detail }
       }
 
-      const response = mockResponses[selectedTool] || { error: 'Unknown tool' }
-      setOutput(JSON.stringify(response, null, 2))
+      setOutput(JSON.stringify(data, null, 2))
     } catch (err) {
       setOutput(JSON.stringify({ error: 'Call failed', message: String(err) }, null, 2))
     } finally {

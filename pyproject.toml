@@ -50,6 +50,9 @@ dev = [
   "ruff>=0.5",
 ]
 
+[project.scripts]
+spec-atlas-mcp = "spec_atlas.mcp.__main__:main"
+
 [project.urls]
 Homepage = "https://github.com/spec-atlas/spec-atlas"
 
