@@ -9,6 +9,20 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Revamp palette (CSS variables)
+        bg: 'var(--bg)',
+        panel: 'var(--panel)',
+        border: 'var(--border)',
+        hi: 'var(--hi)',
+        mid: 'var(--mid)',
+        dim: 'var(--dim)',
+        faint: 'var(--faint)',
+        primary: 'var(--primary)',
+        l1: 'var(--l1)',
+        l3: 'var(--l3)',
+        l4: 'var(--l4)',
+        amber: 'var(--amber)',
+        rose: 'var(--rose)',
         // GitHub Dark theme (default)
         'github-dark': {
           bg: '#0d1117',
@@ -67,6 +81,8 @@ export default {
         display: ['Space Grotesk', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
         system: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        body: 'var(--body)',
+        disp: 'var(--disp)',
       },
     },
   },
