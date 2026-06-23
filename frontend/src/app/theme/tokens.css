@@ -1,83 +1,89 @@
-/* Design tokens for Industrial Knowledge Intelligence platform */
-/* Revamp phase: industrial KI voice, mission-control dark + GitHub-blue + mono */
+/* Design tokens for Spec-Atlas */
+/* Apple-inspired dark mode: calm, premium, soothing */
 
-/* Revamp color palette (default dark) */
+/* Dark mode palette (default) */
 :root {
-  /* Background & surfaces */
-  --bg: #0a0e1a;
-  --bg-1: #0d1322;
-  --panel: #111a2e;
-  --panel-2: #0f1626;
+  /* Background & surfaces - warm charcoal, not pure black */
+  --bg: #1a1a1a;        /* primary background - warm charcoal */
+  --bg-1: #1f1f1f;      /* secondary background */
+  --panel: #242424;     /* elevated surface - primary panels */
+  --panel-2: #2a2a2a;   /* elevated surface - secondary panels */
 
-  /* Borders & dividers */
-  --border: #1d2840;
-  --hair: #202c47;
-  --border-soft: #172238;
+  /* Borders & dividers - soft, low-contrast */
+  --border: #3a3a3a;    /* standard border */
+  --hair: #454545;      /* hairline divider */
+  --border-soft: #333333; /* soft border variant */
 
-  /* Text hierarchy */
-  --hi: #e9eefb;        /* high contrast (was --ink) */
-  --mid: #9aa8c8;       /* mid-tone */
-  --dim: #5d6c8e;       /* dimmed (secondary) */
-  --faint: #3a486a;     /* very faint (tertiary) */
+  /* Text hierarchy - excellent contrast, easy on eyes */
+  --hi: #f5f5f5;        /* high contrast - primary text */
+  --mid: #a0a0a0;       /* mid-tone - secondary text */
+  --dim: #808080;       /* dimmed - tertiary text */
+  --faint: #595959;     /* very faint - disabled/hints */
 
-  /* Primary accent (GitHub Blue) */
-  --primary: #4493f8;
-  --primary-soft: rgba(68, 147, 248, 0.14);
+  /* Primary accent - muted indigo-blue (Apple-inspired) */
+  --primary: #6ba3d4;   /* calm, sophisticated blue */
+  --primary-soft: rgba(107, 163, 212, 0.12);
 
-  /* Layer colors (immutable per spec) */
-  --l1: #58a6ff;        /* Sources/code - cyan */
-  --l3: #3fb950;        /* Cards/specs - green */
-  --l4: #7c8bff;        /* Domains/groups - purple */
+  /* Layer colors - muted, professional palette */
+  --l1: #5b9dd9;        /* Sources/code - muted blue */
+  --l3: #6db84a;        /* Cards/specs - soft green */
+  --l4: #8b7ec8;        /* Domains/groups - muted purple */
 
-  /* Utility colors */
-  --amber: #d29922;
-  --rose: #f0506e;
+  /* Utility colors - desaturated, warm */
+  --amber: #c4995e;     /* warm amber - muted */
+  --rose: #d4707d;      /* soft rose - desaturated */
 
   /* Typography */
   --mono: 'JetBrains Mono', ui-monospace, monospace;
   --body: 'Inter', system-ui, sans-serif;
   --disp: 'Space Grotesk', 'Inter', sans-serif;
 
-  /* Aliases for backward compatibility with existing code */
+  /* Aliases for backward compatibility */
   --ink: var(--hi);
   --ink-dim: var(--mid);
   --ink-faint: var(--faint);
   --font-display: var(--disp);
   --font-mono: var(--mono);
   --cyan: var(--primary);
-  --cyan-bright: #79c0ff;
-  --cyan-glow: rgba(68, 147, 248, 0.4);
+  --cyan-bright: #8bbae8;
+  --cyan-glow: rgba(107, 163, 212, 0.25);
 }
 
-/* Light mode token overrides */
+/* Light mode - warm off-white, clean and comfortable */
 [data-theme="light"] {
-  --bg: #ffffff;
-  --bg-1: #f6f8fa;
-  --panel: #f6f8fa;
-  --panel-2: #eaeef2;
+  /* Background & surfaces - warm off-white */
+  --bg: #f8f8f8;        /* primary background - warm off-white */
+  --bg-1: #fafafa;      /* secondary background */
+  --panel: #f0f0f0;     /* elevated surface - primary panels */
+  --panel-2: #ececec;   /* elevated surface - secondary panels */
 
-  --border: #d0d7de;
-  --hair: #d8dee4;
-  --border-soft: #e1e7ec;
+  /* Borders & dividers - soft grey */
+  --border: #d9d9d9;    /* standard border */
+  --hair: #e5e5e5;      /* hairline divider */
+  --border-soft: #e0e0e0; /* soft border variant */
 
-  --hi: #1f2328;
-  --mid: #57606a;
-  --dim: #6e7781;
-  --faint: #8c959f;
+  /* Text hierarchy - dark grey, not black */
+  --hi: #1a1a1a;        /* high contrast - primary text */
+  --mid: #666666;       /* mid-tone - secondary text */
+  --dim: #999999;       /* dimmed - tertiary text */
+  --faint: #b0b0b0;     /* very faint - disabled/hints */
 
-  --primary: #0969da;
-  --primary-soft: rgba(9, 105, 218, 0.1);
+  /* Primary accent - same muted indigo-blue */
+  --primary: #5b8fd4;   /* calm blue - light mode variant */
+  --primary-soft: rgba(91, 143, 212, 0.1);
 
-  --l1: #0969da;
-  --l3: #1a7f37;
-  --l4: #8957e5;
+  /* Layer colors - light mode variants */
+  --l1: #5b8fd4;        /* Sources/code - muted blue */
+  --l3: #5cb946;        /* Cards/specs - soft green */
+  --l4: #7b6db8;        /* Domains/groups - muted purple */
 
-  --amber: #9e6a03;
-  --rose: #cf222e;
+  /* Utility colors - light mode variants */
+  --amber: #b8914d;     /* warm amber */
+  --rose: #c76a6a;      /* soft rose */
 
-  --cyan: #0969da;
-  --cyan-bright: #0860ca;
-  --cyan-glow: rgba(9, 105, 218, 0.3);
+  --cyan: #5b8fd4;
+  --cyan-bright: #3d66ad;
+  --cyan-glow: rgba(91, 143, 212, 0.2);
 }
 
 /* Motion timings (exact, from prototype feedback iterations) */

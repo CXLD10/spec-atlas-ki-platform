@@ -101,7 +101,7 @@
 
 .specify-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(68, 147, 248, 0.15);
+  box-shadow: 0 0 0 2px var(--primary-soft);
 }
 
 .specify-input:disabled {
@@ -113,17 +113,20 @@
   grid-column: 1 / -1;
   padding: 0.875rem 1.5rem;
   background: var(--primary);
-  color: white;
+  color: #f5f5f5;
   border: none;
   border-radius: 6px;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(107, 163, 212, 0.15);
 }
 
 .specify-submit:hover:not(:disabled) {
-  background: #5aa3ff;
+  background: var(--cyan-bright);
+  box-shadow: 0 4px 12px rgba(107, 163, 212, 0.25);
+  transform: translateY(-1px);
 }
 
 .specify-submit:disabled {

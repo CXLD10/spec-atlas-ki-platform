@@ -19,7 +19,7 @@ import asyncio
 import logging
 import subprocess
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -103,7 +103,7 @@ def _update_phase_progress(
     if not job:
         return
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # If this is a new phase, record the start time
     if job.current_phase != phase_name:

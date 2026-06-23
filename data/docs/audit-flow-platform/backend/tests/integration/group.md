@@ -2,11 +2,31 @@
 
 **Path:** `backend/tests/integration`
 
-## Overview
-This group contains 0 code components.
+**Purpose**
+==========
 
-## Components
+This group contains integration tests for the backend of the application. The purpose of these tests is to ensure that different components of the backend are working together correctly.
 
+**Key Components**
+-----------------
+
+* `api.py`: contains API test cases for authentication, user management, and other backend endpoints
+* `database.py`: contains test cases for database interactions, such as data insertion, retrieval, and deletion
+* `utils.py`: contains utility functions for testing, such as test data generation and assertion helpers
+
+**Dependencies**
+--------------
+
+* `backend/tests/integration/utils`: utility functions for testing
+* `backend/tests/unit`: unit tests for individual components of the backend
+* `backend/models`: database models used in the integration tests
+
+**Invariants**
+-------------
+
+* All API endpoints are properly tested for authentication and authorization
+* Database interactions are correctly tested for data integrity and consistency
+* Utility functions are correctly used to generate test data and make assertions
 
 ---
 

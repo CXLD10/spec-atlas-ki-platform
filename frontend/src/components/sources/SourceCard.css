@@ -16,7 +16,7 @@
 .source-card:hover {
   border-color: var(--primary);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(68, 147, 248, 0.1);
+  box-shadow: 0 8px 24px rgba(107, 163, 212, 0.1);
 }
 
 .source-card:focus-visible {

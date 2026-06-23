@@ -86,7 +86,7 @@
 }
 
 .filter-tab.active .filter-count {
-  background: rgba(68, 147, 248, 0.2);
+  background: rgba(107, 163, 212, 0.2);
   color: var(--primary);
 }
 

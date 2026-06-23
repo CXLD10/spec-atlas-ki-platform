@@ -49,8 +49,8 @@
 }
 
 .trace-step--running .trace-step-content {
-  background: rgba(68, 147, 248, 0.08);
-  border: 1px solid rgba(68, 147, 248, 0.2);
+  background: rgba(107, 163, 212, 0.08);
+  border: 1px solid rgba(107, 163, 212, 0.2);
 }
 
 .trace-step--done .trace-step-content {

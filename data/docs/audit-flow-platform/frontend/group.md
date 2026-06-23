@@ -2,11 +2,27 @@
 
 **Path:** `frontend`
 
-## Overview
-This group contains 0 code components.
+**Group: frontend**
+====================
 
-## Components
+### Purpose
+The frontend group is responsible for handling all client-side interactions, creating a seamless user experience.
 
+### Key Components
+* **Components**: Individual elements that make up the UI, such as buttons, forms, and navigation bars.
+* **Templates**: HTML structures that define the layout and content of the page.
+* **Styles**: CSS files that determine the visual appearance of the UI.
+* **Interactivity**: JavaScript code that enables user input, animates elements, and responds to events.
+
+### Dependencies
+* **Backend API**: The frontend relies on the backend API to fetch data and send requests.
+* **Global Styles**: The frontend uses a global stylesheet to maintain consistency in UI design.
+* **JavaScript Libraries**: The frontend leverages popular libraries like React or Angular to simplify development and enhance functionality.
+
+### Invariants
+* **Responsive Design**: The frontend ensures that the UI adapts to different screen sizes and devices.
+* **Accessibility**: The frontend prioritizes accessibility by providing alternative text for images, sufficient color contrast, and keyboard navigability.
+* **Consistency**: The frontend maintains a consistent visual design throughout the application.
 
 ---
 

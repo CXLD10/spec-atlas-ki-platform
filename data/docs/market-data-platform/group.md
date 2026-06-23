@@ -1,27 +1,10 @@
 # market-data-platform
 
-**market-data-platform Group Summary**
-=====================================
+## Overview
+This group contains 0 code components.
 
-### Purpose
-The market-data-platform group is responsible for collecting, processing, and providing real-time market data to various stakeholders.
+## Components
 
-### Key Components
-- **Market Data APIs**: Interfaces to external services that provide market data feeds (e.g., stock prices, trading volumes)
-- **Data Processing Pipelines**: ETL (Extract, Transform, Load) processes that clean, transform, and store market data in a centralized repository
-- **Data Storage**: A database designed to efficiently store and manage large volumes of market data
-- **Data Analytics Tools**: Libraries and frameworks used to perform data analysis, visualization, and reporting
-
-### Dependencies
-- **External Market Data Services**: APIs and feeds from external providers (e.g., stock exchanges, financial data vendors)
-- **Data Storage Infrastructure**: Reliable storage solutions (e.g., databases, file systems) to ensure data availability and integrity
-- **Security Frameworks**: Measures to protect sensitive market data from unauthorized access and malicious activities
-
-### Invariants
-- **Data Consistency**: Market data is consistently formatted and stored across all systems and interfaces
-- **Data Integrity**: Market data is accurate, complete, and free from errors and corruption
-- **Security**: Sensitive market data is protected from unauthorized access and malicious activities
-- **Availability**: Market data is readily available for analysis, reporting, and other business purposes
 
 ---
 

@@ -2,30 +2,13 @@
 
 **Path:** `frontend/src/pages`
 
-**pages Group Summary**
-======================
+## Overview
+This group contains 2 code components.
 
-### Purpose
-----------------
+## Components
 
-The `pages` group is responsible for defining the structure and functionality of individual pages within the application. It provides a collection of reusable page components that can be utilized to create new pages as needed.
-
-### Key Components
-------------------
-
-* **List Audit Logs**: A function that generates a list of audit logs for monitoring and tracking purposes.
-* **Login**: A function that provides a login interface for users to authenticate and access the application.
-
-### Dependencies
-----------------
-
-The `pages` group relies on the underlying application architecture to function correctly. It assumes the existence of a authentication mechanism and a data storage system for audit logs.
-
-### Invariants
---------------
-
-* **Secure Login Functionality**: The `Login` function ensures that user authentication is secure and compliant with industry standards.
-* **Audit Log Integrity**: The `List Audit Logs` function maintains a comprehensive and accurate record of all user activity, ensuring that audit logs are tamper-proof and easily accessible.
+- `listAuditLogs` (function, typescript)
+- `Login` (function, typescript)
 
 ---
 
