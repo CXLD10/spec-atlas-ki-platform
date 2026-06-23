@@ -63,9 +63,47 @@
   color: var(--mid);
   transition: color 0.15s;
   user-select: none;
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
 .layer-toggle:hover { color: var(--hi); }
+
+.layer-toggle:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.layer-toggle select {
+  background: var(--bg);
+  color: var(--hi);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  font-family: var(--body);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.layer-toggle select:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-soft);
+}
+
+.layer-toggle select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-soft);
+}
+
+.layer-toggle select option {
+  background: var(--panel);
+  color: var(--hi);
+  padding: 0.5rem;
+}
 
 .layer-toggle input[type='checkbox'] {
   cursor: pointer;
