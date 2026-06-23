@@ -8,7 +8,7 @@ interface UseSidebarReturn {
 }
 
 export function useSidebar(): UseSidebarReturn {
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
+  const [collapsed, setCollapsed] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       return stored ? JSON.parse(stored) : false
@@ -21,8 +21,12 @@ export function useSidebar(): UseSidebarReturn {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(collapsed))
   }, [collapsed])
 
+  useEffect(() => {
+    // Initialization hook - ensures stable hook order
+  }, [])
+
   const toggleCollapsed = useCallback(() => {
-    setCollapsed(prev => !prev)
+    setCollapsed((prev: boolean) => !prev)
   }, [])
 
   return {
