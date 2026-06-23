@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { FileText, GitBranch, Settings, MessageSquare, Book, Github } from 'lucide-react'
+import { FileText, GitBranch, Settings, MessageSquare, Book, ExternalLink } from 'lucide-react'
 import MCPModal from '../MCPModal'
 import './Sidebar.css'
 
@@ -66,7 +66,7 @@ export function Sidebar() {
           rel="noopener noreferrer"
           className="nav-link"
         >
-          <Github size={18} />
+          <ExternalLink size={18} />
           <span>GitHub</span>
         </a>
       </nav>

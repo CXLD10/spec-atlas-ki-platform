@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from './theme/ThemeProvider'
+import { AppShell } from '../components/shell/AppShell'
 import Landing from '../pages/Landing'
 import Projects from '../pages/Projects'
 import RepoAsk from '../pages/RepoAsk'
@@ -29,20 +30,22 @@ export function App() {
       <ThemeProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/graph" element={<RepoGraphify />} />
-            <Route path="/ask" element={<RepoAsk />} />
-            <Route path="/specify" element={<SpecifyTool />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/docs" element={<Docs />} />
-            <Route path="/index/:jobId" element={<IndexProgress />} />
-            <Route path="/repo/:repoId/ask" element={<RepoAsk />} />
-            <Route path="/repo/:repoId/graphify" element={<RepoGraphify />} />
-            <Route path="/repo/:repoId/specify" element={<SpecifyTool />} />
-            <Route path="/repo/:repoId/specify/:specId" element={<SpecView />} />
-            <Route path="/repo/:repoId/explore" element={<RepoExplore />} />
-            <Route path="/repo/:repoId/explore/specs/:specRef" element={<RepoSpec />} />
+            <Route element={<AppShell />}>
+              <Route path="/" element={<Landing />} />
+              <Route path="/projects" element={<Projects />} />
+              <Route path="/graph" element={<RepoGraphify />} />
+              <Route path="/ask" element={<RepoAsk />} />
+              <Route path="/specify" element={<SpecifyTool />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/docs" element={<Docs />} />
+              <Route path="/index/:jobId" element={<IndexProgress />} />
+              <Route path="/repo/:repoId/ask" element={<RepoAsk />} />
+              <Route path="/repo/:repoId/graphify" element={<RepoGraphify />} />
+              <Route path="/repo/:repoId/specify" element={<SpecifyTool />} />
+              <Route path="/repo/:repoId/specify/:specId" element={<SpecView />} />
+              <Route path="/repo/:repoId/explore" element={<RepoExplore />} />
+              <Route path="/repo/:repoId/explore/specs/:specRef" element={<RepoSpec />} />
+            </Route>
           </Routes>
         </BrowserRouter>
       </ThemeProvider>
