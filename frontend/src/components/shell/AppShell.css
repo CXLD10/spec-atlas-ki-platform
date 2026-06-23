@@ -28,8 +28,9 @@
   height: 100%;
   width: 100%;
   min-width: 0;
-  margin-left: 50px;
-  margin-right: 50px;
+  box-sizing: border-box;
+  padding-left: 50px;
+  padding-right: 50px;
 }
 
 .topbar {
