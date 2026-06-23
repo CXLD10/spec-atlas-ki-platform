@@ -38,6 +38,14 @@
   font-family: var(--body);
   font-size: 0.95rem;
   outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  box-shadow: none;
+}
+
+.ingest-input:focus {
+  outline: none;
+  box-shadow: none;
 }
 
 .ingest-input::placeholder {
