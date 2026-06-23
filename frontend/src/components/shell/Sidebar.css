@@ -1,7 +1,7 @@
 .sidebar {
   background: transparent;
   border: none;
-  width: var(--rail, 64px);
+  width: var(--rail, 56px);
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -19,8 +19,9 @@
 .sidebar-header {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0.75rem;
+  padding: 0.5rem;
   border-bottom: none;
   flex-shrink: 0;
   height: 56px;
@@ -31,8 +32,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   background: transparent;
   border: none;
   border-radius: 6px;
@@ -41,6 +42,7 @@
   transition: all 0.2s ease;
   padding: 0;
   margin: 0;
+  flex-shrink: 0;
 }
 
 .sidebar-hamburger:hover {
@@ -151,8 +153,8 @@
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  height: 44px;
+  padding: 0.5rem;
+  height: 40px;
   border-radius: 6px;
   color: var(--mid);
   text-decoration: none;
