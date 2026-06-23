@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Search, X } from 'lucide-react'
+import { Search, X, Github } from 'lucide-react'
 import { useSources, useCards } from '../../lib/hooks'
 import './Topbar.css'
 
@@ -173,6 +173,15 @@ export function Topbar() {
           </div>
         )}
       </div>
+      <a
+        href="https://github.com/CXLD10/spec-atlas-ki-platform"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="topbar-github"
+        title="View source code on GitHub"
+      >
+        <Github size={20} />
+      </a>
     </header>
   )
 }
