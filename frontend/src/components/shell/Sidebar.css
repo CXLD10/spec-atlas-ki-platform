@@ -74,30 +74,9 @@
 }
 
 .sidebar-home {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 4px;
-  color: var(--hi);
-  text-decoration: none;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  box-sizing: border-box;
-  margin: 2px;
+  display: none;
 }
 
-.sidebar:not(.collapsed) .sidebar-home {
-  width: 100%;
-  height: 44px;
-  padding: 0.5rem 0.75rem;
-  gap: 0.5rem;
-  justify-content: flex-start;
-  margin: 2px 0;
-}
 
 .sidebar-home:hover {
   background: var(--border-soft);
