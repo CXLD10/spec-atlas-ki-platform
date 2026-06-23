@@ -1,7 +1,18 @@
 # Handoff — Phase 2 (document ingestion) in progress
 
 **Written:** 2026-06-23, end of session (connection/session limit reached mid-Phase 2).
-**Branch:** `main` (local Phase 0/1/2-WIP work + `origin/uiux-changes` merged in; pushed to `origin/main`).
+**Branch:** `main` (local Phase 0/1/2-WIP work + `origin/uiux-changes` merged in).
+
+> ## ⚠️ NOT PUSHED — action required
+> This sandbox has no GitHub credentials configured (`git push origin main`
+> fails: `fatal: could not read Username for 'https://github.com'`). Every
+> commit below is **local only**, sitting ahead of `origin/main` (which is
+> still at `94c38f5`, your last push). **Someone with push access needs to
+> run `git push origin main` from a machine with valid GitHub auth before
+> any other dev can pull this.** Local `main` is a strict fast-forward of
+> `origin/main` (no rewritten history), so a plain push should work with no
+> force needed — verify with `git log --oneline origin/main..main` before
+> pushing to see exactly what's about to land.
 
 This note is for whoever continues — human or another Claude session. Read this
 before touching anything; it tells you exactly what's real, what's half-built,
