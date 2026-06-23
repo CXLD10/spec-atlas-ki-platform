@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { TopBar } from '../components/layout/TopBar'
 import './Docs.css'
 
 interface DocSection {
@@ -482,7 +481,7 @@ export function Docs() {
     return (
       <div key={section.id}>
         <button
-          className={`nav-item ${isSelected ? 'selected' : ''}`}
+          className={`docs-nav-item ${isSelected ? 'selected' : ''}`}
           style={{ paddingLeft: `${level * 16}px` }}
           onClick={() => {
             setSelectedDoc(section.id)
@@ -490,17 +489,17 @@ export function Docs() {
           }}
         >
           {hasSubsections ? (
-            <span className="nav-toggle">
+            <span className="docs-nav-toggle">
               {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             </span>
           ) : (
-            <span className="nav-toggle-placeholder" />
+            <span className="docs-nav-toggle-placeholder" />
           )}
-          <span className="nav-label">{section.title}</span>
+          <span className="docs-nav-label">{section.title}</span>
         </button>
 
         {hasSubsections && isExpanded && section.subsections && (
-          <div className="nav-subsections">
+          <div className="docs-nav-subsections">
             {section.subsections.map((subsection) =>
               renderNavItem(subsection, level + 1)
             )}
@@ -512,17 +511,15 @@ export function Docs() {
 
   return (
     <div className="docs-page">
-      <TopBar variant="workspace" />
-
       <div className="docs-container">
         {/* Sidebar */}
         <aside className="docs-sidebar">
-          <div className="sidebar-header">
+          <div className="docs-sidebar-header">
             <h2>Documentation</h2>
             <input
               type="text"
               placeholder="Search docs..."
-              className="sidebar-search"
+              className="docs-sidebar-search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />

@@ -1,0 +1,145 @@
+.sources-page {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.sources-page-header {
+  margin-bottom: 1.5rem;
+}
+
+.sources-page-title {
+  font-family: var(--disp);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--hi);
+  margin: 0 0 0.5rem 0;
+}
+
+.sources-page-subtitle {
+  margin: 0;
+  color: var(--mid);
+  font-size: 0.95rem;
+}
+
+.sources-ingest-bar {
+  margin-bottom: 2rem;
+  max-width: 720px;
+}
+
+.sources-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 0.25rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.25rem;
+}
+
+.filter-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.875rem;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--mid);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filter-tab:hover {
+  color: var(--hi);
+  background: var(--border-soft);
+}
+
+.filter-tab.active {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 0.375rem;
+  background: var(--border-soft);
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--dim);
+}
+
+.filter-tab.active .filter-count {
+  background: rgba(68, 147, 248, 0.2);
+  color: var(--primary);
+}
+
+.sources-search {
+  padding: 0.5rem 0.875rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--hi);
+  font-size: 0.875rem;
+  outline: none;
+  min-width: 200px;
+  transition: border-color 0.2s;
+}
+
+.sources-search:focus {
+  border-color: var(--primary);
+}
+
+.sources-search::placeholder {
+  color: var(--dim);
+}
+
+.sources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+
+.sources-loading,
+.sources-empty {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--mid);
+  font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  .sources-page {
+    padding: 1rem;
+  }
+
+  .sources-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sources-search {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .sources-grid {
+    grid-template-columns: 1fr;
+  }
+}

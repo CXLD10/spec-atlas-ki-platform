@@ -1,0 +1,279 @@
+.kc-page {
+  padding: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.kc-loading,
+.kc-error {
+  padding: 4rem 2rem;
+  text-align: center;
+  color: var(--mid);
+}
+
+.kc-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--mid);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 1.5rem;
+}
+
+.kc-back-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.kc-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+}
+
+.kc-title {
+  font-family: var(--disp);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--hi);
+  margin: 0 0 0.625rem 0;
+}
+
+.kc-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.kc-status {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.kc-status--verified {
+  background: rgba(63, 185, 80, 0.12);
+  color: var(--l3);
+}
+
+.kc-status--draft {
+  background: rgba(68, 147, 248, 0.12);
+  color: var(--primary);
+}
+
+.kc-status--stale {
+  background: rgba(212, 153, 34, 0.12);
+  color: var(--amber);
+}
+
+.kc-ref {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--dim);
+}
+
+.kc-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.kc-action-btn {
+  padding: 0.5rem 0.875rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.kc-action-btn:hover {
+  background: #5aa3ff;
+}
+
+.kc-action-btn.secondary {
+  background: var(--border-soft);
+  color: var(--mid);
+  border: 1px solid var(--border);
+}
+
+.kc-action-btn.secondary:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.kc-layout {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .kc-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Body */
+.kc-markdown {
+  margin-bottom: 2rem;
+}
+
+.kc-pre {
+  font-family: var(--body);
+  font-size: 0.9rem;
+  color: var(--mid);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+.kc-section {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-soft);
+}
+
+.kc-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.875rem 0;
+}
+
+.kc-citations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.kc-citation {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.3rem 0.625rem;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.kc-citation--code {
+  background: rgba(88, 166, 255, 0.1);
+  color: var(--l1);
+}
+
+.kc-citation--pdf {
+  background: rgba(124, 139, 255, 0.1);
+  color: var(--l4);
+}
+
+.kc-citation--xlsx {
+  background: rgba(212, 153, 34, 0.1);
+  color: var(--amber);
+}
+
+.kc-citation--md {
+  background: rgba(63, 185, 80, 0.1);
+  color: var(--l3);
+}
+
+.kc-citation-ref {
+  opacity: 0.8;
+}
+
+.kc-citation-loc {
+  font-weight: 600;
+}
+
+/* Relations sidebar */
+.kc-relations {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  position: sticky;
+  top: 1rem;
+}
+
+.kc-relations-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.875rem 0;
+}
+
+.kc-relation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.kc-relation-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s;
+}
+
+.kc-relation-item:hover {
+  border-color: var(--primary);
+}
+
+.kc-relation-kind {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  background: var(--border-soft);
+  border-radius: 3px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.kc-relation-ref {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--mid);
+  word-break: break-all;
+}
+
+@media (max-width: 640px) {
+  .kc-page {
+    padding: 1rem;
+  }
+
+  .kc-header {
+    flex-direction: column;
+  }
+}

@@ -1,7 +1,7 @@
 .docs-page {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   background: var(--bg);
 }
 
@@ -22,20 +22,20 @@
   gap: 0;
 }
 
-.sidebar-header {
+.docs-sidebar-header {
   padding: 1.5rem 1rem;
   border-bottom: 1px solid var(--panel-border);
   flex-shrink: 0;
 }
 
-.sidebar-header h2 {
+.docs-sidebar-header h2 {
   margin: 0 0 1rem 0;
   font-size: 1rem;
   font-weight: 700;
   color: var(--ink);
 }
 
-.sidebar-search {
+.docs-sidebar-search {
   width: 100%;
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
@@ -46,11 +46,11 @@
   transition: all 0.2s ease;
 }
 
-.sidebar-search::placeholder {
+.docs-sidebar-search::placeholder {
   color: var(--ink-faint);
 }
 
-.sidebar-search:focus {
+.docs-sidebar-search:focus {
   outline: none;
   border-color: var(--cyan);
   box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
@@ -65,7 +65,7 @@
   flex-direction: column;
 }
 
-.nav-item {
+.docs-nav-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -81,11 +81,11 @@
   transition: all 0.2s ease;
 }
 
-.nav-item:hover {
+.docs-nav-item:hover {
   background: rgba(88, 166, 255, 0.1);
 }
 
-.nav-item.selected {
+.docs-nav-item.selected {
   background: rgba(88, 166, 255, 0.15);
   color: var(--cyan);
   font-weight: 600;
@@ -93,7 +93,7 @@
   padding-left: calc(0.75rem - 3px);
 }
 
-.nav-toggle {
+.docs-nav-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -103,20 +103,20 @@
   color: var(--ink-dim);
 }
 
-.nav-toggle-placeholder {
+.docs-nav-toggle-placeholder {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
 }
 
-.nav-label {
+.docs-nav-label {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.nav-subsections {
+.docs-nav-subsections {
   display: flex;
   flex-direction: column;
 }
@@ -297,8 +297,8 @@
 
 /* ============ REDUCED MOTION ============ */
 @media (prefers-reduced-motion: reduce) {
-  .nav-item,
-  .sidebar-search {
+  .docs-nav-item,
+  .docs-sidebar-search {
     transition: none;
   }
 }

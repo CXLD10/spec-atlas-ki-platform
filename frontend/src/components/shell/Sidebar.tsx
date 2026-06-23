@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Menu, Zap, FileText, Network, MessageCircle, Wrench, Webhook, BookOpen } from 'lucide-react'
+import { Menu, Zap, FileText, Network, BookOpen, MessageCircle, Wrench, Webhook, Library } from 'lucide-react'
 import { useSidebar } from './useSidebar'
 import { ThemeToggle } from './ThemeToggle'
 import './Sidebar.css'
@@ -35,7 +35,7 @@ export function Sidebar() {
       items: [
         { icon: Zap, label: 'Dashboard', path: '/' },
         { icon: FileText, label: 'Sources', path: '/sources' },
-        { icon: Network, label: 'Knowledge Base', path: '/kb' },
+        { icon: Library, label: 'Knowledge Base', path: '/kb' },
         { icon: Network, label: 'Knowledge Graph', path: '/graph' },
         { icon: MessageCircle, label: 'Ask Atlas', path: '/ask' },
         { icon: Wrench, label: 'Specify', path: '/specify' },
