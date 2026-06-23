@@ -86,7 +86,8 @@ export function Sidebar() {
       <nav className="sidebar-nav">
         {navGroups.map((group) => (
           <div key={group.label} className="nav-group">
-            <div className="nav-group-label">{group.label}</div>
+            {!collapsed && <div className="nav-group-label">{group.label}</div>}
+            {collapsed && <div className="nav-group-divider" />}
             {group.items.map((item) => {
               const IconComponent = item.icon
               return (
@@ -96,7 +97,8 @@ export function Sidebar() {
                   className={({ isActive }: { isActive: boolean }) =>
                     `nav-item ${isActive ? 'active' : ''} ${collapsed ? 'collapsed' : ''}`
                   }
-                  title={collapsed ? item.label : undefined}
+                  aria-label={item.label}
+                  title={item.label}
                   onClick={() => isMobile && closeMobile()}
                 >
                   <IconComponent size={18} className="nav-icon" />
