@@ -76,11 +76,6 @@
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--mid);
-  transition: border-color 0.2s ease;
-}
-
-.topbar-search:focus-within {
-  border-color: var(--primary);
 }
 
 .search-icon {
