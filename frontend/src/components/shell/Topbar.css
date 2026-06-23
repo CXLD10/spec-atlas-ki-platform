@@ -208,10 +208,12 @@
   cursor: pointer;
   transition: all 0.2s ease;
   text-decoration: none;
-  margin-left: auto;
-  flex-shrink: 0;
   font-size: 0.875rem;
   font-weight: 600;
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .topbar-github:hover {
