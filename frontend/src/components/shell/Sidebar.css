@@ -8,6 +8,8 @@
   flex-direction: column;
   transition: width 0.3s ease;
   width: var(--rail, 248px);
+  flex-shrink: 0;
+  min-width: 0;
 }
 
 .sidebar.mobile {
