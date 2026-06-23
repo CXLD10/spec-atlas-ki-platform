@@ -47,6 +47,8 @@ export function useSidebar(): UseSidebarReturn {
 
     const mediaQuery = window.matchMedia('(max-width: 767px)')
     mediaQuery.addEventListener('change', handleMediaChange)
+    // Set initial state from media query to ensure accuracy
+    setIsMobile(mediaQuery.matches)
 
     return () => {
       mediaQuery.removeEventListener('change', handleMediaChange)

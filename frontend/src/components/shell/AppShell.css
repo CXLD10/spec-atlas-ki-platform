@@ -11,6 +11,7 @@
 @media (max-width: 767px) {
   .app-shell {
     grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
   }
 }
 
