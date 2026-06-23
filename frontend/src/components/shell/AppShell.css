@@ -7,7 +7,8 @@
   width: 100%;
   gap: 0;
   position: relative;
-  background: var(--bg);
+  background: linear-gradient(135deg, #0d0f15 0%, #0a0d12 50%, #0f0d1a 100%);
+  backdrop-filter: blur(20px);
 }
 
 .sidebar {
@@ -46,7 +47,7 @@
   min-width: 0;
   min-height: 0;
   width: 100%;
-  background: var(--bg);
+  background: transparent;
   position: relative;
 }
 
@@ -57,7 +58,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(20, 40, 80, 0.02), rgba(10, 14, 26, 0.01));
+  background: radial-gradient(ellipse at center top, rgba(70, 120, 180, 0.08), transparent 60%);
   pointer-events: none;
   z-index: 0;
 }
