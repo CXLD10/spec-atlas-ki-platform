@@ -9,6 +9,7 @@ from typing import Optional
 
 import json
 import tempfile
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel

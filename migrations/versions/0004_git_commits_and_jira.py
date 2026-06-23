@@ -62,6 +62,19 @@ def upgrade_analysis() -> None:
 
 
 def downgrade_analysis() -> None:
+    # Re-imposing the stricter 3-value constraint would fail outright if any
+    # 'jira' rows exist (CheckViolation on ADD CONSTRAINT) — downgrading this
+    # migration means reverting the capability that created them, so they go
+    # too. Analysis DB is documented as rebuildable/disposable (DATA-MODEL.md),
+    # so this is consistent with the rest of this DB's downgrade semantics,
+    # not a special case. embeddings.owner_ref is a loose text reference (no
+    # FK — it also points at Group.path/Spec refs), so clean those up too.
+    op.execute(
+        "DELETE FROM embeddings WHERE owner_kind = 'source_unit' AND owner_ref IN "
+        "(SELECT id::text FROM source_units WHERE source_type = 'jira')"
+    )
+    op.execute("DELETE FROM source_units WHERE source_type = 'jira'")
+
     op.drop_constraint("ck_source_units_type", "source_units", type_="check")
     op.create_check_constraint(
         "ck_source_units_type",

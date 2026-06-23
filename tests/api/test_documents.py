@@ -226,7 +226,10 @@ def test_group_md_persisted_to_durable_store(migrated: None, tmp_path: Path) -> 
     # Served by GET /api/docs/{repo_name}
     from spec_atlas.config import Settings
 
-    settings = Settings(docs_dir=docs_dir)
+    # Settings fields use aliases for env loading (docs_dir's is DOCS_DIR);
+    # constructing Settings(docs_dir=...) directly silently doesn't set it
+    # (falls back to the default ./data/docs) — must use the alias name.
+    settings = Settings(DOCS_DIR=str(docs_dir))
     client = TestClient(create_app(settings))
     resp = client.get("/api/docs/docs-test-repo")
     assert resp.status_code == 200, resp.text

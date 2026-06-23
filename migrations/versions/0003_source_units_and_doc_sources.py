@@ -94,6 +94,13 @@ def downgrade_analysis() -> None:
     bind = op.get_bind()
     inspector = sa.inspect(bind)
 
+    # Re-imposing the stricter 2-value constraint fails outright (CheckViolation
+    # on ADD CONSTRAINT) if any 'source_unit' embedding rows exist — downgrading
+    # this migration means reverting the capability that created them, so they
+    # go too (Analysis DB is documented as rebuildable/disposable). Same bug
+    # class later found and fixed in 0004's jira rows — fixed here too.
+    op.execute("DELETE FROM embeddings WHERE owner_kind = 'source_unit'")
+
     if _has_check_constraint(inspector, "embeddings", "ck_embeddings_owner_kind"):
         op.drop_constraint("ck_embeddings_owner_kind", "embeddings", type_="check")
         op.create_check_constraint(
