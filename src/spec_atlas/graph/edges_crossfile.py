@@ -183,33 +183,21 @@ def _extract_ts_imports(
     nodes_by_qname: dict[tuple[str, str], list[Node]],
     repo_id: uuid.UUID,
 ) -> list[Edge]:
-    """Extract TypeScript/JavaScript import edges."""
+    """Extract TypeScript/JavaScript import edges via tree-sitter CST."""
     edges = []
 
-    # Parse import statements using regex
-    # import x from "module"
-    # import { x } from "module"
-    # import * as x from "module"
-    # import x, { y } from "module"
+    module_paths = _parse_ts_import_paths(content, file.language or "typescript")
 
-    import_pattern = r'import\s+(?:[\w{}\s,*]+)\s+from\s+["\']([^"\']+)["\']'
-
-    for match in re.finditer(import_pattern, content):
-        module_path = match.group(1)
-
-        # Try to resolve the module path to a file and node
-        # For v1, simple heuristic: match module_path to file.path
-        # This is very simplified; full resolution would need path normalization
-
-        # Try to find nodes from the imported module
-        qname_key = ("typescript" if file.language == "typescript" else "javascript", module_path)
+    for module_path in module_paths:
+        lang_key = "typescript" if file.language in ("typescript", "tsx") else "javascript"
+        qname_key = (lang_key, module_path)
 
         if qname_key in nodes_by_qname:
             for dst_node in nodes_by_qname[qname_key]:
                 if dst_node.repo_id == repo_id and dst_node.file_id != file.id:
                     src_node = None
                     for node in file_nodes:
-                        if node.kind == "function" or node.kind == "class":
+                        if node.kind in ("function", "class"):
                             src_node = node
                             break
                     if src_node:
@@ -225,3 +213,43 @@ def _extract_ts_imports(
                         break
 
     return edges
+
+
+def _parse_ts_import_paths(content: str, language: str) -> list[str]:
+    """Extract module paths from import/export declarations via tree-sitter.
+
+    Returns a list of raw specifier strings (e.g. './utils', 'react').
+    """
+    try:
+        from spec_atlas.parse.treesitter import parse_ts
+
+        tree = parse_ts(content, language)
+    except Exception:
+        return _parse_ts_import_paths_regex_fallback(content)
+
+    paths: list[str] = []
+
+    def _walk(node) -> None:
+        if node.type in ("import_statement", "export_statement"):
+            for child in node.children:
+                if child.type == "string":
+                    raw = child.text
+                    s = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else (raw or "")
+                    # Strip surrounding quotes
+                    s = s.strip("'\"` ")
+                    if s:
+                        paths.append(s)
+            return
+        for child in node.children:
+            _walk(child)
+
+    _walk(tree.root_node)
+    return paths
+
+
+def _parse_ts_import_paths_regex_fallback(content: str) -> list[str]:
+    """Regex fallback for import path extraction."""
+    import re
+
+    pattern = r'import\s+(?:[\w{}\s,*]+)\s+from\s+["\']([^"\']+)["\']'
+    return re.findall(pattern, content)

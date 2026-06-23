@@ -31,6 +31,7 @@ class VectorSearch:
         session: Session,
         k: int = 3,
         model: str = "sentence-transformers/all-MiniLM-L6-v2",
+        stale_spec_refs: set[str] | None = None,
     ) -> list[tuple[Group | SourceUnit, float]]:
         """Search for top-K groups/source_units via ANN on embeddings, or
         fallback to node matching.
@@ -41,6 +42,9 @@ class VectorSearch:
             session: Analysis DB session.
             k: Number of top results to return (default 3).
             model: Embedding model ID to search over.
+            stale_spec_refs: Optional set of component_ref strings whose specs
+                are marked stale. Groups whose member_spec_refs overlap with
+                this set are excluded from results (F-014 D3).
 
         Returns:
             List of (owner, similarity_score) tuples, sorted by score (highest
@@ -54,11 +58,22 @@ class VectorSearch:
         # Check if we have any embeddings
         embedding_count = session.query(func.count(Embedding.owner_ref)).scalar()
         if embedding_count > 0:
-            # Vector search: use embeddings
-            return VectorSearch._vector_search(query, embed_provider, session, k, model)
+            results = VectorSearch._vector_search(query, embed_provider, session, k, model)
         else:
-            # Fallback: keyword search on nodes
-            return VectorSearch._node_keyword_search(query, session, k)
+            results = VectorSearch._node_keyword_search(query, session, k)
+
+        # Filter out groups whose member specs are stale (F-014 D3)
+        if stale_spec_refs:
+            results = [
+                (owner, score)
+                for owner, score in results
+                if not (
+                    isinstance(owner, Group)
+                    and any(ref in stale_spec_refs for ref in (owner.member_spec_refs or []))
+                )
+            ]
+
+        return results
 
     @staticmethod
     def _vector_search(

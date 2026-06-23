@@ -59,6 +59,18 @@ def create_app(settings=None) -> FastAPI:
         app.state.llm_provider = None
         app.state.embedding_provider = None
 
+    # Rate limiting — register the exception handler so slowapi returns 429
+    try:
+        from slowapi import _rate_limit_exceeded_handler
+        from slowapi.errors import RateLimitExceeded
+        from spec_atlas.api.ingest import HAS_LIMITER, limiter
+
+        if HAS_LIMITER and limiter is not None:
+            app.state.limiter = limiter
+            app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    except Exception as e:
+        logger.debug(f"slowapi wiring skipped: {e}")
+
     # CORS Middleware (permissive for local dev)
     app.add_middleware(
         CORSMiddleware,

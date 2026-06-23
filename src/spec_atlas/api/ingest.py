@@ -79,9 +79,9 @@ def _safe_resolve_path(repo_root: Path, requested_file: str) -> Path:
 
 
 def _apply_rate_limit(func):
-    """Apply rate limit if slowapi is available."""
-    # TODO: Fix slowapi compatibility with FastAPI Request injection (same caveat
-    # as api/answer.py — disabled for now, limiter/HAS_LIMITER stay importable).
+    """Apply 5/hour rate limit to ingest endpoints when slowapi is available."""
+    if HAS_LIMITER and limiter is not None:
+        return limiter.limit("5/hour")(func)
     return func
 
 
@@ -256,6 +256,23 @@ def _run_ingest_sync(
                 spec_session.close()
             except Exception as e:
                 logger.warning(f"Spec graph building failed, continuing: {e}")
+
+        # Phase 11: Drift detection — re-fingerprint specs after re-ingest
+        if spec_session_factory:
+            try:
+                from spec_atlas.drift.detector import DriftDetector
+
+                spec_session = spec_session_factory()
+                drift_report = DriftDetector.detect_drift(repo.id, spec_session)
+                if not drift_report.is_clean():
+                    stale_count = DriftDetector.mark_stale(drift_report, spec_session)
+                    logger.info(
+                        f"Job {job_id}: drift detection found "
+                        f"{stale_count} stale spec(s) for repo {repo.name!r}"
+                    )
+                spec_session.close()
+            except Exception as e:
+                logger.warning(f"Drift detection failed, continuing: {e}")
 
         IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=99)
 
@@ -492,9 +509,9 @@ def _get_session_factory(request: Request):
 @router.post("/ingest", response_model=JobStatus)
 @_apply_rate_limit
 async def start_ingest(
-    request: IngestRequest,
+    request: Request,
+    body: IngestRequest,
     background_tasks: BackgroundTasks,
-    http_request: Request,
 ):
     """
     Start indexing a repository.
@@ -503,22 +520,22 @@ async def start_ingest(
 
     Returns a job_id to poll for status.
     """
-    if not request.repo_url or not request.repo_url.strip():
+    if not body.repo_url or not body.repo_url.strip():
         raise HTTPException(status_code=400, detail="repo_url is required")
 
-    session_factory = _get_session_factory(http_request)
+    session_factory = _get_session_factory(request)
     spec_session_factory = None
     llm_provider = None
 
     # Get spec session factory and LLM provider from app state if available
-    if hasattr(http_request.app.state, "spec_session_factory"):
-        spec_session_factory = http_request.app.state.spec_session_factory
-    if hasattr(http_request.app.state, "llm_provider"):
-        llm_provider = http_request.app.state.llm_provider
+    if hasattr(request.app.state, "spec_session_factory"):
+        spec_session_factory = request.app.state.spec_session_factory
+    if hasattr(request.app.state, "llm_provider"):
+        llm_provider = request.app.state.llm_provider
 
     session = session_factory()
     try:
-        job_id = IngestJobStore.create_job(session, request.repo_url)
+        job_id = IngestJobStore.create_job(session, body.repo_url)
         job = IngestJobStore.get_job(session, job_id)
         status_response = _to_job_status(job)
     finally:
@@ -527,20 +544,20 @@ async def start_ingest(
     background_tasks.add_task(
         _process_ingest_job,
         job_id,
-        request.repo_url,
+        body.repo_url,
         session_factory,
         spec_session_factory,
         llm_provider,
     )
-    logger.info(f"Started ingest job {job_id} for {request.repo_url}")
+    logger.info(f"Started ingest job {job_id} for {body.repo_url}")
 
     return status_response
 
 
 @router.get("/ingest/{job_id}", response_model=JobStatus)
-async def get_ingest_status(job_id: str, http_request: Request):
+async def get_ingest_status(job_id: str, request: Request):
     """Get the status of an ingest job."""
-    session_factory = _get_session_factory(http_request)
+    session_factory = _get_session_factory(request)
 
     session = session_factory()
     try:
@@ -555,8 +572,8 @@ async def get_ingest_status(job_id: str, http_request: Request):
 @router.post("/documents", response_model=JobStatus)
 @_apply_rate_limit
 async def upload_document(
+    request: Request,
     background_tasks: BackgroundTasks,
-    http_request: Request,
     file: UploadFile = File(...),  # noqa: B008
 ):
     """Upload a PDF/Excel/Markdown document for ingestion.
@@ -596,8 +613,8 @@ async def upload_document(
     with open(fd, "wb") as f:
         f.write(contents)
 
-    session_factory = _get_session_factory(http_request)
-    embed_provider = getattr(http_request.app.state, "embedding_provider", None)
+    session_factory = _get_session_factory(request)
+    embed_provider = getattr(request.app.state, "embedding_provider", None)
     if not embed_provider:
         Path(temp_path).unlink(missing_ok=True)
         raise HTTPException(status_code=503, detail="Embedding provider not configured")

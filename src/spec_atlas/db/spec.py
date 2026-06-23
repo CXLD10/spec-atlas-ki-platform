@@ -68,6 +68,9 @@ class Spec(SpecBase):
         MutableList.as_mutable(JSONB), nullable=False, default=list
     )
     source_fingerprint: Mapped[str | None] = mapped_column(Text, nullable=True)
+    staleness_detected_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

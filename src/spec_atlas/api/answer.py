@@ -344,26 +344,27 @@ def get_answer_router(request: Request) -> AnswerRouter:
 
 
 def _apply_rate_limit(func):
-    """Apply rate limit if slowapi is available."""
-    # TODO: Fix slowapi compatibility with FastAPI Request injection
-    # Rate limiting disabled for now
+    """Apply 20/minute rate limit to ask endpoints when slowapi is available."""
+    if HAS_LIMITER and limiter is not None:
+        return limiter.limit("20/minute")(func)
     return func
 
 
 @router.post("/ask", response_model=AskResponse)
 @_apply_rate_limit
 async def ask(
-    request: AskRequest,
+    request: Request,
+    body: AskRequest,
     answer_router: AnswerRouter = Depends(get_answer_router),  # noqa: B008
 ) -> AskResponse:
     """Answer a question about the codebase."""
-    return await answer_router.answer(request.question, request.repo)
+    return await answer_router.answer(body.question, body.repo)
 
 
 @router.post("/ask/stream")
 async def ask_stream(
-    request: AskRequest,
-    http_request: Request,
+    request: Request,
+    body: AskRequest,
 ) -> StreamingResponse:
     """SSE streaming variant of POST /api/ask.
 
@@ -376,11 +377,11 @@ async def ask_stream(
     a blank line per the SSE spec.
     """
     # Resolve the router here; raise 503 before starting the stream if DB is absent.
-    if not http_request.app.state.analysis_session_factory:
+    if not request.app.state.analysis_session_factory:
         raise HTTPException(status_code=503, detail="Analysis database not configured")
 
-    answer_router = get_answer_router(http_request)
-    result = await answer_router.answer(request.question, request.repo)
+    answer_router = get_answer_router(request)
+    result = await answer_router.answer(body.question, body.repo)
 
     async def _generate():
         # Emit the answer word-by-word so the client can render progressively.
