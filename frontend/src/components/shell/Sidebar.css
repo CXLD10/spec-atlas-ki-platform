@@ -1,7 +1,7 @@
 .sidebar {
   background: transparent;
-  border-right: none;
-  width: var(--rail, 248px);
+  border: none;
+  width: var(--rail, 64px);
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -10,7 +10,9 @@
   overflow-x: hidden;
   box-sizing: border-box;
   scrollbar-width: thin;
-  position: relative;
+  position: fixed;
+  left: 0;
+  top: 0;
   z-index: 100;
 }
 
@@ -22,6 +24,7 @@
   border-bottom: none;
   flex-shrink: 0;
   height: 56px;
+  background: transparent;
 }
 
 .sidebar-hamburger {
@@ -41,7 +44,7 @@
 }
 
 .sidebar-hamburger:hover {
-  background: var(--border-soft);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--hi);
 }
 
@@ -62,6 +65,8 @@
   flex: 1;
   min-width: 0;
   height: 40px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .sidebar-home:hover {
@@ -89,15 +94,35 @@
   text-overflow: ellipsis;
 }
 
+/* When expanded (248px) - show as overlay panel */
+.sidebar[style*="248px"] {
+  background: rgba(13, 17, 23, 0.95);
+  backdrop-filter: blur(8px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar[style*="248px"] .sidebar-header {
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar[style*="248px"] .sidebar-home {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem 0.5rem;
+  padding: 0.5rem;
   display: flex;
   flex-direction: column;
   gap: 0;
-  background: var(--panel);
-  border-top: 1px solid var(--border-soft);
+}
+
+.sidebar[style*="248px"] .sidebar-nav {
+  padding: 1rem 0.5rem;
 }
 
 .nav-group {
@@ -109,7 +134,7 @@
 .nav-group:not(:first-child) {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .nav-group-label {
@@ -120,17 +145,33 @@
   text-transform: uppercase;
   color: var(--dim);
   margin-bottom: 0.25rem;
+  opacity: 0;
+  height: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.sidebar[style*="248px"] .nav-group-label {
+  opacity: 1;
+  height: auto;
 }
 
 .nav-group-divider {
   height: 1px;
-  background: var(--border);
+  background: rgba(255, 255, 255, 0.1);
   margin: 0.5rem 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar[style*="248px"] .nav-group-divider {
+  opacity: 1;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.75rem;
   padding: 0.5rem 0.75rem;
   height: 44px;
@@ -141,14 +182,18 @@
   border-left: 3px solid transparent;
 }
 
+.sidebar[style*="248px"] .nav-item {
+  justify-content: flex-start;
+}
+
 .nav-item:hover {
-  background: var(--border-soft);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--hi);
 }
 
 .nav-item.active {
   color: var(--primary);
-  background: var(--border-soft);
+  background: rgba(68, 147, 248, 0.1);
   border-left-color: var(--primary);
   box-shadow: inset -3px 0 0 var(--primary);
 }
@@ -169,17 +214,31 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  opacity: 0;
+  width: 0;
+  transition: all 0.3s ease;
+}
+
+.sidebar[style*="248px"] .nav-label {
+  opacity: 1;
+  width: auto;
 }
 
 .sidebar-footer {
   padding: 0.5rem;
-  border-top: 1px solid var(--border-soft);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 0.5rem;
   flex-shrink: 0;
-  background: var(--panel);
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.sidebar[style*="248px"] .sidebar-footer {
+  flex-direction: row;
+  justify-content: space-between;
 }
 
 .footer-content {
@@ -197,6 +256,12 @@
   gap: 0.5rem;
   font-size: 0.75rem;
   color: var(--mid);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar[style*="248px"] .footer-label {
+  opacity: 1;
 }
 
 .footer-label.healthy {

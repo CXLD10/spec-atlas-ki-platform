@@ -17,12 +17,14 @@
   font-size: 0.875rem;
   font-family: var(--mono);
   color: var(--mid);
-  flex-shrink: 0;
   background: transparent;
   border: none;
-  padding: 0;
+  padding: 0.5rem;
   cursor: pointer;
   transition: color 0.2s ease;
+  white-space: nowrap;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .topbar-home:hover {
