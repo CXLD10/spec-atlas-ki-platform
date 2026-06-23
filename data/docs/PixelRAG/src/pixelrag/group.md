@@ -2,12 +2,26 @@
 
 **Path:** `src/pixelrag`
 
-## Overview
-This group contains 1 code components.
+**pixelrag**
+================
 
-## Components
+### Purpose
 
-- `_usage` (function, python)
+The `pixelrag` group is responsible for managing pixel-related functionality. Its primary task is to provide a module that can be used to create and manipulate pixel data.
+
+### Key Components
+
+* **_usage**: The `_usage` function is a key component of the `pixelrag` group. It is a Python function that provides a utility for creating and managing pixel data.
+
+### Dependencies
+
+* The `pixelrag` group does not have any explicit dependencies. However, it is likely that it relies on the Python standard library, particularly the `math` and `color` modules, to perform calculations and color manipulations.
+
+### Invariants
+
+* The `_usage` function always returns a valid pixel object, which is an instance of a class that represents a single pixel in a 2D image.
+* The pixel object has a fixed size, which is determined by the number of color channels (e.g., RGB, RGBA, etc.).
+* The pixel object's color values are always within the valid range for the respective color channel (e.g., 0-255 for an 8-bit color channel).
 
 ---
 

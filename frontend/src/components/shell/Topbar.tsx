@@ -80,6 +80,7 @@ export function Topbar() {
       }
     })
 
+    console.log('Search:', { query, sources: sources.length, cards: cards.length, results: searchResults.length })
     setResults(searchResults.slice(0, 8))
     setShowResults(searchResults.length > 0)
   }, [searchQuery, sources, cards])
@@ -127,7 +128,11 @@ export function Topbar() {
             className="search-input"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => searchQuery.trim() && setShowResults(true)}
+            onFocus={() => {
+              if (searchQuery.trim() && results.length > 0) {
+                setShowResults(true)
+              }
+            }}
           />
           {searchQuery && (
             <button

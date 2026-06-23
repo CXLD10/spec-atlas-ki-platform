@@ -7,8 +7,8 @@ This group contains 8 code components.
 
 ## Components
 
-- `Badge` (function, typescript)
 - `cn` (method, typescript)
+- `Badge` (function, typescript)
 - `Collapsible` (function, typescript)
 - `Dialog` (function, typescript)
 - `DialogTrigger` (function, typescript)

@@ -2,28 +2,14 @@
 
 **Path:** `web/app/api/chat`
 
-**Group: web/app/api/chat**
-==========================
+## Overview
+This group contains 3 code components.
 
-### Purpose
-This group is responsible for implementing a chat functionality, enabling real-time communication between users. It focuses on creating and managing chat-related API endpoints and tools.
+## Components
 
-### Key Components
-The core components of this group are:
-
-* **sseEvent**: A function that handles Server-Sent Events (SSE) to establish real-time communication channels.
-* **createTools**: A function that creates and manages tools necessary for chat functionality.
-* **POST**: A function that handles POST requests for sending messages or other chat-related data.
-
-### Dependencies
-This group depends on a robust server infrastructure to handle incoming requests and send SSE events.
-
-### Invariants
-Key properties that hold in this group include:
-
-* **Message integrity**: The group ensures that messages are sent and received correctly, with no data corruption or loss.
-* **Real-time updates**: The SSE event mechanism guarantees that users receive updates in real-time, without requiring manual refreshes.
-* **Consistent state**: The group maintains a consistent state across all users, preventing inconsistencies and ensuring a seamless chat experience.
+- `sseEvent` (function, typescript)
+- `createTools` (function, typescript)
+- `POST` (function, typescript)
 
 ---
 
