@@ -1,6 +1,5 @@
 import { useLocation } from 'react-router-dom'
-import { Menu, Search } from 'lucide-react'
-import { useSidebar } from './useSidebar'
+import { Search } from 'lucide-react'
 import './Topbar.css'
 
 const routeTitles: Record<string, string> = {
@@ -15,7 +14,6 @@ const routeTitles: Record<string, string> = {
 }
 
 export function Topbar() {
-  const { isMobile, openMobile } = useSidebar()
   const location = useLocation()
 
   const getTitle = (pathname: string): string => {
@@ -26,15 +24,6 @@ export function Topbar() {
 
   return (
     <header className="topbar">
-      {isMobile && (
-        <button
-          className="topbar-hamburger"
-          aria-label="Open navigation"
-          onClick={openMobile}
-        >
-          <Menu size={20} />
-        </button>
-      )}
       <div className="topbar-breadcrumb">
         <span className="breadcrumb-text">spec-atlas</span>
         <span className="breadcrumb-separator">/</span>
