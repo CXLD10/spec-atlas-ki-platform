@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Search, X, Github } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { useSources, useCards } from '../../lib/hooks'
 import './Topbar.css'
 
@@ -180,7 +180,7 @@ export function Topbar() {
         className="topbar-github"
         title="View source code on GitHub"
       >
-        <Github size={20} />
+        GitHub
       </a>
     </header>
   )
