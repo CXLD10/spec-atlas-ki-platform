@@ -1,16 +1,32 @@
-/* Bulletproof 2-column layout */
+/* Overlay sidebar layout */
 .app-shell {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 64px 1fr;
   grid-template-rows: auto 1fr;
   height: 100vh;
-  width: 100vw;
+  width: 100%;
   gap: 0;
+  position: relative;
 }
 
 .sidebar {
   grid-column: 1;
   grid-row: 1 / -1;
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: 64px;
+  z-index: 100;
+  transition: all 0.3s ease;
+}
+
+.sidebar[style*="--rail: 248px"],
+.sidebar.expanded {
+  width: 248px;
+  background: rgba(13, 17, 23, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 2px 0 24px rgba(0, 0, 0, 0.5);
 }
 
 .app-shell-main {
@@ -18,7 +34,10 @@
   grid-row: 1 / -1;
   display: flex;
   flex-direction: column;
+  height: 100%;
+  width: 100%;
   min-width: 0;
+  margin-left: 0;
 }
 
 .topbar {
@@ -31,6 +50,5 @@
   overflow-x: hidden;
   min-width: 0;
   min-height: 0;
-  position: relative;
-  z-index: 0;
+  width: 100%;
 }
