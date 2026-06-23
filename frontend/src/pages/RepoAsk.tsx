@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Send, Copy, Check } from 'lucide-react';
-import { TopBar } from '../components/layout/TopBar';
 import { CitationChip } from '../components/qa/CitationChip';
 import { client, Claim } from '../api/client';
 import './RepoAsk.css';
@@ -218,8 +217,7 @@ export function RepoAsk() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-b from-slate-900 to-slate-950">
-      <TopBar variant="workspace" />
+    <div className="flex flex-col h-full">
 
       {/* Subheader */}
       <div className="flex-shrink-0 border-b border-slate-700 bg-slate-950 px-6 py-4">

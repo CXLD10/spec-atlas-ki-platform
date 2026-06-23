@@ -1,7 +1,5 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { TopBar } from '../components/layout/TopBar'
-import { AmbientGrid } from '../components/layout/AmbientGrid'
 import { PipelineHUD } from '../components/hud/PipelineHUD'
 import { useIndexJob } from '../api/useIndexJob'
 import './IndexProgress.css'
@@ -30,8 +28,6 @@ export function IndexProgress() {
   if (error) {
     return (
       <div className="index-progress-page">
-        <AmbientGrid />
-        <TopBar variant="marketing" />
         <main className="error-container">
           <div className="error-message" role="alert">
             <strong>Indexing failed:</strong> {error.message}
@@ -49,8 +45,6 @@ export function IndexProgress() {
 
   return (
     <div className="index-progress-page">
-      <AmbientGrid />
-      <TopBar variant="marketing" />
 
       <main className="progress-main">
         <div className="progress-content">

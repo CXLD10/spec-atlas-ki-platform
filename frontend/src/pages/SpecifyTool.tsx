@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { Loader } from 'lucide-react'
-import { TopBar } from '../components/layout/TopBar'
-import { Sidebar } from '../components/layout/Sidebar'
 import './SpecifyTool.css'
 
 interface SpecResponse {
@@ -59,12 +57,7 @@ export function SpecifyTool() {
   }
 
   return (
-    <div className="specify-tool-page-wrapper">
-      <Sidebar />
-      <div className="specify-tool-page">
-        <TopBar variant="default" />
-
-        <div className="specify-page-content">
+    <div className="specify-page-content">
           <h1>Specify Tool</h1>
           <p className="page-subtitle">
             Auto-generate specifications for code components
@@ -169,8 +162,6 @@ export function SpecifyTool() {
               )}
             </div>
           )}
-        </div>
-      </div>
     </div>
   )
 }

@@ -18,6 +18,7 @@ import Sources from '../pages/Sources'
 import SourceDetail from '../pages/SourceDetail'
 import KnowledgeBase from '../pages/KnowledgeBase'
 import KnowledgeCard from '../pages/KnowledgeCard'
+import MCPServer from '../pages/MCPServer'
 import '../styles/global.css'
 
 const queryClient = new QueryClient({
@@ -45,7 +46,7 @@ export function App() {
               <Route path="/graph" element={<Graph />} />
               <Route path="/ask" element={<RepoAsk />} />
               <Route path="/specify" element={<SpecifyTool />} />
-              <Route path="/mcp" element={<Dashboard />} />
+              <Route path="/mcp" element={<MCPServer />} />
               <Route path="/docs" element={<Docs />} />
               <Route path="/index/:jobId" element={<IndexProgress />} />
 

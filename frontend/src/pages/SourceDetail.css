@@ -1,0 +1,230 @@
+.source-detail-page {
+  padding: 2rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.source-detail-loading,
+.source-detail-error {
+  padding: 4rem 2rem;
+  text-align: center;
+  color: var(--mid);
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--mid);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 1.5rem;
+}
+
+.back-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.source-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.source-detail-title {
+  font-family: var(--disp);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--hi);
+  margin: 0 0 0.5rem 0;
+}
+
+.source-detail-subtitle {
+  margin: 0 0 0.75rem 0;
+  color: var(--mid);
+  font-size: 0.9rem;
+}
+
+.source-detail-badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.reingest-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.125rem;
+  background: var(--border-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--mid);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.reingest-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.source-progress {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.progress-label {
+  font-size: 0.875rem;
+  color: var(--mid);
+  margin-bottom: 0.5rem;
+  font-family: var(--mono);
+}
+
+.progress-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.source-detail-stats {
+  display: flex;
+  gap: 2rem;
+  padding: 1.5rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.detail-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detail-stat-value {
+  font-family: var(--disp);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.detail-stat-label {
+  font-size: 0.75rem;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.source-cards-section {
+  margin-top: 1.5rem;
+}
+
+.section-heading {
+  font-family: var(--disp);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--hi);
+  margin: 0 0 1rem 0;
+}
+
+.section-empty {
+  color: var(--mid);
+  font-size: 0.9rem;
+  padding: 1rem 0;
+}
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.card-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.card-list-item:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.card-list-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--hi);
+}
+
+.card-status {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.card-status--verified {
+  background: rgba(63, 185, 80, 0.12);
+  color: var(--l3);
+}
+
+.card-status--draft {
+  background: rgba(68, 147, 248, 0.12);
+  color: var(--primary);
+}
+
+.card-status--stale {
+  background: rgba(212, 153, 34, 0.12);
+  color: var(--amber);
+}
+
+@media (max-width: 640px) {
+  .source-detail-page {
+    padding: 1rem;
+  }
+
+  .source-detail-header {
+    flex-direction: column;
+  }
+
+  .source-detail-stats {
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+}
