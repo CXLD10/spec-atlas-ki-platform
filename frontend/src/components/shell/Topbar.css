@@ -23,6 +23,7 @@
   color: var(--mid);
   cursor: pointer;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .topbar-hamburger:hover {
@@ -42,6 +43,63 @@
 }
 
 .topbar-breadcrumb {
-  color: var(--mid);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 0.875rem;
+  font-family: var(--mono);
+  color: var(--mid);
+  flex-shrink: 0;
+}
+
+.breadcrumb-text {
+  color: var(--dim);
+}
+
+.breadcrumb-separator {
+  color: var(--border);
+}
+
+.breadcrumb-title {
+  color: var(--hi);
+}
+
+.topbar-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--border-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  flex: 1;
+  max-width: 300px;
+  color: var(--dim);
+  cursor: not-allowed;
+}
+
+.search-icon {
+  color: var(--dim);
+  flex-shrink: 0;
+}
+
+.search-input {
+  border: none;
+  background: transparent;
+  color: var(--hi);
+  font-family: var(--body);
+  font-size: 0.875rem;
+  flex: 1;
+  outline: none;
+  cursor: not-allowed;
+}
+
+.search-input::placeholder {
+  color: var(--dim);
+}
+
+@media (max-width: 640px) {
+  .topbar-search {
+    display: none;
+  }
 }
