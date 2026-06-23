@@ -253,6 +253,10 @@ export function GraphCanvas3D({ nodes, edges, onSelectNode, selectedNodeId }: Gr
       lastMouseY = event.clientY
     }
 
+    const onMouseUp = () => {
+      dragDistance = 0
+    }
+
     const onClick = (event: MouseEvent) => {
       // Don't select if user was dragging (interaction > 5px movement)
       if (dragDistance > 5) return

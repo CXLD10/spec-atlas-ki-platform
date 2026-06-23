@@ -9,11 +9,11 @@ This group contains 11 code components.
 
 - `ChatLayout` (function, typescript)
 - `scrollToBottom` (function, typescript)
-- `handleSend` (function, typescript)
 - `handleSSEEvent` (function, typescript)
 - `handleKeyDown` (function, typescript)
 - `handleReset` (function, typescript)
 - `handleTileClick` (function, typescript)
+- `handleSend` (function, typescript)
 - `handleFile` (function, typescript)
 - `handlePaste` (function, typescript)
 - `handleDrop` (function, typescript)

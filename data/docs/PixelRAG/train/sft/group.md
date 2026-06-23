@@ -7,22 +7,22 @@ This group contains 17 code components.
 
 ## Components
 
+- `run_inference` (function, python)
+- `compute_em_char` (function, python)
+- `grade_with_gpt` (function, python)
 - `collect_paths` (function, python)
 - `try_local_link` (function, python)
 - `fetch_tile` (function, python)
 - `_resolve_image_path` (function, python)
 - `strip_image_tokens` (function, python)
-- `run_inference` (function, python)
-- `compute_em_char` (function, python)
-- `grade_with_gpt` (function, python)
 - `process_split` (function, python)
 - `_collect_stats` (function, python)
-- `compress_image` (function, python)
 - `build_image_set` (function, python)
 - `compress_then_upscale` (function, python)
-- `shard_suffix` (function, python)
 - `build_variable_image_set` (function, python)
 - `format_assistant` (function, python)
+- `compress_image` (function, python)
+- `shard_suffix` (function, python)
 - `push_one` (function, python)
 
 ---

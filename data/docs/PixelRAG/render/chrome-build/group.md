@@ -2,27 +2,11 @@
 
 **Path:** `render/chrome-build`
 
-**Group Summary: chrome-build**
-================================
+## Overview
+This group contains 0 code components.
 
-### Purpose
-The `chrome-build` group is responsible for building and packaging Chrome applications. It ensures that the necessary components are assembled and configured correctly for a successful build process.
+## Components
 
-### Key Components
-* `chrome_build.py`: The main script that orchestrates the build process
-* `build_config.py`: Configuration file that stores build settings and parameters
-* `package_manager`: Handles package dependencies and installation
-* `build_tools`: Collection of tools used for building and packaging Chrome applications
-
-### Dependencies
-* `render` group: Provides rendering capabilities for Chrome applications
-* `package_manager` library: Used for managing package dependencies
-* `build_config` library: Used for loading and processing build configuration
-
-### Invariants
-* Build configuration is loaded and validated before the build process begins
-* Package dependencies are resolved and installed before the build process starts
-* The build process produces a packaged Chrome application with the correct metadata and dependencies
 
 ---
 

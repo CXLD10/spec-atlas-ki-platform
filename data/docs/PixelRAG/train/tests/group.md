@@ -13,7 +13,6 @@ This group contains 18 code components.
 - `run_test` (function, python)
 - `multi_gpu_reference` (function, python)
 - `make_rank_data` (function, python)
-- `collect_grads` (function, python)
 - `compare_grads` (function, python)
 - `find_test_image` (function, python)
 - `test_tokenization` (function, python)
@@ -25,6 +24,7 @@ This group contains 18 code components.
 - `test_training_step` (function, python)
 - `test_gather_semantics` (function, python)
 - `test_multi_gpu_gather` (function, python)
+- `collect_grads` (function, python)
 
 ---
 
