@@ -76,7 +76,7 @@ export function SourceDetail() {
           </button>
           <button
             className="specify-btn"
-            onClick={() => navigate('/specify')}
+            onClick={() => navigate(`/specify?repo=${encodeURIComponent(source.name)}&entity=${encodeURIComponent(source.name)}`)}
             title="Generate knowledge cards for this source"
           >
             <Zap size={16} />

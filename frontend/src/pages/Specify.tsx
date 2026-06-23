@@ -65,8 +65,9 @@ function toKnowledgeCard(result: GeneratedSpecResult): KnowledgeCard {
 export default function Specify() {
   const [searchParams] = useSearchParams()
   const entityParam = searchParams.get('entity')
+  const repoParam = searchParams.get('repo')
 
-  const [repo, setRepo] = useState('')
+  const [repo, setRepo] = useState(repoParam || '')
   const [entity, setEntity] = useState(entityParam || '')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
