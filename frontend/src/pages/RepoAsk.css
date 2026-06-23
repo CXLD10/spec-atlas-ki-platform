@@ -1,21 +1,33 @@
 /* RepoAsk Chat Component Styles */
 
-/* Scrollbar styling for the messages container */
+/* Force scrollbar visibility and styling for messages container */
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.6) rgba(15, 23, 42, 0.8);
+}
+
+/* Webkit scrollbar (Chrome, Safari, Edge) */
 .overflow-y-auto::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
 }
 
 .overflow-y-auto::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
-}
-
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.8);
   border-radius: 4px;
 }
 
-.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+.overflow-y-auto::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.6);
+  border-radius: 4px;
+  min-height: 40px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.8);
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:active {
+  background: rgba(148, 163, 184, 1);
 }
 
 /* Smooth animations */
