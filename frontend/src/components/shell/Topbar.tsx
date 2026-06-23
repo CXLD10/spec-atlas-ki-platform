@@ -80,7 +80,6 @@ export function Topbar() {
       }
     })
 
-    console.log('Search:', { query, sources: sources.length, cards: cards.length, results: searchResults.length })
     setResults(searchResults.slice(0, 8))
     setShowResults(searchResults.length > 0)
   }, [searchQuery, sources, cards])

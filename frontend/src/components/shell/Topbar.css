@@ -93,6 +93,15 @@
   outline: none;
   min-width: 0;
   cursor: text;
+  -webkit-appearance: none;
+  appearance: none;
+  box-shadow: none;
+}
+
+.search-input:focus {
+  outline: none;
+  box-shadow: none;
+  border: none;
 }
 
 .search-input::placeholder {
