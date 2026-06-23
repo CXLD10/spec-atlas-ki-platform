@@ -1,18 +1,33 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Menu, Zap, FileText, Network, MessageCircle, Wrench, Webhook, BookOpen } from 'lucide-react'
 import { useSidebar } from './useSidebar'
+import { ThemeToggle } from './ThemeToggle'
 import './Sidebar.css'
 
 export function Sidebar() {
   const { collapsed, toggleCollapsed, mobileOpen, closeMobile, isMobile } = useSidebar()
   const navRef = useRef<HTMLDivElement>(null)
+  const [mcpHealthy, setMcpHealthy] = useState(true)
 
   useEffect(() => {
     if (isMobile && mobileOpen && navRef.current) {
       navRef.current.focus()
     }
   }, [isMobile, mobileOpen])
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        // BACKEND-DEP: GET /health
+        const res = await fetch('/health')
+        setMcpHealthy(res.ok)
+      } catch {
+        setMcpHealthy(false)
+      }
+    }
+    checkHealth()
+  }, [])
 
   const navGroups = [
     {
@@ -94,8 +109,18 @@ export function Sidebar() {
       </nav>
 
       <div className="sidebar-footer">
-        {!collapsed && <span className="footer-label">● MCP · 4 tools live</span>}
-        {collapsed && <span className="footer-dot">●</span>}
+        <div className="footer-content">
+          {!collapsed && (
+            <span className={`footer-label ${mcpHealthy ? 'healthy' : 'unhealthy'}`}>
+              <span className="footer-dot">●</span>
+              MCP · {mcpHealthy ? '4 tools live' : 'offline'}
+            </span>
+          )}
+          {collapsed && (
+            <span className={`footer-dot ${mcpHealthy ? 'healthy' : 'unhealthy'}`}>●</span>
+          )}
+        </div>
+        <ThemeToggle />
       </div>
     </aside>
     </>

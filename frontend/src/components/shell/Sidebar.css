@@ -180,18 +180,54 @@
   border-top: 1px solid var(--border-soft);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   flex-shrink: 0;
 }
 
+.footer-content {
+  flex: 1;
+  min-width: 0;
+}
+
 .footer-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 0.75rem;
   color: var(--mid);
+}
+
+.footer-label.healthy {
+  color: var(--l3);
+}
+
+.footer-label.unhealthy {
+  color: var(--rose);
 }
 
 .footer-dot {
   font-size: 0.75rem;
   color: var(--primary);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.footer-dot.healthy {
+  color: var(--l3);
+}
+
+.footer-dot.unhealthy {
+  color: var(--rose);
+  animation: none;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* Tooltip on collapsed state */
