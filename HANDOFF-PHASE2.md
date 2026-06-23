@@ -3,6 +3,17 @@
 **Written:** 2026-06-23, end of session (connection/session limit reached mid-Phase 2).
 **Branch:** `main` (local Phase 0/1/2-WIP work + `origin/uiux-changes` merged in).
 
+**Source plans/prompts for all phases (0-5) now live in `docs/phases/`:**
+`00-MASTER-PLAN.md`, `PHASE-0.md` … `PHASE-5.md` (detailed spec per phase),
+`PROMPT-PHASE-0.md` … `PROMPT-PHASE-5.md` (copy-paste execution briefs). These
+are the original planning docs Phases 0-2 were executed from this session;
+Phases 3-5 (real external sources; MCP + SSE; drift/eval/tree-sitter/rate
+limiting) have **not been started** — their docs are there now so the next
+session/dev doesn't have to regenerate them. Phase 2's own doc
+(`docs/phases/PHASE-2.md`) and prompt (`docs/phases/PROMPT-PHASE-2.md`) match
+what's described below; read this file first since it has the
+session-specific "what actually happened" detail the static prompt doesn't.
+
 > ## ⚠️ NOT PUSHED — action required
 > This sandbox has no GitHub credentials configured (`git push origin main`
 > fails: `fatal: could not read Username for 'https://github.com'`). Every
