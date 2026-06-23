@@ -1,0 +1,13 @@
+.sidebar {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+.sidebar-placeholder {
+  padding: 1rem;
+  color: var(--mid);
+}
