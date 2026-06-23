@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Menu, Zap, FileText, Network, BookOpen, MessageCircle, Wrench, Webhook, Library } from 'lucide-react'
 import { useSidebar } from './useSidebar'
@@ -6,20 +6,12 @@ import { ThemeToggle } from './ThemeToggle'
 import './Sidebar.css'
 
 export function Sidebar() {
-  const { collapsed, toggleCollapsed, mobileOpen, closeMobile, isMobile } = useSidebar()
-  const navRef = useRef<HTMLDivElement>(null)
+  const { collapsed, toggleCollapsed } = useSidebar()
   const [mcpHealthy, setMcpHealthy] = useState(true)
-
-  useEffect(() => {
-    if (isMobile && mobileOpen && navRef.current) {
-      navRef.current.focus()
-    }
-  }, [isMobile, mobileOpen])
 
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        // BACKEND-DEP: GET /health
         const res = await fetch('/health')
         setMcpHealthy(res.ok)
       } catch {
@@ -51,14 +43,7 @@ export function Sidebar() {
   ]
 
   return (
-    <>
-      {isMobile && mobileOpen && (
-        <div className="sidebar-backdrop" onClick={closeMobile} />
-      )}
-      <aside
-        ref={navRef}
-        className={`sidebar ${isMobile ? 'mobile' : ''} ${mobileOpen ? 'mobile-open' : ''}`}
-      >
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
         <button
           className="sidebar-hamburger"
@@ -72,7 +57,7 @@ export function Sidebar() {
 
         <NavLink
           to="/"
-          className={`sidebar-home ${collapsed ? 'collapsed' : ''}`}
+          className="sidebar-home"
           title="Spec-Atlas Home"
         >
           <span className="sidebar-logo">◆</span>
@@ -92,13 +77,12 @@ export function Sidebar() {
                   key={item.path}
                   to={item.path}
                   className={({ isActive }: { isActive: boolean }) =>
-                    `nav-item ${isActive ? 'active' : ''} ${collapsed ? 'collapsed' : ''}`
+                    `nav-item ${isActive ? 'active' : ''}`
                   }
                   aria-label={item.label}
                   title={item.label}
-                  onClick={() => isMobile && closeMobile()}
                 >
-                  <IconComponent size={18} className="nav-icon" />
+                  <IconComponent size={20} className="nav-icon" />
                   {!collapsed && <span className="nav-label">{item.label}</span>}
                 </NavLink>
               )
@@ -109,19 +93,13 @@ export function Sidebar() {
 
       <div className="sidebar-footer">
         <div className="footer-content">
-          {!collapsed && (
-            <span className={`footer-label ${mcpHealthy ? 'healthy' : 'unhealthy'}`}>
-              <span className="footer-dot">●</span>
-              MCP · {mcpHealthy ? '4 tools live' : 'offline'}
-            </span>
-          )}
-          {collapsed && (
-            <span className={`footer-dot ${mcpHealthy ? 'healthy' : 'unhealthy'}`}>●</span>
-          )}
+          <div className={`footer-label ${mcpHealthy ? 'healthy' : 'unhealthy'}`}>
+            <div className={`footer-dot ${mcpHealthy ? 'healthy' : 'unhealthy'}`} />
+            {!collapsed && (mcpHealthy ? 'MCP ready' : 'MCP offline')}
+          </div>
         </div>
         <ThemeToggle />
       </div>
     </aside>
-    </>
   )
 }
