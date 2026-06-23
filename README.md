@@ -100,76 +100,95 @@ Phase 6: Specs          → Generate L3 knowledge cards via LLM
 
 ## Getting Started
 
-### Prerequisites
-- **Python 3.12+** (backend)
-- **Node.js 18+** (frontend)
-- **PostgreSQL 15+** with `pgvector` extension
-- **Docker** (optional, for PostgreSQL)
+## Quick Start Setup
 
-### Quick Start (Local Development)
+### Step 1: Install Prerequisites
 
-#### 1. Clone & Setup
+Ensure you have the following installed:
+- Python 3.12 or later
+- Node.js 18 or later
+- Docker and Docker Compose
+
+### Step 2: Clone the Repository
 
 ```bash
 git clone https://github.com/CXLD10/spec-atlas-ki-platform.git
 cd spec-atlas-ki-platform
-
-# Backend
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-
-# Frontend
-cd frontend
-npm install
 ```
 
-#### 2. Database Setup
+### Step 3: Start the Database
 
-**Option A: Docker (Recommended)**
 ```bash
 docker-compose up -d postgres
 ```
 
-**Option B: Local PostgreSQL**
+Wait 5 seconds for the database to be ready.
+
+### Step 4: Install Backend Dependencies
+
 ```bash
-createuser -h localhost spec_atlas -P  # password: spec_atlas_dev
-createdb -h localhost -O spec_atlas spec_atlas_analysis
-createdb -h localhost -O spec_atlas spec_atlas_spec
-psql -h localhost -U spec_atlas spec_atlas_analysis -c "CREATE EXTENSION vector;"
-psql -h localhost -U spec_atlas spec_atlas_spec -c "CREATE EXTENSION vector;"
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
 ```
 
-#### 3. Environment Variables
+### Step 5: Create Environment Configuration
+
+Create a `.env` file in the project root:
 
 ```bash
-# .env (git-ignored)
+cat > .env << 'EOF'
 ANALYSIS_DB_URL=postgresql+psycopg://spec_atlas:spec_atlas_dev@localhost:5432/spec_atlas_analysis
 SPEC_DB_URL=postgresql+psycopg://spec_atlas:spec_atlas_dev@localhost:5432/spec_atlas_spec
-
 LLM_PROVIDER=groq
-GROQ_API_KEY=your_key_here...
+GROQ_API_KEY=your_key_here_KEY_HERE
 EMBED_PROVIDER=fake
+EOF
 ```
 
-#### 4. Migrations & Start
+Replace `gsk_YOUR_KEY_HERE` with your Groq API key from https://console.groq.com.
+
+### Step 6: Apply Database Migrations
 
 ```bash
-# Apply schema
 alembic upgrade head
-
-# Terminal 1: Backend
-source .venv/bin/activate
-export PYTHONPATH=/path/to/spec-atlas-ki-platform/src
-export ANALYSIS_DB_URL="postgresql+psycopg://spec_atlas:spec_atlas_dev@localhost:5432/spec_atlas_analysis"
-export SPEC_DB_URL="postgresql+psycopg://spec_atlas:spec_atlas_dev@localhost:5432/spec_atlas_spec"
-uvicorn spec_atlas.api.app:app --reload --host 0.0.0.0 --port 8000
-
-# Terminal 2: Frontend
-cd frontend && npm run dev
 ```
 
-Open **http://localhost:5173** and start indexing!
+### Step 7: Start the Backend
+
+Open a terminal and run:
+
+```bash
+source .venv/bin/activate
+cd /home/cxld/projects/spec-atlas-ki-platform
+export PYTHONPATH=$PWD/src
+uvicorn spec_atlas.api.app:app --reload --host 0.0.0.0 --port 8000
+```
+
+Wait for the message: `Uvicorn running on http://0.0.0.0:8000`
+
+### Step 8: Install Frontend Dependencies
+
+Open another terminal and run:
+
+```bash
+cd /home/cxld/projects/spec-atlas-ki-platform/frontend
+npm install
+```
+
+### Step 9: Start the Frontend
+
+```bash
+npm run dev
+```
+
+Wait for the message: `Local: http://localhost:5173`
+
+### Step 10: Access the Application
+
+Open your browser and go to: **http://localhost:5173**
+
+You are now ready to start indexing repositories.
 
 ---
 
