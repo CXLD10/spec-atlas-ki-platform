@@ -1,198 +1,150 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { IsoGraph, GraphNode } from '../components/graph/IsoGraph'
+import { IsoGraph, GraphNode, GraphEdge } from '../components/graph/IsoGraph'
+import { Inspector } from '../components/graph/Inspector'
 import { client, MockFallback } from '../lib/api'
 import { MOCK_SUBGRAPH } from '../lib/mock'
 import './Graph.css'
+
+type SubgraphData = {
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+}
 
 export default function Graph() {
   const [searchParams] = useSearchParams()
   const focusNode = searchParams.get('focus')
 
-  const [graphData, setGraphData] = useState<{
-    nodes: GraphNode[]
-    edges: Array<{ s: string; d: string; kind: string; layer: string; inter?: boolean }>
-  } | null>(null)
+  const [graphData, setGraphData] = useState<SubgraphData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
   const [active, setActive] = useState({ L1: true, L3: true, L4: true })
 
   useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+
     const fetchGraph = async () => {
       try {
-        setLoading(true)
         const data = await client.getSubgraph(focusNode || undefined, 2)
-        const typedData = {
-          nodes: data.nodes as GraphNode[],
-          edges: data.edges as Array<{ s: string; d: string; kind: string; layer: string; inter?: boolean }>,
+        if (!cancelled) {
+          setGraphData({
+            nodes: data.nodes as GraphNode[],
+            edges: data.edges as GraphEdge[],
+          })
         }
-        setGraphData(typedData)
-        setError(null)
       } catch (err) {
+        if (cancelled) return
         if (err instanceof MockFallback) {
-          // Use mock data
-          const typedMock = {
+          setGraphData({
             nodes: MOCK_SUBGRAPH.nodes as GraphNode[],
-            edges: MOCK_SUBGRAPH.edges as Array<{ s: string; d: string; kind: string; layer: string; inter?: boolean }>,
-          }
-          setGraphData(typedMock)
-          setError(null)
+            edges: MOCK_SUBGRAPH.edges as GraphEdge[],
+          })
         } else {
           setError(err instanceof Error ? err.message : 'Failed to fetch graph data')
         }
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     fetchGraph()
+    return () => { cancelled = true }
   }, [focusNode])
 
   if (loading) {
     return (
-      <div className="graph-page">
-        <div className="graph-loading">
-          <p>Loading graph...</p>
-        </div>
+      <div className="graph-page graph-page--loading">
+        <p>Loading graph…</p>
       </div>
     )
   }
 
   if (error || !graphData) {
     return (
-      <div className="graph-page">
-        <div className="graph-error">
-          <p>{error || 'Failed to load graph'}</p>
-          <small>Using mock data fallback</small>
-        </div>
+      <div className="graph-page graph-page--error">
+        <p>{error || 'Failed to load graph'}</p>
+        <small>Backend unavailable — check VITE_API_URL</small>
       </div>
     )
   }
 
-  const visibleNodes: GraphNode[] = graphData.nodes.filter((n) =>
-    active[n.layer as 'L1' | 'L3' | 'L4']
-  )
-  const activeNodeIds = new Set(visibleNodes.map((n) => n.id))
+  const visibleNodes = graphData.nodes.filter((n) => active[n.layer as 'L1' | 'L3' | 'L4'])
+  const visibleNodeIds = new Set(visibleNodes.map((n) => n.id))
   const visibleEdges = graphData.edges.filter(
-    (e) => activeNodeIds.has(e.s) && activeNodeIds.has(e.d)
+    (e) => visibleNodeIds.has(e.s) && visibleNodeIds.has(e.d)
   )
 
-  const stats = {
-    L1: visibleNodes.filter((n) => n.layer === 'L1').length,
-    L3: visibleNodes.filter((n) => n.layer === 'L3').length,
-    L4: visibleNodes.filter((n) => n.layer === 'L4').length,
-  }
+  const countL1 = visibleNodes.filter((n) => n.layer === 'L1').length
+  const countL3 = visibleNodes.filter((n) => n.layer === 'L3').length
+  const countL4 = visibleNodes.filter((n) => n.layer === 'L4').length
 
   return (
     <div className="graph-page">
-      {/* HUD: Layer toggles */}
-      <div className="graph-hud">
-        <div className="hud-layers">
-          <label className="layer-toggle">
-            <input
-              type="checkbox"
-              checked={active.L1}
-              onChange={(e) => setActive((a) => ({ ...a, L1: e.target.checked }))}
-            />
-            <span className="layer-dot l1" />
-            <span>L1 Sources ({stats.L1})</span>
-          </label>
-          <label className="layer-toggle">
-            <input
-              type="checkbox"
-              checked={active.L3}
-              onChange={(e) => setActive((a) => ({ ...a, L3: e.target.checked }))}
-            />
-            <span className="layer-dot l3" />
-            <span>L3 Cards ({stats.L3})</span>
-          </label>
-          <label className="layer-toggle">
-            <input
-              type="checkbox"
-              checked={active.L4}
-              onChange={(e) => setActive((a) => ({ ...a, L4: e.target.checked }))}
-            />
-            <span className="layer-dot l4" />
-            <span>L4 Domains ({stats.L4})</span>
-          </label>
-        </div>
-
-        {/* Stats */}
-        <div className="hud-stats">
-          <div className="stat">
-            <span className="label">Nodes:</span>
-            <span className="value">{visibleNodes.length}</span>
+      {/* Canvas area */}
+      <div className="graph-canvas-area">
+        {/* HUD: layer toggles + stats */}
+        <div className="graph-hud">
+          <div className="hud-layers">
+            {(
+              [
+                { key: 'L1', label: 'Sources', count: countL1 },
+                { key: 'L3', label: 'Cards', count: countL3 },
+                { key: 'L4', label: 'Domains', count: countL4 },
+              ] as const
+            ).map(({ key, label, count }) => (
+              <label key={key} className="layer-toggle">
+                <input
+                  type="checkbox"
+                  checked={active[key]}
+                  onChange={(e) => setActive((a) => ({ ...a, [key]: e.target.checked }))}
+                  aria-label={`Toggle ${label} layer`}
+                />
+                <span className={`layer-dot layer-dot--${key.toLowerCase()}`} />
+                <span>
+                  {key} {label} ({count})
+                </span>
+              </label>
+            ))}
           </div>
-          <div className="stat">
-            <span className="label">Edges:</span>
-            <span className="value">{visibleEdges.length}</span>
+          <div className="hud-stats">
+            <div className="hud-stat">
+              <span className="hud-stat-value">{visibleNodes.length}</span>
+              <span className="hud-stat-label">Nodes</span>
+            </div>
+            <div className="hud-stat">
+              <span className="hud-stat-value">{visibleEdges.length}</span>
+              <span className="hud-stat-label">Edges</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Canvas */}
-      <div className="graph-canvas-wrapper">
+        {/* Canvas */}
         <IsoGraph
           nodes={visibleNodes}
-          edges={visibleEdges as any}
+          edges={visibleEdges}
           active={active}
+          selected={selectedNode}
           onNodeClick={setSelectedNode}
         />
 
         {/* Help text */}
-        <div className="graph-help">
-          <p>
-            Drag to rotate · Scroll to zoom · Click a node to inspect
-          </p>
-          <p className="help-secondary">
+        <div className="graph-help" aria-hidden="true">
+          <p>Drag to rotate · Scroll to zoom · Click a node to inspect</p>
+          <p className="graph-help-secondary">
             Vertical beams show provenance: source → card → domain
           </p>
         </div>
       </div>
 
-      {/* Inspector panel */}
-      {selectedNode && (
-        <div className="graph-inspector">
-          <div className="inspector-header">
-            <h3>{selectedNode.label}</h3>
-            <span className={`layer-tag ${selectedNode.layer.toLowerCase()}`}>
-              {selectedNode.layer}
-            </span>
-          </div>
-
-          <div className="inspector-content">
-            <div className="section">
-              <h4>Node ID</h4>
-              <code className="node-id">{selectedNode.id}</code>
-            </div>
-
-            <div className="section">
-              <h4>Layer</h4>
-              <p>
-                {selectedNode.layer === 'L1'
-                  ? 'Source code (functions, classes, modules)'
-                  : selectedNode.layer === 'L3'
-                    ? 'Knowledge cards (specs, summaries)'
-                    : 'Domains (clusters, concepts)'}
-              </p>
-            </div>
-
-            <div className="section">
-              <h4>Position</h4>
-              <p className="position">
-                X: {selectedNode._x.toFixed(1)} | Y: {selectedNode._y.toFixed(1)} | Z:{' '}
-                {selectedNode._z.toFixed(1)}
-              </p>
-            </div>
-
-            <div className="section actions">
-              <button className="action-btn">Ask about this</button>
-              <button className="action-btn secondary">Open card</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Inspector: always rendered, shows empty state when nothing selected */}
+      <Inspector
+        node={selectedNode}
+        allNodes={visibleNodes}
+        onSelectNode={setSelectedNode}
+      />
     </div>
   )
 }
