@@ -84,7 +84,10 @@ export default function Ask() {
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // Scroll to bottom when new messages arrive or streaming state changes
+    setTimeout(() => {
+      scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, 0)
   }, [messages, streaming])
 
   const clearScope = () => {
