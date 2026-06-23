@@ -247,7 +247,8 @@ class IngestJob(AnalysisBase):
     """Ingest job tracking (ephemeral; can be cleaned up after completion).
 
     Tracks async ingest jobs: repo_url, status (queued/in_progress/done/error),
-    progress percentage, and optional error message.
+    progress percentage, and optional error message. Also tracks phase timing
+    for ETA calculation.
     """
 
     __tablename__ = "ingest_jobs"
@@ -258,6 +259,16 @@ class IngestJob(AnalysisBase):
         String, nullable=False, default="queued"
     )  # queued, in_progress, done, error
     progress_pct: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    current_phase: Mapped[str | None] = mapped_column(String, nullable=True)  # e.g., "resolve", "inventory"
+    phase_start_time: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )  # When the current phase started
+    phase_durations: Mapped[dict | None] = mapped_column(
+        MutableDict.as_mutable(JSONB), nullable=True
+    )  # {phase_name: seconds_elapsed}
+    estimated_completion: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )  # Estimated time of job completion
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

@@ -4,6 +4,23 @@ import { PipelineHUD } from '../components/hud/PipelineHUD'
 import { useIndexJob } from '../api/useIndexJob'
 import './IndexProgress.css'
 
+function formatETADisplay(etaSeconds: number | null | undefined): string {
+  if (etaSeconds === null || etaSeconds === undefined || etaSeconds <= 0) {
+    return 'Almost done!'
+  }
+
+  const minutes = Math.floor(etaSeconds / 60)
+  const seconds = etaSeconds % 60
+
+  if (minutes === 0) {
+    return `${seconds} sec remaining`
+  } else if (seconds === 0) {
+    return `${minutes} min remaining`
+  } else {
+    return `${minutes} min ${seconds} sec remaining`
+  }
+}
+
 export function IndexProgress() {
   const navigate = useNavigate()
   const { jobId } = useParams()
@@ -95,12 +112,23 @@ export function IndexProgress() {
         <div className="progress-content">
           {job && <PipelineHUD activePhase={phase} />}
 
+          {job?.show_warning && (
+            <div className="warning-banner">
+              <p className="warning-text">{job.warning_message || 'Large repository may take longer than usual'}</p>
+            </div>
+          )}
+
           <div className="status-overlay">
             {isLoading && !job ? (
               <p>Loading indexing status...</p>
             ) : job ? (
               <>
                 <p className="status-text">Indexing {jobId}</p>
+
+                {job.status === 'in_progress' && job.eta_seconds !== null && (
+                  <p className="eta-text">{formatETADisplay(job.eta_seconds)}</p>
+                )}
+
                 <div className="progress-bar">
                   <div
                     className="progress-fill"

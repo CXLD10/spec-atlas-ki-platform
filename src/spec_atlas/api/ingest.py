@@ -19,6 +19,7 @@ import asyncio
 import logging
 import subprocess
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -38,6 +39,7 @@ from spec_atlas.ingest.document_pipeline import (
 from spec_atlas.ingest.inventory import FileInventory
 from spec_atlas.ingest.job_store import IngestJobStore
 from spec_atlas.ingest.language import LanguageDetector
+from spec_atlas.ingest.manager import calculate_eta
 from spec_atlas.ingest.resolver import RepoResolver
 from spec_atlas.parse.python_symbols import PythonSymbolExtractor
 from spec_atlas.parse.ts_symbols import TypeScriptSymbolExtractor
@@ -85,6 +87,45 @@ def _apply_rate_limit(func):
     return func
 
 
+def _update_phase_progress(
+    session,
+    job_id: str,
+    phase_name: str,
+    progress_pct: int,
+) -> None:
+    """Update job progress and track phase timing.
+
+    This helper tracks phase start times and duration for ETA calculation.
+    """
+    from spec_atlas.db.analysis import IngestJob
+
+    job = session.query(IngestJob).filter(IngestJob.id == job_id).first()
+    if not job:
+        return
+
+    now = datetime.utcnow()
+
+    # If this is a new phase, record the start time
+    if job.current_phase != phase_name:
+        # If there was a previous phase, record its duration
+        if job.current_phase and job.phase_start_time:
+            elapsed = (now - job.phase_start_time).total_seconds()
+            if job.phase_durations is None:
+                job.phase_durations = {}
+            job.phase_durations[job.current_phase] = elapsed
+
+        # Start the new phase
+        job.current_phase = phase_name
+        job.phase_start_time = now
+
+    # Update progress
+    job.progress_pct = progress_pct
+    job.status = "in_progress"
+    job.updated_at = now
+
+    session.commit()
+
+
 class IngestRequest(BaseModel):
     """Request model for starting an ingest job."""
 
@@ -122,10 +163,23 @@ class JobStatus(BaseModel):
     repo_url: str
     created_at: str
     error: str | None = None
+    eta_seconds: int | None = None  # Estimated seconds remaining
+    show_warning: bool = False  # Whether to show a warning banner
+    warning_message: str | None = None  # Warning message text
 
 
 def _to_job_status(job) -> JobStatus:
     """Map an ``IngestJob`` DB row to the public ``JobStatus`` response shape."""
+    # Calculate ETA if job is in progress
+    eta_result = None
+    if job.status == "in_progress" and job.progress_pct < 100:
+        eta_result = calculate_eta(
+            current_progress_pct=job.progress_pct,
+            phase_durations=job.phase_durations or {},
+            phase_start_time=job.phase_start_time,
+            current_phase=job.current_phase,
+        )
+
     return JobStatus(
         job_id=str(job.id),
         # The DB model uses "error"; the public API uses "failed" (matches the
@@ -135,6 +189,9 @@ def _to_job_status(job) -> JobStatus:
         repo_url=job.repo_url,
         created_at=job.created_at.isoformat() if job.created_at else "",
         error=job.error_message,
+        eta_seconds=eta_result.get("eta_seconds") if eta_result else None,
+        show_warning=eta_result.get("show_warning", False) if eta_result else False,
+        warning_message=eta_result.get("warning_message") if eta_result else None,
     )
 
 
@@ -161,10 +218,10 @@ def _run_ingest_sync(
     """
     session = session_factory()
     try:
-        IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=10)
+        _update_phase_progress(session, job_id, "resolve", 10)
 
         repo_metadata = RepoResolver.resolve_git(repo_url)
-        IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=40)
+        _update_phase_progress(session, job_id, "inventory", 40)
 
         repo, files = FileInventory.scan(repo_metadata, repo_metadata.file_paths, session)
 
@@ -175,12 +232,12 @@ def _run_ingest_sync(
             repo.recent_commits = commits
             session.commit()
 
-        IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=70)
+        _update_phase_progress(session, job_id, "inventory", 70)
 
         for file in files:
             file.language = LanguageDetector.detect(file.path)
         session.commit()
-        IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=75)
+        _update_phase_progress(session, job_id, "languages", 75)
 
         logger.info(
             f"Job {job_id}: resolved repo {repo.name!r} "
@@ -189,11 +246,11 @@ def _run_ingest_sync(
 
         # Phase 4: Extract symbols from source files (L1)
         _extract_symbols(job_id, repo.id, repo_metadata.working_dir, files, session)
-        IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=80)
+        _update_phase_progress(session, job_id, "symbols", 80)
 
         # Phase 5: Extract edges between symbols (L1)
         _extract_edges(job_id, repo.id, repo_metadata.working_dir, files, session)
-        IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=85)
+        _update_phase_progress(session, job_id, "edges", 85)
 
         # Phase 6: Generate specs from code graph (L2) - optional, skip if no spec session
         if spec_session_factory and llm_provider:
@@ -210,13 +267,13 @@ def _run_ingest_sync(
                 spec_session.close()
             except Exception as e:
                 logger.warning(f"Spec generation failed, continuing: {e}")
-        IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=88)
+        _update_phase_progress(session, job_id, "specs", 88)
 
         # Phase 7-9: Group clustering (L4) - optional, skip on error
         groups = []
         try:
             groups = _form_groups(job_id, repo.id, repo_metadata.working_dir, session)
-            IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=92)
+            _update_phase_progress(session, job_id, "groups", 92)
 
             # Phase 8: Summarize groups, write group.md files, and link specs
             if spec_session_factory:
@@ -234,10 +291,11 @@ def _run_ingest_sync(
                     spec_session.close()
                 except Exception as e:
                     logger.warning(f"Group writing failed, continuing: {e}")
-            IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=96)
+            _update_phase_progress(session, job_id, "summarize", 96)
 
             # Phase 9: Embed groups
             _embed_groups(job_id, repo.id, groups, session)
+            _update_phase_progress(session, job_id, "embed", 98)
         except Exception as e:
             logger.warning(f"Group clustering/embedding failed, continuing without groups: {e}")
             session.rollback()
@@ -256,6 +314,7 @@ def _run_ingest_sync(
                 spec_session.close()
             except Exception as e:
                 logger.warning(f"Spec graph building failed, continuing: {e}")
+        _update_phase_progress(session, job_id, "spec_graph", 99)
 
         # Phase 11: Drift detection — re-fingerprint specs after re-ingest
         if spec_session_factory:
@@ -273,8 +332,7 @@ def _run_ingest_sync(
                 spec_session.close()
             except Exception as e:
                 logger.warning(f"Drift detection failed, continuing: {e}")
-
-        IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=99)
+        _update_phase_progress(session, job_id, "drift", 100)
 
         IngestJobStore.update_job_status(session, job_id, status="done", progress_pct=100)
 

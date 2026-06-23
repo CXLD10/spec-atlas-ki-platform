@@ -71,6 +71,9 @@ export interface IngestStatus {
   status: 'queued' | 'in_progress' | 'done' | 'failed'
   progress: number
   error?: string
+  eta_seconds?: number | null
+  show_warning?: boolean
+  warning_message?: string | null
 }
 
 export interface HealthResponse {
