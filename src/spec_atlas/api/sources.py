@@ -7,7 +7,10 @@ import logging
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+import json
+import tempfile
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -177,50 +180,39 @@ def get_source(
 
 @router.get("/git/history")
 async def get_git_history(
+    request: Request,
     project_id: str = Query(...),
     file_path: Optional[str] = Query(None),
     limit: int = Query(10),
 ) -> dict:
-    """Get git commit history for reference.
+    """Get git commit history harvested at ingest time from ``repos.recent_commits``.
 
     Args:
-        project_id: Project identifier.
-        file_path: Optional file path to filter commits.
+        project_id: Repo name or UUID.
+        file_path: Optional keyword filter applied to commit messages.
         limit: Maximum commits to return.
-
-    Returns:
-        Dict with commits list or error.
     """
+    factory = request.app.state.analysis_session_factory
+    if not factory:
+        return {"commits": [], "error": "Database not configured", "project_id": project_id}
+
+    session = factory()
     try:
-        # Mock implementation for demo
-        # In production, this would query the actual git repository
-        commits = [
-            {
-                "sha": "a864233",
-                "short_sha": "a864233",
-                "message": "feat(ingest): Excel and Markdown adapters",
-            },
-            {
-                "sha": "8251a59",
-                "short_sha": "8251a59",
-                "message": "docs: add HANDOFF note for Phase 3 adapters",
-            },
-            {
-                "sha": "72e1150",
-                "short_sha": "72e1150",
-                "message": "feat(frontend): Phase 3.5 Sprint 1 - Core UI",
-            },
-            {
-                "sha": "8a71935",
-                "short_sha": "8a71935",
-                "message": "feat(graph): improve node navigation for Ask feature",
-            },
-            {
-                "sha": "2a04c9a",
-                "short_sha": "2a04c9a",
-                "message": "feat(frontend): MCP modal + Specify Tool page",
-            },
-        ]
+        repo: Repo | None = None
+        try:
+            repo_uuid = uuid.UUID(project_id)
+            repo = session.query(Repo).filter(Repo.id == repo_uuid).first()
+        except ValueError:
+            repo = session.query(Repo).filter(Repo.name == project_id).first()
+
+        if not repo or not repo.recent_commits:
+            return {"commits": [], "total": 0, "file_path": file_path, "project_id": project_id}
+
+        commits: list[dict] = list(repo.recent_commits)
+
+        if file_path:
+            kw = file_path.lower()
+            commits = [c for c in commits if kw in c.get("message", "").lower()]
 
         return {
             "commits": commits[:limit],
@@ -230,84 +222,118 @@ async def get_git_history(
         }
     except Exception as e:
         logger.error(f"Error getting git history: {e}")
-        return {
-            "commits": [],
-            "error": f"Failed to get git history: {str(e)}",
-            "project_id": project_id,
-        }
+        return {"commits": [], "error": str(e), "project_id": project_id}
+    finally:
+        session.close()
 
 
 @router.get("/jira/issues")
 async def get_jira_issues(
+    request: Request,
     project_id: str = Query(...),
     query: str = Query(""),
     limit: int = Query(5),
 ) -> dict:
-    """Get Jira issues related to a query.
+    """Get Jira issues indexed as SourceUnits (source_type='jira').
 
     Args:
-        project_id: Project identifier.
-        query: Search query to filter issues.
+        project_id: Project key or repo name (filters by source_id if provided).
+        query: Keyword filter applied to issue text.
         limit: Maximum issues to return.
-
-    Returns:
-        Dict with issues list or error.
     """
-    try:
-        # Mock implementation for demo
-        # In production, this would load Jira export JSON or query Jira API
-        all_issues = [
-            {
-                "key": "ATLAS-123",
-                "summary": "Add spec generation for components",
-                "status": "Done",
-                "created": "2024-06-01",
-                "url": "https://jira.example.com/browse/ATLAS-123",
-            },
-            {
-                "key": "ATLAS-124",
-                "summary": "Implement git history tracking",
-                "status": "In Progress",
-                "created": "2024-06-15",
-                "url": "https://jira.example.com/browse/ATLAS-124",
-            },
-            {
-                "key": "ATLAS-125",
-                "summary": "Add MCP server integration",
-                "status": "Done",
-                "created": "2024-06-10",
-                "url": "https://jira.example.com/browse/ATLAS-125",
-            },
-            {
-                "key": "ATLAS-126",
-                "summary": "Deep Wiki fallback for answers",
-                "status": "In Progress",
-                "created": "2024-06-20",
-                "url": "https://jira.example.com/browse/ATLAS-126",
-            },
-        ]
+    factory = request.app.state.analysis_session_factory
+    if not factory:
+        return {"issues": [], "error": "Database not configured", "project_id": project_id}
 
-        # Filter by query if provided
-        if query:
-            filtered = [
-                i
-                for i in all_issues
-                if query.lower() in i["summary"].lower()
-                or query.lower() in i["key"].lower()
-            ]
-        else:
-            filtered = all_issues
+    from spec_atlas.db.analysis import SourceUnit
+
+    session = factory()
+    try:
+        q = session.query(SourceUnit).filter(SourceUnit.source_type == "jira")
+        units = q.all()
+
+        issues = []
+        kw = query.lower() if query else ""
+        for unit in units:
+            if kw and kw not in unit.text.lower():
+                continue
+            struct: dict = unit.structure or {}
+            issues.append({
+                "key": struct.get("key", unit.section or ""),
+                "summary": struct.get("summary", ""),
+                "status": struct.get("status", ""),
+                "created": struct.get("created", ""),
+                "url": struct.get("url", ""),
+            })
 
         return {
-            "issues": filtered[:limit],
-            "total": len(filtered),
+            "issues": issues[:limit],
+            "total": len(issues),
             "query": query,
             "project_id": project_id,
         }
     except Exception as e:
         logger.error(f"Error getting Jira issues: {e}")
-        return {
-            "issues": [],
-            "error": f"Failed to get Jira issues: {str(e)}",
-            "project_id": project_id,
-        }
+        return {"issues": [], "error": str(e), "project_id": project_id}
+    finally:
+        session.close()
+
+
+@router.post("/jira/import")
+async def import_jira_export(
+    request: Request,
+    file: UploadFile = File(...),  # noqa: B008
+) -> dict:
+    """Import a Jira export JSON file and index issues as SourceUnits.
+
+    The JSON can be a list of issue objects or ``{"issues": [...]}`` — the
+    canonical format produced by Jira's "Export to JSON" action.  Each issue
+    must have at least ``key`` and ``summary`` fields.  Import is idempotent:
+    re-uploading the same export skips issues that already have a matching
+    ``locator`` (``jira:<KEY>``).
+
+    Returns a summary with the project key, repo_id, and count of new units.
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+    try:
+        payload = json.loads(contents)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid JSON: {exc}") from exc
+
+    issues: list[dict] = payload if isinstance(payload, list) else payload.get("issues", [])
+    if not issues:
+        raise HTTPException(status_code=422, detail="No issues found in the uploaded JSON")
+
+    # Derive project key from first issue's key (e.g. "ATLAS-123" → "ATLAS")
+    first_key: str = issues[0].get("key", "UNKNOWN")
+    project_key = first_key.rsplit("-", 1)[0] if "-" in first_key else first_key
+
+    factory = request.app.state.analysis_session_factory
+    if not factory:
+        raise HTTPException(status_code=503, detail="Analysis database not configured")
+
+    # Write to a temp file so JiraImporter can work from disk (consistent with
+    # DocumentPipeline's contract — adapters open by path, not by in-memory bytes)
+    fd, tmp_path = tempfile.mkstemp(prefix="spec_atlas_jira_", suffix=".json")
+    try:
+        import os
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(contents)
+
+        from spec_atlas.jira.importer import JiraImporter
+
+        session = factory()
+        try:
+            repo_id, count = JiraImporter.import_from_file(tmp_path, project_key, session)
+        finally:
+            session.close()
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+    return {"project_key": project_key, "repo_id": repo_id, "indexed": count}

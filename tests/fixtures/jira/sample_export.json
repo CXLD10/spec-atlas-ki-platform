@@ -1,0 +1,44 @@
+{
+  "issues": [
+    {
+      "key": "ATLAS-101",
+      "summary": "Implement vector search for code embeddings",
+      "status": {"name": "Done"},
+      "created": "2026-04-01T10:00:00.000Z",
+      "description": "Add pgvector-based similarity search so /api/ask can retrieve relevant code groups using embedding cosine distance.",
+      "url": "https://jira.example.com/browse/ATLAS-101"
+    },
+    {
+      "key": "ATLAS-102",
+      "summary": "Add PDF document ingestion adapter",
+      "status": {"name": "Done"},
+      "created": "2026-04-08T14:30:00.000Z",
+      "description": "Build ingest/adapters/pdf.py using PyMuPDF (fitz) to extract per-page SourceUnits with page-level locators.",
+      "url": "https://jira.example.com/browse/ATLAS-102"
+    },
+    {
+      "key": "ATLAS-103",
+      "summary": "Real git history: harvest commits at ingest time",
+      "status": {"name": "In Progress"},
+      "created": "2026-05-12T09:00:00.000Z",
+      "description": "After cloning, run git log and store results in repos.recent_commits JSONB so GET /api/git/history returns real data.",
+      "url": "https://jira.example.com/browse/ATLAS-103"
+    },
+    {
+      "key": "ATLAS-104",
+      "summary": "Jira import: index issues as SourceUnits",
+      "status": {"name": "In Progress"},
+      "created": "2026-05-20T11:00:00.000Z",
+      "description": "Create jira/importer.py to read Jira export JSON and persist each issue as source_type='jira' SourceUnit.",
+      "url": "https://jira.example.com/browse/ATLAS-104"
+    },
+    {
+      "key": "ATLAS-105",
+      "summary": "Deep Wiki: replace canned fallback with real LLM call",
+      "status": {"name": "Open"},
+      "created": "2026-06-01T08:00:00.000Z",
+      "description": "Remove the hardcoded string in _get_deep_wiki_answer and call llm_provider.complete with ANSWER_SCHEMA for honest general-knowledge answers.",
+      "url": "https://jira.example.com/browse/ATLAS-105"
+    }
+  ]
+}

@@ -35,7 +35,7 @@ NODE_KINDS = ("module", "class", "function", "method")
 EDGE_KINDS = ("imports", "calls", "inherits", "defines")
 EMBED_OWNER_KINDS = ("group", "spec", "source_unit")
 REPO_SOURCE_FORMATS = ("git", "pdf", "xlsx", "md")
-SOURCE_UNIT_TYPES = ("pdf", "excel", "markdown")
+SOURCE_UNIT_TYPES = ("pdf", "excel", "markdown", "jira")
 
 
 class AnalysisBase(DeclarativeBase):
@@ -67,6 +67,9 @@ class Repo(AnalysisBase):
     default_branch: Mapped[str | None] = mapped_column(String, nullable=True)
     indexed_commit: Mapped[str | None] = mapped_column(String, nullable=True)  # sha
     source_format: Mapped[str] = mapped_column(String, nullable=False, server_default="git")
+    recent_commits: Mapped[list | None] = mapped_column(
+        MutableList.as_mutable(JSONB), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -191,7 +194,7 @@ class SourceUnit(AnalysisBase):
 
     __tablename__ = "source_units"
     __table_args__ = (
-        CheckConstraint("source_type IN ('pdf','excel','markdown')", name="ck_source_units_type"),
+        CheckConstraint("source_type IN ('pdf','excel','markdown','jira')", name="ck_source_units_type"),
         Index("ix_source_units_repo", "repo_id"),
     )
 

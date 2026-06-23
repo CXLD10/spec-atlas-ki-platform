@@ -217,7 +217,7 @@ class AnswerRouter:
 
             if confidence < 0.4:
                 # Try Deep Wiki fallback for general knowledge questions
-                dw_answer = await self._get_deep_wiki_answer(question)
+                dw_answer = await self._get_deep_wiki_answer(question, similarity=similarity)
                 if dw_answer:
                     answer_obj = dw_answer['answer_obj']
                     claims = [
@@ -251,29 +251,69 @@ class AnswerRouter:
         finally:
             analysis_db.close()
 
-    async def _get_deep_wiki_answer(self, question: str) -> dict | None:
-        """Get fallback answer from Deep Wiki or mock.
+    async def _get_deep_wiki_answer(self, question: str, similarity: float = 0.0) -> dict | None:
+        """General-knowledge fallback: call llm_provider directly with no codebase context.
+
+        Uses ANSWER_SCHEMA for structured output so the result has the same
+        shape as a normal AnswerEngine response.  The confidence returned is
+        the original vector-search similarity score (honest: we surfaced
+        nothing relevant, so we don't pretend the LLM answer is high-confidence).
 
         Args:
             question: User question.
+            similarity: Original retrieval similarity — passed back as confidence
+                        so the caller can display an honest score.
 
         Returns:
-            Dict with answer, confidence, or None if fallback fails.
+            Dict with ``answer`` (str), ``answer_obj`` (Answer), and
+            ``confidence`` (float); or None if the LLM call fails.
         """
+        import inspect
+
+        from spec_atlas.answer.engine import ANSWER_SCHEMA, Answer, Claim
+
         try:
-            # For demo/offline mode: use mock response
-            # In production, integrate with actual Deep Wiki API
-            import os
-            if os.getenv("LLM_PROVIDER") == "fake":
-                # Return mock answer for testing
-                return {
-                    "answer": f"Based on general knowledge about '{question[:50]}...': This relates to general software concepts. For specific details about your codebase, try asking about indexed components or modules.",
-                    "answer_obj": f"Based on general knowledge about '{question[:50]}...': This relates to general software concepts. For specific details about your codebase, try asking about indexed components or modules.",
-                    "confidence": 0.3,
+            messages = [
+                {
+                    "role": "user",
+                    "content": (
+                        "Answer the following question using your general knowledge. "
+                        "Be accurate and concise. If you do not know, say so clearly.\n\n"
+                        f"Question: {question}"
+                    ),
                 }
+            ]
+            maybe_result = self.llm_provider.complete(messages, schema=ANSWER_SCHEMA)
+            result = await maybe_result if inspect.isawaitable(maybe_result) else maybe_result
+
+            if not result:
+                return None
+
+            if isinstance(result, str):
+                import json as _json
+                try:
+                    result = _json.loads(result)
+                except Exception:
+                    result = {"answer": result, "claims": []}
+
+            answer_text: str = result.get("answer", "")
+            if not answer_text:
+                return None
+
+            claims = [
+                Claim(claim=c.get("claim", ""), source=c.get("source", "general_knowledge"))
+                for c in result.get("claims", [])
+                if isinstance(c, dict)
+            ]
+            answer_obj = Answer(text=answer_text, claims=claims, strategy_used="deep_wiki")
+
+            return {
+                "answer": answer_text,
+                "answer_obj": answer_obj,
+                "confidence": similarity,
+            }
         except Exception as e:
             logger.warning(f"Deep Wiki fallback failed: {e}")
-
         return None
 
 

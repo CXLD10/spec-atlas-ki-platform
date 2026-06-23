@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import subprocess
 import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
@@ -166,6 +167,14 @@ def _run_ingest_sync(
         IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=40)
 
         repo, files = FileInventory.scan(repo_metadata, repo_metadata.file_paths, session)
+
+        # Harvest recent commits and persist on the Repo row so GET /api/git/history
+        # can serve real data without requiring the ephemeral clone to still exist.
+        commits = _harvest_commits(repo_metadata.working_dir)
+        if commits:
+            repo.recent_commits = commits
+            session.commit()
+
         IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=70)
 
         for file in files:
@@ -268,6 +277,44 @@ async def _process_ingest_job(
     await asyncio.to_thread(
         _run_ingest_sync, job_id, repo_url, session_factory, spec_session_factory, llm_provider
     )
+
+
+def _harvest_commits(repo_path: str, limit: int = 100) -> list[dict]:
+    """Run git log against the cloned working dir and return structured commit dicts.
+
+    The initial clone uses --depth=1, so we try to fetch more history first.
+    Failure (air-gapped CI, no remote) is silent — the ingest still succeeds.
+    """
+    subprocess.run(
+        ["git", "-C", repo_path, "fetch", "--depth=100"],
+        capture_output=True,
+        timeout=60,
+    )  # best-effort; ignore returncode
+    result = subprocess.run(
+        ["git", "-C", repo_path, "log", f"--max-count={limit}",
+         "--pretty=format:%H\x1f%s\x1f%an\x1f%ai"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0:
+        return []
+    commits = []
+    for line in result.stdout.strip().splitlines():
+        if not line:
+            continue
+        parts = line.split("\x1f", 3)
+        sha = parts[0] if parts else ""
+        if not sha:
+            continue
+        commits.append({
+            "sha": sha,
+            "short_sha": sha[:7],
+            "message": parts[1] if len(parts) > 1 else "",
+            "author": parts[2] if len(parts) > 2 else "",
+            "date": parts[3] if len(parts) > 3 else "",
+        })
+    return commits
 
 
 def _extract_symbols(job_id: str, repo_id, repo_path: str, files, session) -> None:
