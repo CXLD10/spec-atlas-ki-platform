@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
 import { useCards } from '../lib/hooks'
 import './KnowledgeBase.css'
 
@@ -109,7 +110,7 @@ export function KnowledgeBase() {
             </div>
 
             <div className="kb-card-body">
-              <pre className="kb-card-markdown">{selectedCard.markdown}</pre>
+              <ReactMarkdown className="kb-card-markdown">{selectedCard.markdown}</ReactMarkdown>
             </div>
 
             {selectedCard.provenance.length > 0 && (

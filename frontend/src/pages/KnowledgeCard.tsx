@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { useCard } from '../lib/hooks'
 import './KnowledgeCard.css'
 
@@ -51,7 +52,7 @@ export function KnowledgeCard() {
       <div className="kc-layout">
         <article className="kc-body">
           <div className="kc-markdown">
-            <pre className="kc-pre">{card.markdown}</pre>
+            <ReactMarkdown>{card.markdown}</ReactMarkdown>
           </div>
 
           {card.provenance.length > 0 && (
