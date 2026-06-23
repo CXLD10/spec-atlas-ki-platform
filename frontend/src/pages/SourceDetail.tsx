@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Zap } from 'lucide-react'
 import { useSource, useCards } from '../lib/hooks'
 import { client } from '../api/client'
 import { TypeBadge } from '../components/sources/TypeBadge'
@@ -65,14 +65,24 @@ export function SourceDetail() {
             <StatusPill source={source} />
           </div>
         </div>
-        <button
-          className="reingest-btn"
-          onClick={handleReingest}
-          disabled={isReingestingLoading}
-        >
-          <RefreshCw size={16} style={{ animation: isReingestingLoading ? 'spin 1s linear infinite' : 'none' }} />
-          {isReingestingLoading ? 'Reingesting...' : 'Re-ingest'}
-        </button>
+        <div className="source-detail-buttons">
+          <button
+            className="reingest-btn"
+            onClick={handleReingest}
+            disabled={isReingestingLoading}
+          >
+            <RefreshCw size={16} style={{ animation: isReingestingLoading ? 'spin 1s linear infinite' : 'none' }} />
+            {isReingestingLoading ? 'Reingesting...' : 'Re-ingest'}
+          </button>
+          <button
+            className="specify-btn"
+            onClick={() => navigate('/specify')}
+            title="Generate knowledge cards for this source"
+          >
+            <Zap size={16} />
+            Specify
+          </button>
+        </div>
       </div>
 
       {source.status === 'indexing' && (
