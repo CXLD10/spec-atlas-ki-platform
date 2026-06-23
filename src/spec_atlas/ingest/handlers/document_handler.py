@@ -91,18 +91,20 @@ def _build_document_prompt(source_unit: SourceUnit) -> str:
         "",
     ]
 
-    lines.extend([
-        "## Task:",
-        "Analyze the document and generate a JSON spec with these fields:",
-        "- purpose (string): Why does this document exist? What problem does it address?",
-        "- explains (array): Main topics covered? Key concepts or learning objectives?",
-        "- cites (array): What sources or references are mentioned or implied?",
-        "- teaches (array): What should a reader learn? Actionable takeaways?",
-        "- domain (string): What subject area does it cover? Who is the audience?",
-        "",
-        "Be precise and grounded in the document content. If unsure, be conservative.",
-        "Return valid JSON matching the schema.",
-    ])
+    lines.extend(
+        [
+            "## Task:",
+            "Analyze the document and generate a JSON spec with these fields:",
+            "- purpose (string): Why does this document exist? What problem does it address?",
+            "- explains (array): Main topics covered? Key concepts or learning objectives?",
+            "- cites (array): What sources or references are mentioned or implied?",
+            "- teaches (array): What should a reader learn? Actionable takeaways?",
+            "- domain (string): What subject area does it cover? Who is the audience?",
+            "",
+            "Be precise and grounded in the document content. If unsure, be conservative.",
+            "Return valid JSON matching the schema.",
+        ]
+    )
 
     return "\n".join(lines)
 
@@ -165,10 +167,7 @@ def _validate_document_spec(spec: dict) -> dict:
     # Sanitize empty strings and None from arrays BEFORE validation
     for field in ("explains", "cites", "teaches"):
         if field in spec and isinstance(spec[field], list):
-            spec[field] = [
-                item for item in spec[field]
-                if isinstance(item, str) and item.strip()
-            ]
+            spec[field] = [item for item in spec[field] if isinstance(item, str) and item.strip()]
 
     try:
         jsonschema_validate(instance=spec, schema=schema)
