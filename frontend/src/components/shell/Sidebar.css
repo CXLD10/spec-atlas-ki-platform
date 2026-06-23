@@ -8,6 +8,7 @@
   flex-direction: column;
   transition: width 0.3s ease;
   width: var(--rail, 248px);
+  max-width: var(--rail, 248px);
   flex-shrink: 0;
   position: static;
   box-sizing: border-box;
