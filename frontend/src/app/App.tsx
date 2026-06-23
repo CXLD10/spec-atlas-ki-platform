@@ -13,6 +13,10 @@ import SpecView from '../pages/SpecView'
 import Docs from '../pages/Docs'
 import Dashboard from '../pages/Dashboard'
 import IndexProgress from '../pages/IndexProgress'
+import Sources from '../pages/Sources'
+import SourceDetail from '../pages/SourceDetail'
+import KnowledgeBase from '../pages/KnowledgeBase'
+import KnowledgeCard from '../pages/KnowledgeCard'
 import '../styles/global.css'
 
 const queryClient = new QueryClient({
@@ -31,14 +35,23 @@ export function App() {
         <BrowserRouter>
           <Routes>
             <Route element={<AppShell />}>
-              <Route path="/" element={<Landing />} />
-              <Route path="/projects" element={<Projects />} />
+              {/* New IA routes */}
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/sources" element={<Sources />} />
+              <Route path="/sources/:id" element={<SourceDetail />} />
+              <Route path="/kb" element={<KnowledgeBase />} />
+              <Route path="/kb/:ref" element={<KnowledgeCard />} />
               <Route path="/graph" element={<RepoGraphify />} />
               <Route path="/ask" element={<RepoAsk />} />
               <Route path="/specify" element={<SpecifyTool />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/mcp" element={<Dashboard />} />
               <Route path="/docs" element={<Docs />} />
               <Route path="/index/:jobId" element={<IndexProgress />} />
+
+              {/* Backward compatibility / old repo-scoped routes */}
+              <Route path="/landing" element={<Landing />} />
+              <Route path="/projects" element={<Projects />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/repo/:repoId/ask" element={<RepoAsk />} />
               <Route path="/repo/:repoId/graphify" element={<RepoGraphify />} />
               <Route path="/repo/:repoId/specify" element={<SpecifyTool />} />
