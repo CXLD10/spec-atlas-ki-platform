@@ -244,6 +244,18 @@
   background: var(--primary-soft);
 }
 
+.inspector-btn--secondary {
+  background: var(--border-soft);
+  color: var(--mid);
+  border: 1px solid var(--border);
+}
+
+.inspector-btn--secondary:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
 .inspector-btn--disabled {
   opacity: 0.4;
   cursor: not-allowed;

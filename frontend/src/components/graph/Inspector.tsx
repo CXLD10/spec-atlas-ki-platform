@@ -113,6 +113,13 @@ export function Inspector({ node, allNodes, allEdges, onSelectNode }: InspectorP
         >
           Open Knowledge Card
         </button>
+        <button
+          className="inspector-btn inspector-btn--secondary"
+          onClick={() => navigate(`/specify?component=${encodeURIComponent(node.label || node.id)}`)}
+          title="Generate or edit specifications for this node"
+        >
+          Specify
+        </button>
       </footer>
     </aside>
   )
