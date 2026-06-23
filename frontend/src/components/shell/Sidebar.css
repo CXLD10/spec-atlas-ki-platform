@@ -64,7 +64,7 @@
 }
 
 .sidebar-home {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
@@ -75,6 +75,10 @@
   flex: 1;
   min-width: 0;
   height: 40px;
+}
+
+.sidebar:not(.collapsed) .sidebar-home {
+  display: flex;
 }
 
 .sidebar-home:hover {
