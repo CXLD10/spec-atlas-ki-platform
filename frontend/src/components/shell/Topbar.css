@@ -197,7 +197,7 @@
 }
 
 .topbar-github {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 40px;
@@ -208,10 +208,9 @@
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
-  flex-shrink: 0;
-  position: absolute;
-  right: 1rem;
   text-decoration: none;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .topbar-github:hover {
