@@ -9,6 +9,7 @@ import RepoAsk from '../pages/RepoAsk'
 import RepoExplore from '../pages/RepoExplore'
 import RepoSpec from '../pages/RepoSpec'
 import RepoGraphify from '../pages/RepoGraphify'
+import Specify from '../pages/Specify'
 import SpecifyTool from '../pages/SpecifyTool'
 import SpecView from '../pages/SpecView'
 import Docs from '../pages/Docs'
@@ -46,7 +47,7 @@ export function App() {
               <Route path="/kb/:ref" element={<KnowledgeCard />} />
               <Route path="/graph" element={<Graph />} />
               <Route path="/ask" element={<Ask />} />
-              <Route path="/specify" element={<SpecifyTool />} />
+              <Route path="/specify" element={<Specify />} />
               <Route path="/mcp" element={<MCPServer />} />
               <Route path="/docs" element={<Docs />} />
               <Route path="/index/:jobId" element={<IndexProgress />} />
