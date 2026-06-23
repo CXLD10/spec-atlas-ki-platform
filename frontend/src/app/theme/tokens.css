@@ -1,69 +1,52 @@
-/* Design tokens extracted from spec-atlas-hero.html prototype */
-/* Source: docs/frontend/design/DESIGN-TOKENS.md */
+/* Design tokens for Industrial Knowledge Intelligence platform */
+/* Revamp phase: industrial KI voice, mission-control dark + GitHub-blue + mono */
 
-/* GitHub Dark Theme (default) */
-:root,
-[data-theme="dark"] {
-  /* Background & surfaces */
-  --bg: #0d1117;
-  --bg-grid: rgba(88, 166, 255, 0.03);
-  --panel: rgba(22, 27, 34, 0.8);
-  --panel-border: rgba(48, 54, 61, 0.4);
-
-  /* Text */
-  --ink: #c9d1d9;
-  --ink-dim: #8b949e;
-  --ink-faint: #484f58;
-
-  /* Primary accent (GitHub Blue) */
-  --cyan: #58a6ff;
-  --cyan-bright: #79c0ff;
-  --cyan-glow: rgba(88, 166, 255, 0.4);
-
-  /* Layer colors (immutable per spec) */
-  --l1: #58a6ff;      /* Code layer (L1) - cyan */
-  --l3: #3fb950;      /* Specs layer (L3) - green */
-  --l4: #d291f2;      /* Groups layer (L4) - purple */
-
-  /* Additional colors */
-  success: #3fb950;
-  warning: #d29922;
-  danger: #f85149;
-}
-
-/* GitHub Light Theme */
-[data-theme="light"] {
-  /* Background & surfaces */
-  --bg: #ffffff;
-  --bg-grid: rgba(9, 105, 218, 0.03);
-  --panel: rgba(246, 248, 250, 0.8);
-  --panel-border: rgba(48, 54, 61, 0.15);
-
-  /* Text */
-  --ink: #24292f;
-  --ink-dim: #57606a;
-  --ink-faint: #8c959f;
-
-  /* Primary accent (GitHub Blue) */
-  --cyan: #0969da;
-  --cyan-bright: #0860ca;
-  --cyan-glow: rgba(9, 105, 218, 0.3);
-
-  /* Layer colors (immutable per spec) */
-  --l1: #0969da;      /* Code layer (L1) - blue */
-  --l3: #1a7f37;      /* Specs layer (L3) - green */
-  --l4: #8957e5;      /* Groups layer (L4) - purple */
-
-  /* Additional colors */
-  success: #1a7f37;
-  warning: #9e6a03;
-  danger: #da3633;
-}
-
-/* Typography */
+/* Revamp color palette (default dark) */
 :root {
-  --font-display: 'Space Grotesk', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  /* Background & surfaces */
+  --bg: #0a0e1a;
+  --bg-1: #0d1322;
+  --panel: #111a2e;
+  --panel-2: #0f1626;
+
+  /* Borders & dividers */
+  --border: #1d2840;
+  --hair: #202c47;
+  --border-soft: #172238;
+
+  /* Text hierarchy */
+  --hi: #e9eefb;        /* high contrast (was --ink) */
+  --mid: #9aa8c8;       /* mid-tone */
+  --dim: #5d6c8e;       /* dimmed (secondary) */
+  --faint: #3a486a;     /* very faint (tertiary) */
+
+  /* Primary accent (GitHub Blue) */
+  --primary: #4493f8;
+  --primary-soft: rgba(68, 147, 248, 0.14);
+
+  /* Layer colors (immutable per spec) */
+  --l1: #58a6ff;        /* Sources/code - cyan */
+  --l3: #3fb950;        /* Cards/specs - green */
+  --l4: #7c8bff;        /* Domains/groups - purple */
+
+  /* Utility colors */
+  --amber: #d29922;
+  --rose: #f0506e;
+
+  /* Typography */
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --body: 'Inter', system-ui, sans-serif;
+  --disp: 'Space Grotesk', 'Inter', sans-serif;
+
+  /* Aliases for backward compatibility with existing code */
+  --ink: var(--hi);
+  --ink-dim: var(--mid);
+  --ink-faint: var(--faint);
+  --font-display: var(--disp);
+  --font-mono: var(--mono);
+  --cyan: var(--primary);
+  --cyan-bright: #79c0ff;
+  --cyan-glow: rgba(68, 147, 248, 0.4);
 }
 
 /* Motion timings (exact, from prototype feedback iterations) */
