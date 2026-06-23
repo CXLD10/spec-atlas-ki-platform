@@ -1,0 +1,21 @@
+erDiagram
+    SPECS {
+        uuid id PK
+        string user_id
+        string repo
+        string component_ref
+        int version
+        datetime valid_to
+        string status
+        jsonb content
+        jsonb provenance
+    }
+    SPEC_EDGES {
+        uuid id PK
+        string user_id
+        string repo
+        string src_component_ref
+        string dst_component_ref
+        string kind
+        string derived_from
+    }

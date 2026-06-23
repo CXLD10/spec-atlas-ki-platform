@@ -1,0 +1,17 @@
+flowchart TB
+    subgraph compose["docker compose (docker-compose.yml)"]
+        pg["postgres: pgvector/pgvector:pg16 (5432)"]:::real
+        api["spec-atlas: FastAPI (8000)"]:::real
+    end
+    feDev["frontend: Vite dev server (not in compose)"]:::mock
+    initdb["init-db.sql (create 2 DBs)"]:::real
+    alembic["alembic upgrade head (on container start)"]:::real
+
+    feDev -->|"VITE_API_URL"| api
+    api --> pg
+    initdb --> pg
+    alembic --> pg
+    api -.->|"ANALYSIS_DB_URL / SPEC_DB_URL"| pg
+
+    classDef real fill:#0b3d0b,stroke:#2ea043,color:#fff;
+    classDef mock fill:#3d2b00,stroke:#d29922,color:#fff,stroke-dasharray:5 5;

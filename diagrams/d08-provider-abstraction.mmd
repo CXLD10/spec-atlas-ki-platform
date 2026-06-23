@@ -1,0 +1,36 @@
+classDiagram
+    class LLMProvider {
+        <<abstract>>
+        +complete(messages, schema) str|dict
+    }
+    class EmbeddingProvider {
+        <<abstract>>
+        +dim int
+        +embed(texts) list
+        +embed_one(text) list
+    }
+    LLMProvider <|-- FakeLLMProvider
+    LLMProvider <|-- GeminiLLMProvider
+    LLMProvider <|-- OllamaProvider
+    LLMProvider <|-- GroqProvider
+    EmbeddingProvider <|-- FakeEmbeddingProvider
+    EmbeddingProvider <|-- FastembedEmbeddingProvider
+
+    class FakeLLMProvider {
+        offline, deterministic, default
+    }
+    class GeminiLLMProvider {
+        httpx, no SDK
+    }
+    class OllamaProvider {
+        httpx, async, local
+    }
+    class GroqProvider {
+        httpx, async, OpenAI-compatible
+    }
+    class FakeEmbeddingProvider {
+        offline, deterministic, default
+    }
+    class FastembedEmbeddingProvider {
+        local bge-small, 384-dim
+    }

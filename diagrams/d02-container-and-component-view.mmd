@@ -1,0 +1,53 @@
+flowchart TB
+    spa["Frontend SPA"]:::real
+
+    subgraph backend["FastAPI app (api/app.py)"]
+        ingestR["ingest router"]:::real
+        answerR["answer router"]:::real
+        graphR["graph router"]:::real
+        groupsR["groups router"]:::real
+        specsR["specs router"]:::real
+        reportsR["reports router"]:::real
+        sourcesR["sources router"]:::mock
+        healthR["health route"]:::real
+    end
+
+    subgraph workers["Ingest workers (BackgroundTasks)"]
+        pipe["resolve, parse, edges, cluster, summarize, embed, specify"]:::real
+    end
+
+    subgraph retr["Retrieval + answer"]
+        router2["QueryRouter"]:::real
+        search["VectorSearch (pgvector)"]:::real
+        descent["TreeDescent"]:::real
+        engine["AnswerEngine"]:::real
+    end
+
+    prov["LLM + Embedding providers"]:::real
+    mcp["MCP server (4 tools)"]:::mock
+
+    adb[("Analysis DB - L1, L4, embeddings, jobs")]:::real
+    sdb[("Spec DB - L2 specs, L3 spec_edges")]:::real
+
+    spa --> ingestR & answerR & graphR & groupsR & specsR & reportsR & sourcesR & healthR
+
+    ingestR --> pipe
+    pipe --> adb
+    pipe --> sdb
+    pipe --> prov
+
+    answerR --> router2 --> search --> descent --> engine
+    search --> adb
+    descent --> adb & sdb
+    engine --> prov
+
+    graphR --> adb
+    groupsR --> adb
+    specsR --> sdb & adb
+    reportsR --> sdb
+    healthR --> adb & sdb
+
+    mcp -.-> adb & sdb & prov
+
+    classDef real fill:#0b3d0b,stroke:#2ea043,color:#fff;
+    classDef mock fill:#3d2b00,stroke:#d29922,color:#fff,stroke-dasharray:5 5;

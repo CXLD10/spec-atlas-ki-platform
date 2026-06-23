@@ -1,0 +1,33 @@
+sequenceDiagram
+    actor U as Engineer
+    participant FE as Frontend
+    participant API as POST /api/ingest
+    participant BG as Background worker
+    participant ADB as Analysis DB
+    participant SDB as Spec DB
+
+    U->>FE: paste repo URL
+    FE->>API: repo_url (https, allowlisted host)
+    API->>ADB: create ingest_job (queued, 0pct)
+    API-->>FE: job_id (status queued)
+    API->>BG: schedule _process_ingest_job
+
+    BG->>ADB: in_progress 10pct
+    BG->>BG: git clone --depth=1 (resolver)
+    BG->>ADB: inventory files + hashes 40pct
+    BG->>ADB: detect language per file 70pct, commit 75pct
+    BG->>ADB: extract symbols to nodes 80pct
+    BG->>ADB: extract intra + cross-file edges 85pct
+    BG->>SDB: BatchSpecGenerator specs (if LLM) 88pct
+    BG->>ADB: cluster groups from dirs 92pct
+    BG->>ADB: summarize groups 94pct
+    BG->>SDB: GroupWriter group.md + link specs 96pct
+    BG->>ADB: embed group summaries (pgvector)
+    BG->>SDB: SpecGraphBuilder L3 edges 99pct
+    BG->>ADB: done 100pct
+
+    loop poll until done or failed
+        FE->>API: GET /api/ingest/{job_id}
+        API->>ADB: read job row
+        API-->>FE: status + progress
+    end

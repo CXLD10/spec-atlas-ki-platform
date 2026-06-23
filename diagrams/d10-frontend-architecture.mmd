@@ -1,0 +1,30 @@
+flowchart TB
+    subgraph shell["AppShell + react-router (app/App.tsx)"]
+        dash["/ Dashboard"]:::mock
+        srcs["/sources"]:::mock
+        kb["/kb KnowledgeBase"]:::mock
+        graphPg["/graph"]:::mock
+        ask["/ask"]:::real
+        spec["/specify"]:::mock
+        mcpP["/mcp"]:::mock
+        idx["/index/:jobId"]:::real
+    end
+
+    libapi["lib/api.ts (mock-fallback client)"]:::mock
+    apiclient["api/client.ts (ApiClient)"]:::real
+
+    beIngest["POST /api/ingest, GET /api/ingest/:id"]:::real
+    beAsk["POST /api/ask"]:::real
+    beSources["GET /api/sources (does not exist)"]:::mock
+    beKb["GET /api/kb (does not exist)"]:::mock
+    beSubgraph["GET /api/graph/subgraph (shape mismatch)"]:::mock
+
+    dash & srcs --> libapi --> beSources
+    kb --> libapi --> beKb
+    graphPg --> libapi --> beSubgraph
+    ask --> libapi --> beAsk
+    spec --> libapi
+    idx --> apiclient --> beIngest
+
+    classDef real fill:#0b3d0b,stroke:#2ea043,color:#fff;
+    classDef mock fill:#3d2b00,stroke:#d29922,color:#fff,stroke-dasharray:5 5;

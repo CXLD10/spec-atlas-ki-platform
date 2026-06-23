@@ -1,0 +1,29 @@
+flowchart TB
+    engineer["Engineer (browser)"]:::real
+    agent["AI agent via MCP (stdio)"]:::mock
+
+    subgraph SA["Spec-Atlas system"]
+        fe["Frontend SPA (React + Vite)"]:::real
+        api["FastAPI backend"]:::real
+        mcp["MCP server"]:::mock
+    end
+
+    pg[("Postgres + pgvector")]:::real
+    llmreal["LLM APIs (Gemini, Groq, Ollama)"]:::real
+    embedreal["fastembed (local model)"]:::real
+    git["Git hosts (clone over https)"]:::real
+    jira["Jira"]:::mock
+
+    engineer --> fe
+    fe -->|"REST over http"| api
+    agent -.->|"not wired, no entrypoint"| mcp
+    mcp -.-> api
+
+    api --> pg
+    api -->|"httpx, no SDK"| llmreal
+    api --> embedreal
+    api -->|"git clone --depth=1"| git
+    api -.->|"hardcoded data"| jira
+
+    classDef real fill:#0b3d0b,stroke:#2ea043,color:#fff;
+    classDef mock fill:#3d2b00,stroke:#d29922,color:#fff,stroke-dasharray:5 5;

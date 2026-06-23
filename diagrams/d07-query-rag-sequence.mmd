@@ -1,0 +1,38 @@
+sequenceDiagram
+    actor U as User
+    participant API as POST /api/ask
+    participant ADB as Analysis DB
+    participant VS as VectorSearch
+    participant TD as TreeDescent
+    participant AE as AnswerEngine
+    participant LLM as LLM provider
+
+    U->>API: question, repo
+    API->>ADB: count groups + nodes
+    alt both zero
+        API-->>U: status empty_db
+    else has data
+        API->>API: QueryRouter.route (vector or graph)
+        API->>VS: search top-k groups
+        alt embeddings exist
+            VS->>ADB: pgvector ANN order by distance
+        else no embeddings
+            VS->>ADB: keyword match on nodes (synthetic groups)
+        end
+        alt no results
+            API-->>U: status no_results
+        else top group found
+            API->>TD: descend top group
+            TD->>ADB: child groups + specs + provenance spans
+            API->>AE: answer_async (context)
+            AE->>LLM: complete with ANSWER_SCHEMA
+            AE-->>API: answer + claims
+            API->>API: confidence = top similarity
+            alt confidence below 0.4
+                API->>API: Deep Wiki fallback (MOCK, fake-only)
+            else
+                API->>API: format Spec-Atlas claims
+            end
+            API-->>U: answer, claims, confidence, source
+        end
+    end

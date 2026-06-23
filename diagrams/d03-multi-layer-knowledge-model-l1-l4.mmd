@@ -1,0 +1,18 @@
+flowchart LR
+    subgraph adb["Analysis DB (rebuildable)"]
+        L1["L1 code graph: nodes + edges (+ files, repos)"]:::real
+        L4["L4 groups tree + embeddings (Vector 384)"]:::real
+    end
+    subgraph sdb["Spec DB (durable, versioned)"]
+        L2["L2 specs (JSONB content + provenance)"]:::real
+        L3["L3 spec_edges (depends-on, part-of, uses)"]:::real
+    end
+
+    src["Source files"]:::real --> L1
+    L1 -->|"directory clustering"| L4
+    L1 -->|"LLM specify per component"| L2
+    L1 -->|"derive edges from real L1 edges"| L3
+    L2 -->|"member_spec_refs"| L4
+    L4 -->|"summary_md embedded"| L4
+
+    classDef real fill:#0b3d0b,stroke:#2ea043,color:#fff;

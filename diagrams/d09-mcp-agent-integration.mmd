@@ -1,0 +1,27 @@
+flowchart TB
+    agent["AI agent (stdio client)"]:::mock
+    subgraph srv["SpecAtlasMCPServer (mcp/server.py)"]
+        t1["search_knowledge"]:::mock
+        t2["get_spec"]:::real
+        t3["get_graph"]:::mock
+        t4["ask_question"]:::mock
+    end
+    subgraph h["MCPHandlers (mcp/handlers.py)"]
+        hs["search_knowledge - wrong call signature"]:::mock
+        hg["get_spec - SpecStore (works)"]:::real
+        hgr["get_graph - returns empty"]:::mock
+        ha["ask_question - wrong call signature"]:::mock
+    end
+    store["SpecStore / VectorSearch / TreeDescent"]:::real
+
+    agent -.->|"no entrypoint published"| srv
+    t1 -.-> hs
+    t2 --> hg
+    t3 -.-> hgr
+    t4 -.-> ha
+    hg --> store
+    hs -.->|"raises at runtime"| store
+    ha -.->|"raises at runtime"| store
+
+    classDef real fill:#0b3d0b,stroke:#2ea043,color:#fff;
+    classDef mock fill:#3d2b00,stroke:#d29922,color:#fff,stroke-dasharray:5 5;

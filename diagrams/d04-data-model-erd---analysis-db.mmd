@@ -1,0 +1,61 @@
+erDiagram
+    REPOS ||--o{ FILES : has
+    REPOS ||--o{ NODES : has
+    REPOS ||--o{ EDGES : has
+    REPOS ||--o{ GROUPS : has
+    REPOS ||--o{ EMBEDDINGS : has
+    FILES ||--o{ NODES : contains
+    NODES ||--o{ EDGES : "src/dst"
+    GROUPS ||--o{ GROUPS : parent_of
+
+    REPOS {
+        uuid id PK
+        string name
+        string source
+        string indexed_commit
+    }
+    FILES {
+        uuid id PK
+        uuid repo_id FK
+        string path
+        string language
+        string content_hash
+        int loc
+    }
+    NODES {
+        uuid id PK
+        uuid repo_id FK
+        uuid file_id FK
+        string kind
+        string qualified_name
+        int start_line
+        int end_line
+    }
+    EDGES {
+        uuid id PK
+        uuid src_node_id FK
+        uuid dst_node_id FK
+        string kind
+        float confidence
+    }
+    GROUPS {
+        uuid id PK
+        uuid parent_id FK
+        int level
+        text path
+        text summary_md
+        uuidarray member_node_ids
+        textarray member_spec_refs
+    }
+    EMBEDDINGS {
+        string owner_kind PK
+        string owner_ref PK
+        string model PK
+        vector384 vector
+    }
+    INGEST_JOBS {
+        uuid id PK
+        text repo_url
+        string status
+        int progress_pct
+    }
