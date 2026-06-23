@@ -1,6 +1,6 @@
 .sidebar {
-  background: var(--panel);
-  border-right: 1px solid var(--border);
+  background: transparent;
+  border-right: none;
   width: var(--rail, 248px);
   height: 100vh;
   display: flex;
@@ -19,7 +19,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem;
-  border-bottom: 1px solid var(--border-soft);
+  border-bottom: none;
   flex-shrink: 0;
   height: 56px;
 }
@@ -31,11 +31,13 @@
   width: 40px;
   height: 40px;
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
   border-radius: 6px;
   color: var(--mid);
   cursor: pointer;
   transition: all 0.2s ease;
+  padding: 0;
+  margin: 0;
 }
 
 .sidebar-hamburger:hover {
@@ -94,6 +96,8 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  background: var(--panel);
+  border-top: 1px solid var(--border-soft);
 }
 
 .nav-group {
@@ -175,6 +179,7 @@
   justify-content: space-between;
   gap: 0.5rem;
   flex-shrink: 0;
+  background: var(--panel);
 }
 
 .footer-content {
