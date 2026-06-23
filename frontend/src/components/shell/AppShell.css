@@ -49,6 +49,11 @@
   width: 100%;
   background: transparent;
   position: relative;
+  scrollbar-width: none;
+}
+
+.app-shell-content::-webkit-scrollbar {
+  display: none;
 }
 
 .app-shell-content::before {
