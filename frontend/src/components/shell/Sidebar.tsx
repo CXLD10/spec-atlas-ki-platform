@@ -1,10 +1,18 @@
+import { useEffect, useRef } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Menu, Zap, FileText, Network, MessageCircle, Wrench, Webhook, BookOpen } from 'lucide-react'
 import { useSidebar } from './useSidebar'
 import './Sidebar.css'
 
 export function Sidebar() {
-  const { collapsed, toggleCollapsed } = useSidebar()
+  const { collapsed, toggleCollapsed, mobileOpen, closeMobile, isMobile } = useSidebar()
+  const navRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isMobile && mobileOpen && navRef.current) {
+      navRef.current.focus()
+    }
+  }, [isMobile, mobileOpen])
 
   const navGroups = [
     {
@@ -30,10 +38,15 @@ export function Sidebar() {
   const railWidth = collapsed ? '64px' : '248px'
 
   return (
-    <aside
-      className="sidebar"
-      style={{ '--rail': railWidth } as React.CSSProperties}
-    >
+    <>
+      {isMobile && mobileOpen && (
+        <div className="sidebar-backdrop" onClick={closeMobile} />
+      )}
+      <aside
+        ref={navRef}
+        className={`sidebar ${isMobile ? 'mobile' : ''} ${mobileOpen ? 'mobile-open' : ''}`}
+        style={{ '--rail': railWidth } as React.CSSProperties}
+      >
       <div className="sidebar-header">
         <button
           className="sidebar-hamburger"
@@ -69,6 +82,7 @@ export function Sidebar() {
                     `nav-item ${isActive ? 'active' : ''} ${collapsed ? 'collapsed' : ''}`
                   }
                   title={collapsed ? item.label : undefined}
+                  onClick={() => isMobile && closeMobile()}
                 >
                   <IconComponent size={18} className="nav-icon" />
                   {!collapsed && <span className="nav-label">{item.label}</span>}
@@ -84,5 +98,6 @@ export function Sidebar() {
         {collapsed && <span className="footer-dot">●</span>}
       </div>
     </aside>
+    </>
   )
 }
