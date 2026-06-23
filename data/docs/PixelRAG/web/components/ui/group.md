@@ -7,7 +7,6 @@ This group contains 8 code components.
 
 ## Components
 
-- `cn` (method, typescript)
 - `Badge` (function, typescript)
 - `Collapsible` (function, typescript)
 - `Dialog` (function, typescript)
@@ -15,6 +14,7 @@ This group contains 8 code components.
 - `DialogPortal` (function, typescript)
 - `DialogClose` (function, typescript)
 - `Input` (function, typescript)
+- `cn` (method, typescript)
 
 ---
 

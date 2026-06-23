@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { GitBranch, MessageSquare, FileText, Plug } from 'lucide-react'
+import { GitBranch, MessageSquare, FileText, Plug, BookOpen, Database } from 'lucide-react'
 import { useSources } from '../lib/hooks'
 import { OmniIngest } from '../components/ingest/OmniIngest'
 import { SourceCard } from '../components/sources/SourceCard'
@@ -143,6 +143,16 @@ export function Dashboard() {
               <div className="cap-icon"><FileText size={22} /></div>
               <h3>Specify</h3>
               <p>Generate knowledge cards for any entity with one click.</p>
+            </button>
+            <button className="cap-tile" onClick={() => navigate('/kb')}>
+              <div className="cap-icon"><BookOpen size={22} /></div>
+              <h3>Knowledge Base</h3>
+              <p>Browse and manage all generated knowledge cards.</p>
+            </button>
+            <button className="cap-tile" onClick={() => navigate('/sources')}>
+              <div className="cap-icon"><Database size={22} /></div>
+              <h3>Sources</h3>
+              <p>Index repositories and ingest documents into your knowledge base.</p>
             </button>
             <button className="cap-tile" onClick={() => navigate('/mcp')}>
               <div className="cap-icon"><Plug size={22} /></div>

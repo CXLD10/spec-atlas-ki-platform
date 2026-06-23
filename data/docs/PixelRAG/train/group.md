@@ -7,8 +7,11 @@ This group contains 168 code components.
 
 ## Components
 
+- `to_relative_image_path` (function, python)
+- `materialize_image` (function, python)
 - `count_lines` (function, python)
 - `chunk_dir` (function, python)
+- `search_batch` (function, python)
 - `init_usage` (function, python)
 - `build_client` (function, python)
 - `parse_json_from_text` (function, python)
@@ -24,9 +27,6 @@ This group contains 168 code components.
 - `review_rows` (function, python)
 - `candidate_priority` (function, python)
 - `select_rows` (function, python)
-- `word_count` (function, python)
-- `compute_query_stats` (function, python)
-- `estimated_cost_usd` (function, python)
 - ... and 148 more
 
 ---

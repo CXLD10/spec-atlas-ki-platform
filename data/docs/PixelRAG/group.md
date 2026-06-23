@@ -1,29 +1,10 @@
 # PixelRAG
 
-**Purpose**
-----------
+## Overview
+This group contains 0 code components.
 
-PixelRAG, short for Pixel Random Access Group, is a root-level group that serves as a centralized hub for various tasks and operations. Its primary purpose is to facilitate random access to pixels, enabling efficient manipulation and processing of image data.
+## Components
 
-**Key Components**
------------------
-
-* **`root`**: The top-level directory serving as the group's namespace.
-* **`PixelRAG`**: The group's title, indicating its primary function.
-* **`member_count`**: A counter tracking the number of group members.
-* **`task`**: A metadata field storing information about the group's purpose.
-
-**Dependencies**
---------------
-
-* **None**: The root group has no external dependencies, making it self-contained and independent.
-
-**Invariants**
--------------
-
-* **`member_count` is a non-negative integer**: The member count must always be zero, as there are no group members.
-* **`task` is defined**: The task metadata field must always contain a valid value, describing the group's purpose.
-* **`PixelRAG` is the group title**: The group's title is always set to "PixelRAG", reflecting its primary function.
 
 ---
 

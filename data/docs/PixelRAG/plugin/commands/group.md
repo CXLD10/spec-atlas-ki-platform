@@ -2,11 +2,24 @@
 
 **Path:** `plugin/commands`
 
-## Overview
-This group contains 0 code components.
+**commands Group Summary**
+=====================================
 
-## Components
+### Purpose
+The `plugin/commands` group is responsible for handling user commands in the plugin. It provides a centralized location for commands to be defined, registered, and executed.
 
+### Key Components
+- `commands/`: A directory containing command-specific files, each defining a single command.
+- `command_parser.py`: A module responsible for parsing and executing user input to determine the relevant command.
+
+### Dependencies
+- `plugin/core`: The core plugin module, providing essential functionality and utilities.
+- `utils`: A utility module offering general-purpose functions, such as logging and error handling.
+
+### Invariants
+- Each command is defined in a separate file within the `commands/` directory, allowing for easy maintenance and modification.
+- The `command_parser.py` module is designed to be extensible, enabling new commands to be added without modifying existing code.
+- Commands are executed in a way that ensures input validation and proper error handling, maintaining a stable and predictable plugin behavior.
 
 ---
 
