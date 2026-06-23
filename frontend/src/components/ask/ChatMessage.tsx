@@ -44,7 +44,7 @@ export function ChatMessage({ role, text, streaming, claims, confidence, route }
     <div className={`chat-message chat-message--${role}`}>
       <div className="chat-message-avatar">
         <span className={`chat-avatar chat-avatar--${role}`}>
-          {role === 'user' ? '👤' : '⚛️'}
+          {role === 'user' ? '>' : '<'}
         </span>
       </div>
       <div className="chat-message-content">
