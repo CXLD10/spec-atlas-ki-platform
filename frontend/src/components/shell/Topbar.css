@@ -18,17 +18,23 @@
   gap: 0.5rem;
   font-size: 0.875rem;
   font-family: var(--mono);
-  color: white;
+  color: var(--mid);
   background: transparent;
   border: none;
   padding: 0.5rem;
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: all 0.2s ease;
   white-space: nowrap;
   min-width: 0;
   flex-shrink: 0;
   position: absolute;
   left: 1rem;
+}
+
+.topbar-logo {
+  color: white;
+  font-weight: bold;
+  font-size: 1rem;
 }
 
 .topbar-home:hover {
