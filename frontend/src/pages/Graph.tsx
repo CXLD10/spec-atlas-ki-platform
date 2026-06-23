@@ -63,11 +63,19 @@ export default function Graph() {
     )
   }
 
-  const visibleNodes = graphData.nodes.filter((n) => active[n.layer])
-  const visibleNodeIds = new Set(visibleNodes.map((n) => n.id))
-  const visibleEdges = graphData.edges.filter(
-    (e) => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target)
+  // Memoize visible nodes so graph doesn't rebuild when selectedNode changes
+  const visibleNodes = useMemo(
+    () => graphData.nodes.filter((n) => active[n.layer]),
+    [graphData, active]
   )
+
+  // Memoize visible edges the same way
+  const visibleEdges = useMemo(() => {
+    const visibleNodeIds = new Set(visibleNodes.map((n) => n.id))
+    return graphData.edges.filter(
+      (e) => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target)
+    )
+  }, [graphData, visibleNodes])
 
   const countL1 = visibleNodes.filter((n) => n.layer === 'L1').length
   const countL3 = visibleNodes.filter((n) => n.layer === 'L3').length
