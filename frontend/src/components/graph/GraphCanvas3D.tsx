@@ -214,7 +214,7 @@ export function GraphCanvas3D({ nodes, edges, onSelectNode, selectedNodeId }: Gr
 
     const raycaster = new THREE.Raycaster()
     const mouse = new THREE.Vector2()
-    let dragDistance = 0
+    let isInteracting = false
 
     const resetMeshColors = () => {
       Object.values(nodeMeshes).forEach((mesh) => {
@@ -225,32 +225,21 @@ export function GraphCanvas3D({ nodes, edges, onSelectNode, selectedNodeId }: Gr
       })
     }
 
-    let lastMouseX = 0
-    let lastMouseY = 0
-
     const onMouseMove = (event: MouseEvent) => {
-      // Only show hover feedback if OrbitControls isn't active
-      if (!controls.isRotating && !controls.isPanning) {
-        const rect = renderer.domElement.getBoundingClientRect()
-        mouse.x = ((event.clientX - rect.left) / width) * 2 - 1
-        mouse.y = -((event.clientY - rect.top) / height) * 2 + 1
-        raycaster.setFromCamera(mouse, camera)
-        const intersects = raycaster.intersectObjects(Object.values(nodeMeshes))
-        renderer.domElement.style.cursor = intersects.length > 0 ? 'pointer' : 'grab'
-      }
-
-      // Track drag distance
-      if (controls.isRotating || controls.isPanning) {
-        dragDistance += Math.abs(event.clientX - lastMouseX) + Math.abs(event.clientY - lastMouseY)
-      }
-      lastMouseX = event.clientX
-      lastMouseY = event.clientY
+      if (isInteracting) return
+      const rect = renderer.domElement.getBoundingClientRect()
+      mouse.x = ((event.clientX - rect.left) / width) * 2 - 1
+      mouse.y = -((event.clientY - rect.top) / height) * 2 + 1
+      raycaster.setFromCamera(mouse, camera)
+      const intersects = raycaster.intersectObjects(Object.values(nodeMeshes))
+      renderer.domElement.style.cursor = intersects.length > 0 ? 'pointer' : 'grab'
     }
 
     const onMouseDown = (event: MouseEvent) => {
-      dragDistance = 0
-      lastMouseX = event.clientX
-      lastMouseY = event.clientY
+      if (event.button === 0 || event.button === 2) isInteracting = true
+    }
+    const onMouseUp = () => {
+      isInteracting = false
     }
 
     const onMouseUp = () => {
@@ -258,9 +247,7 @@ export function GraphCanvas3D({ nodes, edges, onSelectNode, selectedNodeId }: Gr
     }
 
     const onClick = (event: MouseEvent) => {
-      // Don't select if user was dragging (interaction > 5px movement)
-      if (dragDistance > 5) return
-
+      if (isInteracting) return
       const rect = renderer.domElement.getBoundingClientRect()
       mouse.x = ((event.clientX - rect.left) / width) * 2 - 1
       mouse.y = -((event.clientY - rect.top) / height) * 2 + 1
