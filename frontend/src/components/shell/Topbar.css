@@ -4,10 +4,12 @@
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 1rem;
   padding: 0 1rem;
   flex-shrink: 0;
   min-width: 0;
+  position: relative;
 }
 
 .topbar-home {
@@ -25,6 +27,8 @@
   white-space: nowrap;
   min-width: 0;
   flex-shrink: 0;
+  position: absolute;
+  left: 1rem;
 }
 
 .topbar-home:hover {
@@ -67,8 +71,9 @@
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
-  flex: 1;
-  max-width: 300px;
+  flex: 0 0 auto;
+  width: 400px;
+  max-width: 90%;
   color: var(--mid);
   transition: all 0.2s ease;
 }
