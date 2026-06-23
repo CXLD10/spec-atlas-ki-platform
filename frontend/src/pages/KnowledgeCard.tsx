@@ -39,7 +39,7 @@ export function KnowledgeCard() {
           </div>
         </div>
         <div className="kc-header-actions">
-          <button className="kc-action-btn" onClick={() => navigate(`/ask?question=Tell me about ${card.title}`)}>
+          <button className="kc-action-btn" onClick={() => navigate(`/ask?scope=${encodeURIComponent(card.ref)}`)}>
             Ask Atlas
           </button>
           <button className="kc-action-btn secondary" onClick={() => navigate(`/graph?focus=${card.ref}`)}>

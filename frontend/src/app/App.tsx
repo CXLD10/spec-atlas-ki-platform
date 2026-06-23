@@ -4,6 +4,7 @@ import { ThemeProvider } from './theme/ThemeProvider'
 import { AppShell } from '../components/shell/AppShell'
 import Landing from '../pages/Landing'
 import Projects from '../pages/Projects'
+import Ask from '../pages/Ask'
 import RepoAsk from '../pages/RepoAsk'
 import RepoExplore from '../pages/RepoExplore'
 import RepoSpec from '../pages/RepoSpec'
@@ -44,7 +45,7 @@ export function App() {
               <Route path="/kb" element={<KnowledgeBase />} />
               <Route path="/kb/:ref" element={<KnowledgeCard />} />
               <Route path="/graph" element={<Graph />} />
-              <Route path="/ask" element={<RepoAsk />} />
+              <Route path="/ask" element={<Ask />} />
               <Route path="/specify" element={<SpecifyTool />} />
               <Route path="/mcp" element={<MCPServer />} />
               <Route path="/docs" element={<Docs />} />
