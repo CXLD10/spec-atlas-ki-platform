@@ -193,6 +193,17 @@ export const client = {
       `/api/graph/subgraph?${params.toString()}`
     )
   },
+
+  /**
+   * Generate a structured Knowledge Card from an entity name.
+   * BACKEND-DEP: POST /api/specs {repo, entity_name}
+   */
+  async generateSpec(repo: string, entityName: string): Promise<KnowledgeCard> {
+    return request<KnowledgeCard>('POST', '/api/specs', {
+      repo,
+      entity_name: entityName,
+    })
+  },
 }
 
 export type { Source, KnowledgeCard, JobStatus, AskResponse }

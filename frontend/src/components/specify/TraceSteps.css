@@ -1,0 +1,125 @@
+.trace-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.trace-step {
+  position: relative;
+  display: flex;
+  gap: 1.25rem;
+}
+
+/* Connector line between steps */
+.trace-connector {
+  position: absolute;
+  left: 10px;
+  top: 40px;
+  bottom: -40px;
+  width: 2px;
+  background: var(--border-soft);
+  transition: background 0.3s ease;
+}
+
+.trace-connector--done {
+  background: var(--l3);
+}
+
+.trace-connector--running {
+  background: var(--primary);
+}
+
+.trace-connector--queued {
+  background: var(--border-soft);
+}
+
+/* Step content */
+.trace-step-content {
+  display: flex;
+  gap: 0.875rem;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.trace-step--queued .trace-step-content {
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.trace-step--running .trace-step-content {
+  background: rgba(68, 147, 248, 0.08);
+  border: 1px solid rgba(68, 147, 248, 0.2);
+}
+
+.trace-step--done .trace-step-content {
+  background: rgba(63, 185, 80, 0.08);
+  border: 1px solid rgba(63, 185, 80, 0.15);
+}
+
+/* Icon */
+.trace-step-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.trace-step--queued .trace-step-icon {
+  color: var(--dim);
+}
+
+.trace-step--running .trace-step-icon {
+  color: var(--primary);
+}
+
+.trace-step--done .trace-step-icon {
+  color: var(--l3);
+}
+
+.trace-spinner {
+  animation: trace-spin 1s linear infinite;
+}
+
+@keyframes trace-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Text */
+.trace-step-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.trace-step-title {
+  margin: 0 0 0.2rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--hi);
+  transition: color 0.2s ease;
+}
+
+.trace-step--queued .trace-step-title {
+  color: var(--dim);
+}
+
+.trace-step-detail {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--mid);
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trace-step-content,
+  .trace-connector {
+    transition: none;
+  }
+  .trace-spinner {
+    animation: none;
+  }
+}
