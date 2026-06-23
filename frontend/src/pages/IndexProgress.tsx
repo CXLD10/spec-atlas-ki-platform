@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PipelineHUD } from '../components/hud/PipelineHUD'
 import { useIndexJob } from '../api/useIndexJob'
@@ -9,6 +9,17 @@ export function IndexProgress() {
   const { jobId } = useParams()
   const { data: job, isLoading, error } = useIndexJob(jobId || '')
   const phase = calculatePhase(job?.progress || 0)
+  const [showGoToSources, setShowGoToSources] = React.useState(false)
+
+  // Show "go to sources" popup if stuck at 96% for more than 30 seconds
+  React.useEffect(() => {
+    if (job?.progress === 96) {
+      const timer = setTimeout(() => setShowGoToSources(true), 30000)
+      return () => clearTimeout(timer)
+    } else {
+      setShowGoToSources(false)
+    }
+  }, [job?.progress])
 
   // Auto-redirect to Sources page when indexing completes
   useEffect(() => {
@@ -45,6 +56,40 @@ export function IndexProgress() {
 
   return (
     <div className="index-progress-page">
+      {showGoToSources && (
+        <div style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          backgroundColor: '#1a1f3a',
+          border: '2px solid #4493f8',
+          borderRadius: '8px',
+          padding: '2rem',
+          zIndex: 1000,
+          textAlign: 'center',
+          maxWidth: '400px'
+        }}>
+          <h2 style={{ color: '#fff', marginBottom: '1rem' }}>Indexing in Progress</h2>
+          <p style={{ color: '#aaa', marginBottom: '1.5rem' }}>
+            The final steps are processing. You can view your sources while we finish indexing.
+          </p>
+          <button
+            onClick={() => navigate('/sources')}
+            style={{
+              backgroundColor: '#4493f8',
+              color: 'white',
+              border: 'none',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '1rem'
+            }}
+          >
+            Go to Sources
+          </button>
+        </div>
+      )}
 
       <main className="progress-main">
         <div className="progress-content">

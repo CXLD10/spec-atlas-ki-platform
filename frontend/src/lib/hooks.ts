@@ -17,6 +17,7 @@ export function useSources() {
     queryKey: ['sources'],
     queryFn: () => client.listKnowledgeSources(),
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchInterval: 5000, // Auto-refetch every 5 seconds to show new sources
   })
 }
 

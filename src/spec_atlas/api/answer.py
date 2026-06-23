@@ -217,6 +217,7 @@ class AnswerRouter:
             confidence = similarity  # Use top group similarity as confidence
             source = "spec_atlas"
             disclaimer = ""
+            claims = []  # Initialize claims
 
             if confidence < 0.4:
                 # Try Deep Wiki fallback for general knowledge questions
