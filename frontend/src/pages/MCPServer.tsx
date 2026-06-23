@@ -1,26 +1,30 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Copy, Check, Circle } from 'lucide-react'
+import { ToolCard } from '../components/mcp/ToolCard'
+import { Console } from '../components/mcp/Console'
+import { client, MockFallback } from '../lib/api'
 import './MCPServer.css'
 
 const MCP_TOOLS = [
   {
     name: 'search',
     signature: 'search(query: string, repo?: string) → SearchResult[]',
-    description: 'Semantic search across all indexed sources and knowledge cards.',
+    description: 'Runs the full router→retriever→answerer pipeline and returns matched groups, specs and provenance.',
   },
   {
     name: 'get_spec',
     signature: 'get_spec(component_ref: string, repo?: string) → Spec',
-    description: 'Retrieve the full knowledge card for a specific component by reference.',
+    description: 'Fetches the current spec/card with purpose, I/O, invariants, status and citations.',
   },
   {
     name: 'get_group',
     signature: 'get_group(group_path: string, repo?: string) → Group',
-    description: 'Get a domain group with its member cards and summary.',
+    description: 'Returns a group/domain summary, child groups and member specs.',
   },
   {
     name: 'list_stale_specs',
     signature: 'list_stale_specs(repo?: string) → Spec[]',
-    description: 'List all knowledge cards that are stale and need regeneration.',
+    description: 'Lists specs whose source has drifted and need regeneration.',
   },
 ]
 
@@ -36,39 +40,30 @@ const MCP_CONFIG = `{
   }
 }`
 
-export function MCPServer() {
-  const [selectedTool, setSelectedTool] = useState(MCP_TOOLS[0].name)
-  const [toolArg, setToolArg] = useState('')
-  const [output, setOutput] = useState<string | null>(null)
-  const [calling, setCalling] = useState(false)
+export default function MCPServer() {
+  const [healthy, setHealthy] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const handleCall = async () => {
-    setCalling(true)
-    setOutput(null)
-    await new Promise((r) => setTimeout(r, 800))
-    setOutput(
-      JSON.stringify(
-        {
-          status: 'ok',
-          tool: selectedTool,
-          result: [
-            {
-              ref: 'hf-transformers-tokenizer',
-              title: 'Tokenizer: BPE to SentencePiece',
-              score: 0.94,
-              source: 'huggingface/transformers',
-            },
-          ],
-        },
-        null,
-        2
-      )
-    )
-    setCalling(false)
-  }
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        await client.health()
+        setHealthy(true)
+      } catch (err) {
+        if (err instanceof MockFallback) {
+          setHealthy(true) // Mock is OK
+        } else {
+          setHealthy(false)
+        }
+      }
+    }
 
-  const handleCopy = () => {
+    checkHealth()
+    const interval = setInterval(checkHealth, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleCopyConfig = () => {
     navigator.clipboard.writeText(MCP_CONFIG)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -76,91 +71,64 @@ export function MCPServer() {
 
   return (
     <div className="mcp-page">
-      <div className="mcp-header">
-        <div>
+      {/* Header */}
+      <header className="mcp-header">
+        <div className="mcp-header-content">
           <h1 className="mcp-title">MCP Server</h1>
           <p className="mcp-subtitle">
-            Connect Claude Code and other MCP-compatible agents to your knowledge base.
+            Connect Claude Code and other MCP-compatible agents to your knowledge base. Four frozen tools provide stable schemas for retrieval and exploration.
           </p>
         </div>
-        <div className="mcp-status healthy">
-          <span className="status-dot" />
-          MCP · 4 tools live
-        </div>
-      </div>
 
+        <div className={`mcp-status ${healthy ? 'mcp-status--healthy' : 'mcp-status--offline'}`}>
+          <Circle size={10} fill="currentColor" />
+          <span>{healthy ? 'MCP · backend ready' : 'MCP · offline'}</span>
+        </div>
+      </header>
+
+      {/* Layout */}
       <div className="mcp-layout">
-        <div className="mcp-tools">
-          <h2 className="section-title">Available Tools</h2>
-          <div className="tool-grid">
+        {/* Tools section */}
+        <section className="mcp-tools">
+          <h2 className="mcp-section-title">Available Tools</h2>
+          <div className="mcp-tool-grid">
             {MCP_TOOLS.map((tool) => (
-              <div key={tool.name} className="tool-card">
-                <div className="tool-header">
-                  <span className="tool-name">{tool.name}</span>
-                  <span className="tool-badge">FROZEN</span>
-                </div>
-                <code className="tool-signature">{tool.signature}</code>
-                <p className="tool-desc">{tool.description}</p>
-              </div>
+              <ToolCard key={tool.name} {...tool} />
             ))}
           </div>
-        </div>
+        </section>
 
-        <div className="mcp-sidebar">
-          <div className="mcp-console">
-            <h2 className="section-title">Playground — try a call</h2>
-            <div className="console-form">
-              <label className="console-label">Tool</label>
-              <select
-                className="console-select"
-                value={selectedTool}
-                onChange={(e) => setSelectedTool(e.target.value)}
-              >
-                {MCP_TOOLS.map((t) => (
-                  <option key={t.name} value={t.name}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
+        {/* Sidebar */}
+        <aside className="mcp-sidebar">
+          {/* Console */}
+          <Console tools={MCP_TOOLS} />
 
-              <label className="console-label">Argument</label>
-              <input
-                className="console-input"
-                type="text"
-                placeholder='e.g. "tokenizer" or "auth/session"'
-                value={toolArg}
-                onChange={(e) => setToolArg(e.target.value)}
-              />
-
+          {/* Config block */}
+          <div className="mcp-config">
+            <div className="mcp-config-header">
+              <h3 className="mcp-config-title">claude_desktop_config.json</h3>
               <button
-                className="console-call-btn"
-                onClick={handleCall}
-                disabled={calling}
+                className="mcp-config-copy"
+                onClick={handleCopyConfig}
+                title="Copy config"
               >
-                {calling ? 'Calling...' : 'Call'}
+                {copied ? (
+                  <>
+                    <Check size={14} />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy size={14} />
+                    Copy
+                  </>
+                )}
               </button>
             </div>
-
-            {output && (
-              <div className="console-output">
-                <pre className="output-pre">{output}</pre>
-              </div>
-            )}
+            <pre className="mcp-config-pre">{MCP_CONFIG}</pre>
           </div>
-
-          <div className="mcp-config-block">
-            <div className="config-header">
-              <h3 className="config-title">claude_desktop_config.json</h3>
-              <button className="copy-btn" onClick={handleCopy}>
-                {copied ? 'Copied!' : 'Copy'}
-              </button>
-            </div>
-            <pre className="config-pre">{MCP_CONFIG}</pre>
-          </div>
-        </div>
+        </aside>
       </div>
     </div>
   )
 }
-
-export default MCPServer
