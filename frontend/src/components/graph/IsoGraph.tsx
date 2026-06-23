@@ -22,6 +22,7 @@ interface IsoGraphProps {
   nodes: GraphNode[]
   edges: GraphEdge[]
   active: { L1: boolean; L3: boolean; L4: boolean }
+  selected?: GraphNode | null
   onNodeClick: (node: GraphNode) => void
 }
 
@@ -31,7 +32,7 @@ const LAYER_COLORS = {
   L4: 'rgb(124, 139, 255)', // --l4 (purple)
 }
 
-export function IsoGraph({ nodes, edges, active, onNodeClick }: IsoGraphProps) {
+export function IsoGraph({ nodes, edges, active, selected, onNodeClick }: IsoGraphProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [yaw, setYaw] = useState(0)
   const [pitch, setPitch] = useState(0.3)
@@ -134,29 +135,41 @@ export function IsoGraph({ nodes, edges, active, onNodeClick }: IsoGraphProps) {
     activeNodes.forEach((node) => {
       const p = project3D(node._x, node._y, node._z, centerX, centerY)
       const isHovered = node.id === hovered
-      const radius = isHovered ? 8 : 6
+      const isSelected = selected?.id === node.id
+      const radius = isHovered || isSelected ? 8 : 6
+      const color = LAYER_COLORS[node.layer]
 
-      // Glow halo
-      if (isHovered) {
-        ctx.fillStyle = LAYER_COLORS[node.layer]
-        ctx.globalAlpha = 0.2
+      // Selected ring (outer, solid)
+      if (isSelected) {
+        ctx.strokeStyle = color
+        ctx.globalAlpha = 0.9
+        ctx.lineWidth = 2
         ctx.beginPath()
-        ctx.arc(p.x, p.y, radius + 6, 0, Math.PI * 2)
+        ctx.arc(p.x, p.y, radius + 5, 0, Math.PI * 2)
+        ctx.stroke()
+      }
+
+      // Glow halo for hover or selected
+      if (isHovered || isSelected) {
+        ctx.fillStyle = color
+        ctx.globalAlpha = isSelected ? 0.25 : 0.15
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, radius + (isSelected ? 8 : 6), 0, Math.PI * 2)
         ctx.fill()
       }
 
       // Node circle
-      ctx.fillStyle = LAYER_COLORS[node.layer]
+      ctx.fillStyle = color
       ctx.globalAlpha = 1
       ctx.beginPath()
       ctx.arc(p.x, p.y, radius, 0, Math.PI * 2)
       ctx.fill()
 
-      // Label (small, to the right)
-      if (isHovered) {
-        ctx.fillStyle = 'var(--hi)'
-        ctx.font = '11px var(--mono)'
-        ctx.globalAlpha = 0.8
+      // Label: always show for selected, only on hover otherwise
+      if (isHovered || isSelected) {
+        ctx.fillStyle = isSelected ? '#ffffff' : 'rgba(255,255,255,0.8)'
+        ctx.font = `${isSelected ? '600 ' : ''}11px var(--mono, monospace)`
+        ctx.globalAlpha = 1
         ctx.fillText(node.label, p.x + radius + 8, p.y + 4)
       }
     })
@@ -183,7 +196,7 @@ export function IsoGraph({ nodes, edges, active, onNodeClick }: IsoGraphProps) {
     animate()
 
     return () => cancelAnimationFrame(animFrameId)
-  }, [nodes, edges, active, yaw, pitch, zoom, hovered])
+  }, [nodes, edges, active, yaw, pitch, zoom, hovered, selected])
 
   // Mouse events
   useEffect(() => {
@@ -266,23 +279,24 @@ export function IsoGraph({ nodes, edges, active, onNodeClick }: IsoGraphProps) {
     }
   }, [nodes, dragging, dragStart, onNodeClick])
 
-  // Handle resize
+  // Handle resize via ResizeObserver (more accurate than window resize)
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const onResize = () => {
-      const rect = canvas.parentElement?.getBoundingClientRect()
-      if (rect) {
-        canvas.width = rect.width
-        canvas.height = rect.height
-      }
+    const setSize = () => {
+      const parent = canvas.parentElement
+      if (!parent) return
+      canvas.width = parent.clientWidth
+      canvas.height = parent.clientHeight
     }
 
-    window.addEventListener('resize', onResize)
-    onResize() // Initial size
+    setSize()
 
-    return () => window.removeEventListener('resize', onResize)
+    const ro = new ResizeObserver(setSize)
+    if (canvas.parentElement) ro.observe(canvas.parentElement)
+
+    return () => ro.disconnect()
   }, [])
 
   return <canvas ref={canvasRef} className="iso-graph-canvas" />
