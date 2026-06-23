@@ -10,12 +10,12 @@ export function IndexProgress() {
   const { data: job, isLoading, error } = useIndexJob(jobId || '')
   const phase = calculatePhase(job?.progress || 0)
 
-  // Auto-redirect to Ask page when indexing completes
+  // Auto-redirect to Sources page when indexing completes
   useEffect(() => {
     if (job?.status === 'done') {
       // Small delay to let animation settle
       const timer = setTimeout(() => {
-        navigate(`/repo/${jobId}/ask`)
+        navigate(`/sources`)
       }, 500)
       return () => clearTimeout(timer)
     }
