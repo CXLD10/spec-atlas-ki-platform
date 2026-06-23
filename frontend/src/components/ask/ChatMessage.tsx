@@ -55,18 +55,22 @@ export function ChatMessage({ role, text, streaming, claims, confidence, route }
           <div className="chat-citations">
             <span className="chat-citations-label">Sources</span>
             <div className="chat-citations-list">
-              {claims.map((c, i) => (
-                <span key={i} className={`chat-claim chat-claim--${c.source.split('/').pop()?.split('.').pop() || 'text'}`}>
-                  <code className="chat-claim-ref">{c.source}</code>
-                  {c.file && <span className="chat-claim-loc">{c.file}</span>}
-                  {c.start_line && (
-                    <span className="chat-claim-line">
-                      L{c.start_line}
-                      {c.end_line && c.end_line !== c.start_line ? `-${c.end_line}` : ''}
-                    </span>
-                  )}
-                </span>
-              ))}
+              {claims.map((c, i) => {
+                const isDoc = /\.(pdf|xlsx?|md|markdown):/i.test(c.source)
+                const ext = c.source.split('/').pop()?.split('.').pop()?.split(':')[0] || 'text'
+                return (
+                  <span key={i} className={`chat-claim chat-claim--${ext}`}>
+                    <code className="chat-claim-ref">{c.source}</code>
+                    {!isDoc && c.file && <span className="chat-claim-loc">{c.file}</span>}
+                    {!isDoc && c.start_line != null && (
+                      <span className="chat-claim-line">
+                        L{c.start_line}
+                        {c.end_line && c.end_line !== c.start_line ? `-${c.end_line}` : ''}
+                      </span>
+                    )}
+                  </span>
+                )
+              })}
             </div>
           </div>
         )}

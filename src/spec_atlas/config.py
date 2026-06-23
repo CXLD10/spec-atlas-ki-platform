@@ -9,6 +9,7 @@ no credentials, and no cost (NFR: $0; testing-standard: offline fakes).
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
@@ -61,6 +62,10 @@ class Settings(BaseSettings):
     ollama_host: str = Field(default="http://localhost:11434", alias="OLLAMA_HOST")
     ollama_base_url: str = Field(default="http://localhost:11434", alias="OLLAMA_BASE_URL")
     ollama_model: str = Field(default="mistral", alias="OLLAMA_MODEL")
+
+    # --- Persistent docs store -----------------------------------------------
+    # group.md files written here by GroupWriter, served by GET /api/docs/...
+    docs_dir: Path = Field(default=Path("./data/docs"), alias="DOCS_DIR")
 
     @property
     def offline(self) -> bool:

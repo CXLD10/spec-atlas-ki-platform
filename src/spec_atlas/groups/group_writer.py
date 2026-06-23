@@ -29,6 +29,7 @@ class GroupWriter:
         analysis_session: Session,
         spec_session: Session | None = None,
         llm_provider: LLMProvider | None = None,
+        docs_dir: Path | None = None,
     ) -> dict:
         """Write group.md files and link specs to groups.
 
@@ -142,8 +143,9 @@ class GroupWriter:
                         )
                         report["linked_specs"] += len(group.member_spec_refs or [])
 
-                    # Write group.md to disk
-                    group_md_path = _write_group_markdown(group, repo_path)
+                    # Write group.md — to persistent docs_dir if provided, else temp clone
+                    write_base = str(docs_dir / repo_name) if docs_dir else repo_path
+                    group_md_path = _write_group_markdown(group, write_base)
                     report["written_files"] += 1
                     logger.debug(f"Wrote group.md: {group_md_path}")
 

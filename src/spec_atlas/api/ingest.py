@@ -212,6 +212,7 @@ def _run_ingest_sync(
             # Phase 8: Summarize groups, write group.md files, and link specs
             if spec_session_factory:
                 try:
+                    from spec_atlas.config import get_settings as _get_settings
                     spec_session = spec_session_factory()
                     GroupWriter.write_groups_for_repo(
                         repo.id,
@@ -219,6 +220,7 @@ def _run_ingest_sync(
                         session,
                         spec_session,
                         llm_provider,
+                        docs_dir=_get_settings().docs_dir,
                     )
                     spec_session.close()
                 except Exception as e:

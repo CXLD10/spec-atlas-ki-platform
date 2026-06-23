@@ -76,6 +76,7 @@ def create_app(settings=None) -> FastAPI:
 
     # ── Routers ──────────────────────────────────────────────────
     from spec_atlas.api.answer import router as answer_router
+    from spec_atlas.api.docs import router as docs_router
     from spec_atlas.api.graph import router as graph_router
     from spec_atlas.api.groups import router as groups_router
     from spec_atlas.api.ingest import router as ingest_router
@@ -92,6 +93,7 @@ def create_app(settings=None) -> FastAPI:
     app.include_router(kb_router, tags=["kb"])
     app.include_router(reports_router, tags=["reports"])
     app.include_router(sources_router, tags=["sources"])
+    app.include_router(docs_router, tags=["docs"])
 
     # ── Root ─────────────────────────────────────────────────────
     @app.get("/")
