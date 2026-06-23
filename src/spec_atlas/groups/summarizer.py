@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import inspect
 from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session
@@ -47,9 +49,14 @@ class GroupSummarizer:
         # Build the prompt
         prompt = GroupSummarizer._build_prompt(group, member_nodes, member_edges, related_specs)
 
-        # Call LLM
+        # Call LLM. LLMProvider.complete() is sync in the ABC, but Groq/Ollama
+        # implement it as async — bridge with asyncio.run() when needed (safe:
+        # always called from a sync context, never inside a running loop).
         messages = [{"role": "user", "content": prompt}]
-        response = llm_provider.complete(messages)
+        maybe_response = llm_provider.complete(messages)
+        response = (
+            asyncio.run(maybe_response) if inspect.isawaitable(maybe_response) else maybe_response
+        )
 
         # Ensure response is a string
         if isinstance(response, dict):

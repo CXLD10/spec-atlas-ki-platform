@@ -25,15 +25,17 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
-from sqlalchemy.ext.mutable import MutableList
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
+from sqlalchemy.ext.mutable import MutableDict, MutableList
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 EMBED_DIM = 384  # must match Settings.embed_dim and embeddings.vector(N)
 
 NODE_KINDS = ("module", "class", "function", "method")
 EDGE_KINDS = ("imports", "calls", "inherits", "defines")
-EMBED_OWNER_KINDS = ("group", "spec")
+EMBED_OWNER_KINDS = ("group", "spec", "source_unit")
+REPO_SOURCE_FORMATS = ("git", "pdf", "xlsx", "md")
+SOURCE_UNIT_TYPES = ("pdf", "excel", "markdown")
 
 
 class AnalysisBase(DeclarativeBase):
@@ -45,13 +47,26 @@ def _uuid_pk() -> Mapped[uuid.UUID]:
 
 
 class Repo(AnalysisBase):
+    """A top-level indexed source: a git repo, or (Phase 2) a single uploaded
+    document. Documents reuse this table — `source_format` distinguishes them
+    ('git' = code repo; 'pdf'/'xlsx'/'md' = a document) — rather than a
+    parallel "documents" table, so every place that already aggregates
+    sources by Repo (embeddings.repo_id FK, /api/sources, group counts)
+    covers documents for free."""
+
     __tablename__ = "repos"
+    __table_args__ = (
+        CheckConstraint(
+            "source_format IN ('git','pdf','xlsx','md')", name="ck_repos_source_format"
+        ),
+    )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
     name: Mapped[str] = mapped_column(String, nullable=False)
     source: Mapped[str] = mapped_column(String, nullable=False)  # local path or URL
     default_branch: Mapped[str | None] = mapped_column(String, nullable=True)
     indexed_commit: Mapped[str | None] = mapped_column(String, nullable=True)  # sha
+    source_format: Mapped[str] = mapped_column(String, nullable=False, server_default="git")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -163,15 +178,57 @@ class Group(AnalysisBase):
     )
 
 
-class Embedding(AnalysisBase):
-    """Vectors for groups (primary retrieval) and specs (direct lookup).
+class SourceUnit(AnalysisBase):
+    """A persisted, citable unit of document knowledge (PDF page, Excel row,
+    Markdown section) — the document-source analogue of a code Node.
 
-    Composite PK (owner_kind, owner_ref, model). No vectors on raw nodes (ADR-0001 D3).
+    Produced by ingest/adapters/{pdf,excel,markdown}.py's in-memory
+    SourceUnit dataclass; this is its durable, embeddable, queryable form.
+    `locator` is the full citation string (e.g. "doc.pdf:p.3"); the typed
+    page/sheet/row/section columns let the API and UI resolve a citation to
+    a specific, structured location without re-parsing the locator string.
+    """
+
+    __tablename__ = "source_units"
+    __table_args__ = (
+        CheckConstraint("source_type IN ('pdf','excel','markdown')", name="ck_source_units_type"),
+        Index("ix_source_units_repo", "repo_id"),
+    )
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    repo_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("repos.id", ondelete="CASCADE"), nullable=False
+    )
+    source_id: Mapped[str] = mapped_column(String, nullable=False)  # filename / doc name
+    source_type: Mapped[str] = mapped_column(String, nullable=False)  # pdf | excel | markdown
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    structure: Mapped[dict | None] = mapped_column(
+        MutableDict.as_mutable(JSONB), nullable=True
+    )
+    locator: Mapped[str] = mapped_column(Text, nullable=False)  # full citation string
+    page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sheet: Mapped[str | None] = mapped_column(String, nullable=True)
+    row: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    section: Mapped[str | None] = mapped_column(Text, nullable=True)
+    start_line: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    end_line: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class Embedding(AnalysisBase):
+    """Vectors for groups (primary retrieval), specs (direct lookup), and
+    (Phase 2) document source_units.
+
+    Composite PK (owner_kind, owner_ref, model). No vectors on raw code nodes (ADR-0001 D3).
     """
 
     __tablename__ = "embeddings"
     __table_args__ = (
-        CheckConstraint("owner_kind IN ('group','spec')", name="ck_embeddings_owner_kind"),
+        CheckConstraint(
+            "owner_kind IN ('group','spec','source_unit')", name="ck_embeddings_owner_kind"
+        ),
     )
 
     owner_kind: Mapped[str] = mapped_column(String, primary_key=True)

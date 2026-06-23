@@ -18,6 +18,7 @@ def test_analysis_tables_present() -> None:
         "groups",
         "embeddings",
         "ingest_jobs",
+        "source_units",
     }
 
 

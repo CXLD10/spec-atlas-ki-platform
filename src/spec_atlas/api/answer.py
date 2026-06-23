@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 
 from spec_atlas.answer.engine import AnswerEngine
-from spec_atlas.db.analysis import Group, Node
+from spec_atlas.db.analysis import Group, Node, SourceUnit
 
 # Rate limiter (optional; requires slowapi)
 try:
@@ -46,6 +46,37 @@ def _build_context_from_node(group: Group, session) -> TreeDescent.Context:
         specs=[],
         source_spans=[],
         tree_path=[group],
+    )
+
+
+def _build_context_from_source_unit(unit: SourceUnit) -> TreeDescent.Context:
+    """Build context from a document SourceUnit (PDF page / Excel row / MD
+    section) — these are leaves, not part of the L4 group tree, so no
+    descent makes sense; wrap the unit's text + real locator directly.
+    """
+    from spec_atlas.retrieve.descent import Context
+
+    # A Group-shaped (but unpersisted) wrapper so AnswerEngine._build_prompt's
+    # existing "matched_group.summary_md" path picks up the document text
+    # without needing a document-specific branch in the prompt builder.
+    pseudo_group = Group(
+        id=unit.id,
+        repo_id=unit.repo_id,
+        parent_id=None,
+        level=0,
+        path=unit.locator,
+        title=unit.source_id,
+        summary_md=unit.text,
+        member_node_ids=[],
+        member_spec_refs=[],
+    )
+
+    return Context(
+        matched_group=pseudo_group,
+        child_groups=[],
+        specs=[],
+        source_spans=[{"file": unit.locator, "start_line": None, "end_line": None}],
+        tree_path=[pseudo_group],
     )
 
 
@@ -116,14 +147,14 @@ class AnswerRouter:
                 suggestions=["Please ask a question about your code"],
             )
 
-        # Check if database has any data (groups or nodes)
+        # Check if database has any data (code groups/nodes, or document source_units)
         analysis_db = self.analysis_session_factory()
         try:
-            # Check for groups first, then fall back to nodes
             group_count = analysis_db.query(func.count(Group.id)).scalar()
             node_count = analysis_db.query(func.count(Node.id)).scalar()
+            source_unit_count = analysis_db.query(func.count(SourceUnit.id)).scalar()
 
-            if group_count == 0 and node_count == 0:
+            if group_count == 0 and node_count == 0 and source_unit_count == 0:
                 return AskResponse(
                     answer=(
                         "Database is empty. Please index a repository first using the Index page."
@@ -161,16 +192,20 @@ class AnswerRouter:
                 )
 
             # Take top result
-            top_group, similarity = search_results[0]
+            top_match, similarity = search_results[0]
 
-            # Step 3: Descend from top group to collect context
-            # If the group doesn't exist in DB (synthetic from nodes), build context differently
-            try:
-                context = TreeDescent.descend(top_group.id, analysis_db)
-            except Exception as e:
-                logger.warning(f"TreeDescent failed, building context from nodes: {e}")
-                # Fallback: build context from the node itself
-                context = _build_context_from_node(top_group, analysis_db)
+            # Step 3: Build context. A document SourceUnit is a leaf (no group
+            # tree to descend); a Group goes through normal tree descent, with
+            # a fallback for synthetic (keyword-search) groups.
+            if isinstance(top_match, SourceUnit):
+                context = _build_context_from_source_unit(top_match)
+            else:
+                try:
+                    context = TreeDescent.descend(top_match.id, analysis_db)
+                except Exception as e:
+                    logger.warning(f"TreeDescent failed, building context from nodes: {e}")
+                    # Fallback: build context from the node itself
+                    context = _build_context_from_node(top_match, analysis_db)
 
             # Step 4: Generate answer using LLM
             answer_obj = await AnswerEngine.answer_async(question, context, self.llm_provider)

@@ -1,11 +1,53 @@
-"""Tests for vector search over groups."""
+"""Tests for vector search over groups and document source_units."""
 
 from __future__ import annotations
 
 import uuid
 from unittest.mock import MagicMock
 
+from spec_atlas.db.analysis import Group, SourceUnit
 from spec_atlas.retrieve.search import VectorSearch
+
+
+def _mock_session(scalar=1, group_rows=None, source_unit_rows=None):
+    """Build a mock session whose query(Embedding, Group) and
+    query(Embedding, SourceUnit) chains return distinct, controllable result
+    sets — needed since _vector_search now issues two separate queries and
+    merges them."""
+    group_rows = group_rows or []
+    source_unit_rows = source_unit_rows or []
+
+    group_query = MagicMock()
+    group_query.join.return_value = group_query
+    group_query.filter.return_value = group_query
+    group_query.order_by.return_value = group_query
+    group_query.limit.return_value = group_query
+    group_query.all.return_value = group_rows
+
+    source_unit_query = MagicMock()
+    source_unit_query.join.return_value = source_unit_query
+    source_unit_query.filter.return_value = source_unit_query
+    source_unit_query.order_by.return_value = source_unit_query
+    source_unit_query.limit.return_value = source_unit_query
+    source_unit_query.all.return_value = source_unit_rows
+
+    scalar_query = MagicMock()
+    scalar_query.scalar.return_value = scalar
+
+    def query_side_effect(*args, **kwargs):
+        # Identity checks (`is`), not `in`/`==`: real SQLAlchemy expression
+        # args (e.g. func.count(...)) overload __eq__, so `Group in args`
+        # would route through SQLAlchemy's operator coercion instead of a
+        # plain Python comparison and raise.
+        if any(a is Group for a in args):
+            return group_query
+        if any(a is SourceUnit for a in args):
+            return source_unit_query
+        return scalar_query
+
+    mock_session = MagicMock()
+    mock_session.query.side_effect = query_side_effect
+    return mock_session, group_query, source_unit_query
 
 
 class TestVectorSearch:
@@ -35,11 +77,9 @@ class TestVectorSearch:
         """Searching returns groups with similarity scores."""
         query = "What is authentication?"
 
-        # Mock embedding provider
         embed_provider = MagicMock()
         embed_provider.embed_one.return_value = [0.1, 0.2] + [0.0] * 382
 
-        # Mock group and embedding
         group = MagicMock()
         group.id = uuid.uuid4()
         group.path = "auth"
@@ -51,16 +91,7 @@ class TestVectorSearch:
         embedding.model = "sentence-transformers/all-MiniLM-L6-v2"
         embedding.vector = [0.1, 0.2] + [0.0] * 382  # Same as query for 1.0 similarity
 
-        # Mock session query chain
-        mock_session = MagicMock()
-        mock_query = MagicMock()
-        mock_session.query.return_value = mock_query
-        mock_query.scalar.return_value = 1  # Embeddings exist
-        mock_query.join.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        mock_query.limit.return_value = mock_query
-        mock_query.all.return_value = [(embedding, group)]
+        mock_session, _, _ = _mock_session(group_rows=[(embedding, group)])
 
         result = VectorSearch.search(
             query=query,
@@ -79,7 +110,6 @@ class TestVectorSearch:
         embed_provider = MagicMock()
         embed_provider.embed_one.return_value = [0.5] * 384
 
-        # Create multiple groups
         group1 = MagicMock()
         group1.path = "db"
 
@@ -94,15 +124,9 @@ class TestVectorSearch:
         embedding2.owner_ref = "cache"
         embedding2.vector = [0.4] * 384
 
-        mock_session = MagicMock()
-        mock_query = MagicMock()
-        mock_session.query.return_value = mock_query
-        mock_query.scalar.return_value = 1  # Embeddings exist
-        mock_query.join.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        mock_query.limit.return_value = mock_query
-        mock_query.all.return_value = [(embedding1, group1), (embedding2, group2)]
+        mock_session, _, _ = _mock_session(
+            group_rows=[(embedding1, group1), (embedding2, group2)]
+        )
 
         result = VectorSearch.search(
             query=query,
@@ -120,16 +144,7 @@ class TestVectorSearch:
         embed_provider = MagicMock()
         embed_provider.embed_one.return_value = [0.0] * 384
 
-        mock_session = MagicMock()
-        mock_query = MagicMock()
-        mock_session.query.return_value = mock_query
-        # Mock scalar() return for embedding count check
-        mock_query.scalar.return_value = 1
-        mock_query.join.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        mock_query.limit.return_value = mock_query
-        mock_query.all.return_value = []
+        mock_session, group_query, source_unit_query = _mock_session()
 
         VectorSearch.search(
             query="test",
@@ -138,8 +153,8 @@ class TestVectorSearch:
             k=7,
         )
 
-        # Verify limit was called with k=7
-        mock_query.limit.assert_called_once_with(7)
+        group_query.limit.assert_called_once_with(7)
+        source_unit_query.limit.assert_called_once_with(7)
 
     def test_search_similarity_score_range(self) -> None:
         """Search results have similarity scores in [0, 1]."""
@@ -155,16 +170,7 @@ class TestVectorSearch:
         embedding.owner_ref = "test"
         embedding.vector = [0.1] * 384  # Identical to query
 
-        mock_session = MagicMock()
-        mock_query = MagicMock()
-        mock_session.query.return_value = mock_query
-        # Mock scalar() return for embedding count check
-        mock_query.scalar.return_value = 1
-        mock_query.join.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        mock_query.limit.return_value = mock_query
-        mock_query.all.return_value = [(embedding, group)]
+        mock_session, _, _ = _mock_session(group_rows=[(embedding, group)])
 
         result = VectorSearch.search(
             query=query,
@@ -178,16 +184,9 @@ class TestVectorSearch:
 
     def test_distance_to_similarity(self) -> None:
         """Distance to similarity conversion works correctly."""
-        # Distance 0 should give similarity 1.0
         assert VectorSearch._distance_to_similarity(0.0) == 1.0
-
-        # Distance 1.0 should give similarity 0.5
         assert VectorSearch._distance_to_similarity(1.0) == 0.5
-
-        # Distance 2.0 should give similarity 0.0
         assert VectorSearch._distance_to_similarity(2.0) == 0.0
-
-        # Very large distance should clamp to 0.0
         assert VectorSearch._distance_to_similarity(10.0) == 0.0
 
     def test_search_uses_correct_model(self) -> None:
@@ -195,16 +194,7 @@ class TestVectorSearch:
         embed_provider = MagicMock()
         embed_provider.embed_one.return_value = [0.0] * 384
 
-        mock_session = MagicMock()
-        mock_query = MagicMock()
-        mock_session.query.return_value = mock_query
-        # Mock scalar() return for embedding count check
-        mock_query.scalar.return_value = 1
-        mock_query.join.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        mock_query.limit.return_value = mock_query
-        mock_query.all.return_value = []
+        mock_session, group_query, _ = _mock_session()
 
         model = "custom-model"
         VectorSearch.search(
@@ -214,8 +204,7 @@ class TestVectorSearch:
             model=model,
         )
 
-        # Verify that filter was called (would filter by model)
-        mock_query.filter.assert_called_once()
+        group_query.filter.assert_called_once()
 
     def test_confidence_is_distance_derived(self) -> None:
         """Similarity reflects actual vector distance, not result rank.
@@ -241,18 +230,9 @@ class TestVectorSearch:
         far_embedding = MagicMock()
         far_embedding.vector = [0.0] * 384  # distance sqrt(384) -> similarity 0.0 (clamped)
 
-        mock_session = MagicMock()
-        mock_query = MagicMock()
-        mock_session.query.return_value = mock_query
-        mock_query.scalar.return_value = 1
-        mock_query.join.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        mock_query.limit.return_value = mock_query
-        mock_query.all.return_value = [
-            (exact_embedding, exact_group),
-            (far_embedding, far_group),
-        ]
+        mock_session, _, _ = _mock_session(
+            group_rows=[(exact_embedding, exact_group), (far_embedding, far_group)]
+        )
 
         result = VectorSearch.search(
             query="test",
@@ -266,3 +246,44 @@ class TestVectorSearch:
         assert result[1][0] == far_group
         assert result[1][1] == 0.0
         assert result[0][1] > result[1][1]
+
+    def test_search_merges_groups_and_source_units_by_distance(self) -> None:
+        """A document SourceUnit can outrank a Group when it's the closer match.
+
+        This is the contract document retrieval depends on: VectorSearch must
+        consider source_unit embeddings, not just group embeddings, or
+        uploaded document content is never retrievable/citable in answers.
+        """
+        query_vector = [1.0] * 384
+
+        embed_provider = MagicMock()
+        embed_provider.embed_one.return_value = query_vector
+
+        far_group = MagicMock(spec=Group)
+        far_group.path = "far-group"
+        far_group_embedding = MagicMock()
+        far_group_embedding.vector = [0.0] * 384  # far
+
+        close_unit = MagicMock(spec=SourceUnit)
+        close_unit.id = uuid.uuid4()
+        close_unit.locator = "doc.pdf:p.1"
+        close_unit_embedding = MagicMock()
+        close_unit_embedding.vector = [1.0] * 384  # exact match
+
+        mock_session, _, _ = _mock_session(
+            group_rows=[(far_group_embedding, far_group)],
+            source_unit_rows=[(close_unit_embedding, close_unit)],
+        )
+
+        result = VectorSearch.search(
+            query="test",
+            embed_provider=embed_provider,
+            session=mock_session,
+            k=2,
+        )
+
+        assert len(result) == 2
+        assert result[0][0] is close_unit
+        assert isinstance(result[0][0], SourceUnit)
+        assert result[0][1] == 1.0
+        assert result[1][0] is far_group

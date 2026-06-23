@@ -20,8 +20,10 @@ from .analysis import (
     Embedding,
     File,
     Group,
+    IngestJob,
     Node,
     Repo,
+    SourceUnit,
 )
 from .spec import Spec, SpecBase, SpecEdge
 
@@ -34,6 +36,8 @@ __all__ = [
     "Edge",
     "Group",
     "Embedding",
+    "IngestJob",
+    "SourceUnit",
     "Spec",
     "SpecEdge",
     "make_engine",

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -77,9 +79,13 @@ class AnswerEngine:
         # Build the prompt
         prompt = AnswerEngine._build_prompt(query, context)
 
-        # Call LLM with schema to enforce structured output
+        # Call LLM with schema to enforce structured output. See answer_async's
+        # comment below: complete() is sync per the ABC but async for Groq/Ollama.
         messages = [{"role": "user", "content": prompt}]
-        response = llm_provider.complete(messages, schema=ANSWER_SCHEMA)
+        maybe_response = llm_provider.complete(messages, schema=ANSWER_SCHEMA)
+        response = (
+            asyncio.run(maybe_response) if inspect.isawaitable(maybe_response) else maybe_response
+        )
 
         # Parse response
         if isinstance(response, str):
@@ -127,9 +133,18 @@ class AnswerEngine:
         # Build the prompt
         prompt = AnswerEngine._build_prompt(query, context)
 
-        # Call LLM with schema to enforce structured output
+        # Call LLM with schema to enforce structured output. LLMProvider.complete()
+        # is declared sync in the ABC (llm/base.py) and FakeLLMProvider/
+        # GeminiLLMProvider implement it that way, but GroqProvider/OllamaProvider
+        # implement it as async — await only when the provider actually returned
+        # one, so both kinds of providers work here (regression: this used to
+        # unconditionally `await`, so /api/ask always raised TypeError with the
+        # project's own zero-cost default `fake` provider).
         messages = [{"role": "user", "content": prompt}]
-        response = await llm_provider.complete(messages, schema=ANSWER_SCHEMA)
+        maybe_response = llm_provider.complete(messages, schema=ANSWER_SCHEMA)
+        response = (
+            await maybe_response if inspect.isawaitable(maybe_response) else maybe_response
+        )
 
         # Parse response
         if isinstance(response, str):
@@ -193,8 +208,11 @@ class AnswerEngine:
             lines.append("\nSource spans (file:line):")
             for span in context.source_spans[:5]:  # Limit to 5 spans
                 file_path = span.get("file", "?")
-                start_line = span.get("start_line", "?")
-                lines.append(f"  - {file_path}:{start_line}")
+                start_line = span.get("start_line")
+                # Document spans (PDF page / Excel cell / MD section) carry
+                # their full citation in `file` already and have no line
+                # number — don't print a misleading ":None".
+                lines.append(f"  - {file_path}:{start_line}" if start_line else f"  - {file_path}")
 
         # Task description
         lines.extend(

@@ -17,10 +17,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from spec_atlas.embed.pipeline import EmbeddingPipeline
@@ -28,6 +29,11 @@ from spec_atlas.graph.edges_crossfile import CrossFileEdgeExtractor
 from spec_atlas.graph.edges_intrafile import IntraFileEdgeExtractor
 from spec_atlas.groups.clustering import GroupClustering
 from spec_atlas.groups.group_writer import GroupWriter
+from spec_atlas.ingest.document_pipeline import (
+    ADAPTERS_BY_FORMAT,
+    detect_format,
+    process_document_ingest_job,
+)
 from spec_atlas.ingest.inventory import FileInventory
 from spec_atlas.ingest.job_store import IngestJobStore
 from spec_atlas.ingest.language import LanguageDetector
@@ -36,6 +42,8 @@ from spec_atlas.parse.python_symbols import PythonSymbolExtractor
 from spec_atlas.parse.ts_symbols import TypeScriptSymbolExtractor
 from spec_atlas.specify.batch_generator import BatchSpecGenerator
 from spec_atlas.specify.spec_graph_builder import SpecGraphBuilder
+
+MAX_DOCUMENT_UPLOAD_BYTES = 25 * 1024 * 1024  # 25 MB
 
 # Rate limiter (optional; requires slowapi) — mirrors api/answer.py's pattern.
 try:
@@ -493,3 +501,75 @@ async def get_ingest_status(job_id: str, http_request: Request):
         return _to_job_status(job)
     finally:
         session.close()
+
+
+@router.post("/documents", response_model=JobStatus)
+@_apply_rate_limit
+async def upload_document(
+    background_tasks: BackgroundTasks,
+    http_request: Request,
+    file: UploadFile = File(...),  # noqa: B008
+):
+    """Upload a PDF/Excel/Markdown document for ingestion.
+
+    Runs the matching adapter (ingest/adapters/), persists SourceUnits with
+    real locators (page/sheet+row/section), and embeds them so the content
+    is retrievable and citable — mirrors POST /api/ingest's job tracking, so
+    the same GET /api/ingest/:jobId polling and useIndexJob hook work
+    unchanged for documents.
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    source_format = detect_format(file.filename)
+    if source_format is None or source_format not in ADAPTERS_BY_FORMAT:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Unsupported file type: {file.filename!r}. "
+                f"Allowed: {', '.join(sorted({'.pdf', '.xlsx', '.md', '.markdown'}))}"
+            ),
+        )
+
+    contents = await file.read()
+    if len(contents) > MAX_DOCUMENT_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large: max {MAX_DOCUMENT_UPLOAD_BYTES // (1024 * 1024)} MB",
+        )
+    if len(contents) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+    # Stage to a temp file the adapter can open by path; cleaned up by
+    # run_document_ingest_sync once parsing finishes (success or failure).
+    suffix = Path(file.filename).suffix
+    fd, temp_path = tempfile.mkstemp(prefix="spec_atlas_doc_", suffix=suffix)
+    with open(fd, "wb") as f:
+        f.write(contents)
+
+    session_factory = _get_session_factory(http_request)
+    embed_provider = getattr(http_request.app.state, "embedding_provider", None)
+    if not embed_provider:
+        Path(temp_path).unlink(missing_ok=True)
+        raise HTTPException(status_code=503, detail="Embedding provider not configured")
+
+    session = session_factory()
+    try:
+        job_id = IngestJobStore.create_job(session, file.filename)
+        job = IngestJobStore.get_job(session, job_id)
+        status_response = _to_job_status(job)
+    finally:
+        session.close()
+
+    background_tasks.add_task(
+        process_document_ingest_job,
+        job_id,
+        temp_path,
+        file.filename,
+        source_format,
+        session_factory,
+        embed_provider,
+    )
+    logger.info(f"Started document ingest job {job_id} for {file.filename!r}")
+
+    return status_response

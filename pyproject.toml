@@ -18,6 +18,7 @@ dependencies = [
   "fastapi>=0.111",
   "uvicorn[standard]>=0.30",
   "slowapi>=0.1",  # Rate limiting
+  "python-multipart>=0.0.9",  # multipart/form-data parsing (POST /api/documents)
   # Config / validation
   "pydantic>=2.7",
   "pydantic-settings>=2.3",

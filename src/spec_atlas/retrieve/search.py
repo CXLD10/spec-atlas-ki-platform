@@ -1,13 +1,14 @@
-"""Vector search over group embeddings or keyword fallback on nodes."""
+"""Vector search over group + document embeddings, or keyword fallback on nodes."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import func
+from sqlalchemy import cast, func
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Session
 
-from spec_atlas.db.analysis import Embedding, Group, Node
+from spec_atlas.db.analysis import Embedding, Group, Node, SourceUnit
 from spec_atlas.embed.base import EmbeddingProvider
 
 if TYPE_CHECKING:
@@ -20,7 +21,8 @@ def _euclidean_distance(a: list[float], b: list[float]) -> float:
 
 
 class VectorSearch:
-    """Search for relevant groups via ANN on embeddings, with node-based fallback."""
+    """Search for relevant groups/document units via ANN on embeddings, with
+    node-based keyword fallback."""
 
     @staticmethod
     def search(
@@ -29,8 +31,9 @@ class VectorSearch:
         session: Session,
         k: int = 3,
         model: str = "sentence-transformers/all-MiniLM-L6-v2",
-    ) -> list[tuple[Group, float]]:
-        """Search for top-K groups via ANN on embeddings, or fallback to node matching.
+    ) -> list[tuple[Group | SourceUnit, float]]:
+        """Search for top-K groups/source_units via ANN on embeddings, or
+        fallback to node matching.
 
         Args:
             query: User query string.
@@ -40,8 +43,10 @@ class VectorSearch:
             model: Embedding model ID to search over.
 
         Returns:
-            List of (Group, similarity_score) tuples, sorted by score (highest first).
-            Similarity scores are 0–1 (higher = more similar).
+            List of (owner, similarity_score) tuples, sorted by score (highest
+            first). owner is a Group (code/L4) or SourceUnit (document
+            page/row/section) — check with isinstance(). Similarity scores
+            are 0-1 (higher = more similar).
         """
         if not query or not query.strip():
             return []
@@ -62,13 +67,12 @@ class VectorSearch:
         session: Session,
         k: int = 3,
         model: str = "sentence-transformers/all-MiniLM-L6-v2",
-    ) -> list[tuple[Group, float]]:
-        """Vector search using embeddings."""
-        # Embed the query
+    ) -> list[tuple[Group | SourceUnit, float]]:
+        """Vector search across both group (code) and source_unit (document)
+        embeddings, merged into one ranked-by-distance result set."""
         query_vector = embed_provider.embed_one(query)
 
-        # Query pgvector: find top-K group embeddings by distance
-        results = (
+        group_results = (
             session.query(Embedding, Group)
             .join(Group, (Embedding.owner_ref == Group.path) & (Embedding.owner_kind == "group"))
             .filter(Embedding.model == model)
@@ -77,16 +81,30 @@ class VectorSearch:
             .all()
         )
 
-        # Convert results to (Group, similarity_score) tuples. Distance is computed
-        # from the actual stored vectors (matching the pgvector `<->` L2 metric used
-        # in the ORDER BY above), not derived from result rank.
-        output = []
-        for embedding, group in results:
+        source_unit_results = (
+            session.query(Embedding, SourceUnit)
+            .join(
+                SourceUnit,
+                (cast(Embedding.owner_ref, UUID(as_uuid=True)) == SourceUnit.id)
+                & (Embedding.owner_kind == "source_unit"),
+            )
+            .filter(Embedding.model == model)
+            .order_by(Embedding.vector.op("<->")(query_vector))
+            .limit(k)
+            .all()
+        )
+
+        # Distance is computed from the actual stored vectors (matching the
+        # pgvector `<->` L2 metric used in the ORDER BY above), not derived
+        # from result rank — then merged across owner types and re-ranked.
+        output: list[tuple[Group | SourceUnit, float]] = []
+        for embedding, owner in [*group_results, *source_unit_results]:
             distance = _euclidean_distance(query_vector, embedding.vector)
             similarity = VectorSearch._distance_to_similarity(distance)
-            output.append((group, similarity))
+            output.append((owner, similarity))
 
-        return output
+        output.sort(key=lambda pair: pair[1], reverse=True)
+        return output[:k]
 
     @staticmethod
     def _node_keyword_search(query: str, session: Session, k: int = 3) -> list[tuple[Group, float]]:

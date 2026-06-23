@@ -79,8 +79,18 @@ def _repo_to_source(
     spec_session: Session | None,
     latest_job: IngestJob | None,
 ) -> SourceResponse:
-    entities = analysis_session.query(Node).filter(Node.repo_id == repo.id).count()
-    domains = analysis_session.query(Group).filter(Group.repo_id == repo.id).count()
+    is_document = repo.source_format != "git"
+
+    if is_document:
+        from spec_atlas.db.analysis import SourceUnit
+
+        entities = (
+            analysis_session.query(SourceUnit).filter(SourceUnit.repo_id == repo.id).count()
+        )
+        domains = 0  # documents have no L4 group tree
+    else:
+        entities = analysis_session.query(Node).filter(Node.repo_id == repo.id).count()
+        domains = analysis_session.query(Group).filter(Group.repo_id == repo.id).count()
 
     cards = 0
     if spec_session is not None:
@@ -103,13 +113,13 @@ def _repo_to_source(
 
     return SourceResponse(
         id=str(repo.id),
-        type="repo",
+        type="document" if is_document else "repo",
         name=repo.name,
         subtitle=repo.source,
         status=status,
         progress=progress,
         stats=SourceStats(entities=entities, cards=cards, domains=domains),
-        format="git",
+        format=repo.source_format,
         updatedAt=repo.updated_at.isoformat() if repo.updated_at else "",
     )
 

@@ -17,15 +17,17 @@ Cross-DB references are **by value (refs), never FK** — the Spec DB is indepen
 `id` uuid pk · `name` · `description` · `created_at` · `ingest_status` (`queued|ingesting|complete|failed`) · `ingest_progress` real 0–1 · `indexed_at` timestamp null. **Root scope for all downstream data.** All repos, sources, specs, memory, embeddings are scoped to a project.
 
 ### `repos`
-`id` uuid pk · `project_id` fk · `name` · `source` (path/URL) · `default_branch` · `indexed_commit` (sha) · timestamps. **Scoped to project.**
+`id` uuid pk · `name` · `source` (path/URL) · `default_branch` null · `indexed_commit` (sha) null · `source_format` (`git|pdf|xlsx|md`, default `git`) · timestamps.
+
+> **Implementation note (trust the code over this doc):** `projects` and a `repos.project_id` FK described below were never built — there is no project-scoping table. Documents (Phase 2) reuse `repos` directly: an uploaded PDF/Excel/Markdown file gets its own `repos` row with `source_format` set accordingly, rather than the separate `sources`/`source_locators` design sketched below. This means every place that already aggregates by `repos` (embeddings, `/api/sources`, group counts) covers documents for free. See `source_units` below for what actually replaced `source_locators`.
 
 ### `files`
 `id` pk · `repo_id` fk · `path` · `language` · `content_hash` · `loc`. Unique `(repo_id, path)`.
 
-### `sources` (Phase 1, multi-source)
+### `sources` (Phase 1, multi-source) — **not implemented**; see `repos.source_format` + `source_units` above/below for what shipped instead.
 `id` uuid pk · `project_id` fk · `type` enum (`code|pdf|markdown|excel|jira|git_history`) · `name` · `metadata` jsonb (language, pages, encoding) · `ingest_status` · `created_at`. **Each project can have multiple sources.** Code source is implicit; other sources are added explicitly.
 
-### `source_locators` (Phase 1, multi-source citations)
+### `source_locators` (Phase 1, multi-source citations) — **not implemented**; see `source_units` below for what shipped instead.
 Normalized representation of where content lives in each source type:
 ```
 CodeLocator:      {source_id, file_path, start_line, end_line}
@@ -34,6 +36,9 @@ TextLocator:      {source_id, section_id, offset_start, offset_end}
 ExcelLocator:     {source_id, sheet_name, cell_start, cell_end}
 ```
 Stored as polymorphic `locator_type` + `locator_data` jsonb in a single `source_locators` table or separate typed tables per source.
+
+### `source_units` (Phase 2 — the document analogue of `nodes`)
+`id` uuid pk · `repo_id` fk (the document's own `repos` row) · `source_id` (filename) · `source_type` (`pdf|excel|markdown`) · `text` · `structure` jsonb null (e.g. Excel row data) · `locator` text (full citation string, e.g. `doc.pdf:p.3`) · `page` int null · `sheet` text null · `row` int null · `section` text null · `start_line`/`end_line` int null · `created_at`. One row per PDF page / Excel data row / Markdown section, produced by `ingest/adapters/{pdf,excel,markdown}.py`. Embedded the same way as groups (`embeddings.owner_kind = 'source_unit'`, `owner_ref = source_units.id`).
 
 ### `nodes` (L1 symbols)
 `id` pk · `repo_id` fk · `file_id` fk · `language` · `kind` (`module|class|function|method`) · `name` · `qualified_name` · `signature` · `docstring` · `start_line` · `end_line`.
@@ -46,7 +51,7 @@ Stored as polymorphic `locator_type` + `locator_data` jsonb in a single `source_
 `id` pk · `repo_id` fk · `parent_id` uuid null (null = root) · `level` int · `path` text (e.g. `auth/tokens`) · `title` · `summary_md` text (the `group.md` page) · `member_node_ids` uuid[] · `member_spec_refs` text[] (component_refs into the Spec DB) · `source_fingerprint` text (hash of covered source spans — drives staleness) · timestamps. Index `(repo_id, parent_id)`.
 
 ### `embeddings`
-`owner_kind` (`group|spec`) · `owner_ref` (group `path` or spec `component_ref@version`) · `repo_id` · `vector` vector(384) · `model`. PK `(owner_kind, owner_ref, model)`. **Groups = primary retrieval surface; specs = direct lookup.** (ADR-0001 D3.)
+`owner_kind` (`group|spec|source_unit`) · `owner_ref` (group `path`, spec `component_ref@version`, or `source_units.id`) · `repo_id` · `vector` vector(384) · `model`. PK `(owner_kind, owner_ref, model)`. **Groups = primary retrieval surface; specs = direct lookup; source_units = document content (Phase 2).** (ADR-0001 D3.)
 
 ---
 

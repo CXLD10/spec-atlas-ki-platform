@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import json
 from typing import TYPE_CHECKING
 
@@ -44,11 +46,19 @@ class SpecifyEngine:
         # Build the prompt
         prompt = _build_prompt(focal_node, neighbors, edges)
 
-        # Call LLM with structured output
+        # Call LLM with structured output. LLMProvider.complete() is sync in
+        # the ABC (FakeLLMProvider/GeminiLLMProvider), but GroqProvider/
+        # OllamaProvider implement it as async — bridge with asyncio.run()
+        # when needed (safe here: this is always called from a sync context,
+        # either FastAPI's threadpool for sync routes or a background
+        # ingest thread, never from inside a running event loop).
         schema_dict = spec_json_schema()
         messages = [{"role": "user", "content": prompt}]
 
-        response = llm_provider.complete(messages, schema=schema_dict)
+        maybe_response = llm_provider.complete(messages, schema=schema_dict)
+        response = (
+            asyncio.run(maybe_response) if inspect.isawaitable(maybe_response) else maybe_response
+        )
 
         # Parse response (can be dict or JSON string)
         if isinstance(response, str):
