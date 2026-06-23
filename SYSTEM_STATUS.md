@@ -140,11 +140,13 @@ Current `.env` is properly configured:
 ANALYSIS_DB_URL=postgresql+psycopg://spec_atlas:spec_atlas_dev@localhost:5432/spec_atlas_analysis
 SPEC_DB_URL=postgresql+psycopg://spec_atlas:spec_atlas_dev@localhost:5432/spec_atlas_spec
 LLM_PROVIDER=groq
-GROQ_API_KEY=your_key_here
+GROQ_API_KEY=<YOUR_SECRET_KEY>  # Never commit API keys!
 GROQ_MODEL=llama-3.1-8b-instant
 EMBED_PROVIDER=fake
 EMBED_DIM=384
 ```
+
+⚠️ **SECURITY:** `.env` is in `.gitignore` - never commit API keys
 
 ## Quick Restart (if needed)
 

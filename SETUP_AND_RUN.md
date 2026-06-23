@@ -45,16 +45,22 @@ uv pip install -e ".[dev]"
 
 ```bash
 # File: /home/cxld/projects/spec-atlas-ki-platform/.env
-# (Already configured with correct values)
+# DO NOT commit this file - it's in .gitignore
 
 ANALYSIS_DB_URL=postgresql+psycopg://spec_atlas:spec_atlas_dev@localhost:5432/spec_atlas_analysis
 SPEC_DB_URL=postgresql+psycopg://spec_atlas:spec_atlas_dev@localhost:5432/spec_atlas_spec
+
+# LLM Provider - NEVER commit API keys!
 LLM_PROVIDER=groq
-GROQ_API_KEY=your_key_here
+GROQ_API_KEY=<YOUR_GROQ_API_KEY_HERE>  # Get from https://console.groq.com/keys
 GROQ_MODEL=llama-3.1-8b-instant
+
+# Embedding (fake for local dev)
 EMBED_PROVIDER=fake
 EMBED_DIM=384
 ```
+
+⚠️ **IMPORTANT:** Never commit your `.env` file. It's in `.gitignore` for a reason.
 
 ## Step 4: Run Backend (Terminal 1)
 
