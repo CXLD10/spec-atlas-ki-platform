@@ -6,10 +6,9 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Status](https://img.shields.io/badge/status-Production%20Ready-brightgreen)
 
-## 🎯 What is Spec-Atlas?
+## What is Spec-Atlas?
 
 Spec-Atlas is a **zero-cost, local-first knowledge intelligence platform** that indexes repositories and documents to create a queryable, intelligent knowledge base. It combines:
-
 - **Code Understanding**: Parses source code to extract symbols, dependencies, and relationships
 - **Document Intelligence**: Ingests PDFs, Markdown, and spreadsheets with structural awareness
 - **Semantic Search**: Uses embeddings to find relevant code and documentation
@@ -18,43 +17,42 @@ Spec-Atlas is a **zero-cost, local-first knowledge intelligence platform** that 
 - **Citation System**: Every answer links back to its source (file:line for code, page/cell for docs)
 
 ### Why Spec-Atlas?
-
-- 🎓 **Onboarding**: New team members query the codebase instead of asking questions
-- 📚 **Documentation**: Auto-generate specs from code; keep docs in sync with reality
-- 🔍 **Search**: Find code, concepts, and decisions across 100K+ LOC instantly
-- 🏗️ **Architecture**: Visualize how components relate in an interactive 3D graph
-- 💰 **Zero Cost**: Local-first, offline-capable, uses free/OSS LLM providers by default
-- 🔐 **Private**: Everything runs locally; no cloud, no data leakage
+- **Onboarding**: New team members query the codebase instead of asking questions
+-  **Documentation**: Auto-generate specs from code; keep docs in sync with reality
+-  **Search**: Find code, concepts, and decisions across 100K+ LOC instantly
+-  **Architecture**: Visualize how components relate in an interactive 3D graph
+-  **Zero Cost**: Local-first, offline-capable, uses free/OSS LLM providers by default
+-  **Private**: Everything runs locally; no cloud, no data leakage
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-### 📑 Multi-Source Ingestion
+### Multi-Source Ingestion
 - **Code**: Clone any Git repository (Python, JavaScript/TypeScript, Go, etc.)
 - **Documents**: PDF, Markdown, Excel spreadsheets with page/cell awareness
 - **Git History**: Track code changes and commit context
 - **Jira**: Import issues and requirements
 
-### 🧠 Intelligent Retrieval (RAG)
+### Intelligent Retrieval (RAG)
 - Vector embeddings for semantic search
 - Dual-locator citations (code: `file:line`, docs: `page:bbox`)
 - Conversation memory across sessions
 - Context-aware ranking and retrieval
 
-### 📊 Knowledge Graph
+### Knowledge Graph
 - 3-layer visualization (L1 sources, L3 specs, L4 domains)
 - Interactive 3D rendering with Three.js
 - Click-through workflow: graph → ask → specify
 - Real-time provenance tracking
 
-### 🤖 Automated Spec Generation
+### Automated Spec Generation
 - One-click knowledge card generation for any code entity
 - LLM-powered with structured output (purpose, inputs, outputs, invariants, etc.)
 - Spec versioning and verification workflow
 - Drift detection flags when code changes
 
-### 💬 Ask Atlas (Chat)
+### Ask Atlas (Chat)
 - Query your entire knowledge base with natural language
 - Get answers grounded in your code with citations
 - Fallback to general knowledge when code context missing
@@ -62,21 +60,21 @@ Spec-Atlas is a **zero-cost, local-first knowledge intelligence platform** that 
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ### System Diagram
 ```
 Frontend (React 18, Vite)
     ↓ HTTP/REST
 Backend (FastAPI, SQLAlchemy)
-    ├─ Ingest Pipeline (6 phases)
-    ├─ Retrieval Engine (RAG)
-    ├─ Answer Generation (LLM)
-    └─ Knowledge Graph
+     Ingest Pipeline (6 phases)
+     Retrieval Engine (RAG)
+     Answer Generation (LLM)
+     Knowledge Graph
     ↓ SQLAlchemy ORM
 Databases (PostgreSQL + pgvector)
-    ├─ Analysis DB (source units, entities, graph)
-    └─ Spec DB (specs, embeddings, verification)
+     Analysis DB (source units, entities, graph)
+     Spec DB (specs, embeddings, verification)
 ```
 
 ### Ingest Pipeline (6 Phases)
@@ -100,10 +98,9 @@ Phase 6: Specs          → Generate L3 knowledge cards via LLM
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
-
 - **Python 3.12+** (backend)
 - **Node.js 18+** (frontend)
 - **PostgreSQL 15+** with `pgvector` extension
@@ -176,7 +173,7 @@ Open **http://localhost:5173** and start indexing!
 
 ---
 
-## 📖 Usage Guide
+## Usage Guide
 
 ### 1. Index a Repository
 
@@ -209,7 +206,7 @@ Open **http://localhost:5173** and start indexing!
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 ### Backend
 - **Framework**: FastAPI (REST API, SSE streaming)
@@ -229,35 +226,35 @@ Open **http://localhost:5173** and start indexing!
 
 ---
 
-## 📋 Project Structure
+## Project Structure
 
 ```
 spec-atlas-ki-platform/
-├── src/spec_atlas/
-│   ├── api/              # REST endpoints
-│   ├── ingest/           # Ingest pipeline
-│   ├── parse/            # Language parsing
-│   ├── graph/            # Dependencies
-│   ├── embed/            # Embeddings
-│   ├── db/               # SQLAlchemy models
-│   ├── llm/              # LLM provider abstraction
-│   └── answer/           # RAG + answer generation
-├── frontend/src/
-│   ├── pages/            # Ask, Sources, Graph, KB, Specify
-│   ├── components/       # UI components
-│   ├── lib/              # Hooks, utilities, types
-│   ├── api/              # API client
-│   └── app/              # Theme, shell
-├── docs/
-│   ├── DECISIONS.md      # Architecture decisions
-│   ├── PLAYBOOK.md       # Development process
-│   └── decisions/        # ADRs
-└── specs/                # Product specs
+ src/spec_atlas/
+    api/              # REST endpoints
+    ingest/           # Ingest pipeline
+    parse/            # Language parsing
+    graph/            # Dependencies
+    embed/            # Embeddings
+    db/               # SQLAlchemy models
+    llm/              # LLM provider abstraction
+    answer/           # RAG + answer generation
+ frontend/src/
+    pages/            # Ask, Sources, Graph, KB, Specify
+    components/       # UI components
+    lib/              # Hooks, utilities, types
+    api/              # API client
+    app/              # Theme, shell
+ docs/
+    DECISIONS.md      # Architecture decisions
+    PLAYBOOK.md       # Development process
+    decisions/        # ADRs
+ specs/                # Product specs
 ```
 
 ---
 
-## 🔧 Development Commands
+## Development Commands
 
 ```bash
 # Backend
@@ -277,10 +274,9 @@ make db-drop          # Reset (careful!)
 
 ---
 
-## 🎨 Design System
+## Design System
 
 **Apple-inspired dark mode** with professional colors:
-
 - **Background**: Deep space black (`#1a1a1a`)
 - **Surfaces**: Warm charcoal (`#242424`, `#2a2a2a`)
 - **Text**: Light grey (`#f5f5f5`)
@@ -289,7 +285,7 @@ make db-drop          # Reset (careful!)
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Backend: Offline with fake providers
@@ -307,7 +303,7 @@ npm run type-check
 
 ---
 
-## 📊 Performance
+## Performance
 
 ### Ingest Speed
 - Small repos (<50K LOC): 30–60s
@@ -321,17 +317,16 @@ npm run type-check
 
 ---
 
-## 🔐 Security & Privacy
-
-- ✅ Local-first (everything on your machine)
-- ✅ No external calls (code never leaves)
-- ✅ Offline-capable (except LLM calls)
-- ✅ No telemetry
-- ✅ Credentials in git-ignored `.env`
+## Security & Privacy
+- Local-first (everything on your machine)
+-  No external calls (code never leaves)
+-  Offline-capable (except LLM calls)
+-  No telemetry
+-  Credentials in git-ignored `.env`
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 See `docs/PLAYBOOK.md`:
 
@@ -345,8 +340,7 @@ See `docs/PLAYBOOK.md`:
 
 ---
 
-## 📚 Resources
-
+## Resources
 - **API Contract**: `API_CONTRACT.md`
 - **Architecture**: `ARCHITECTURE-E2E.md`
 - **Data Model**: `specs/architecture/DATA-MODEL.md`
@@ -355,21 +349,20 @@ See `docs/PLAYBOOK.md`:
 
 ---
 
-## 📄 License
+## License
 
 MIT — See LICENSE file.
 
 ---
 
-## 👤 Author
+## Author
 
 **Joshua Joseph** (CXLD10)  
 Engineered by Claude (Anthropic)
 
 ---
 
-## 📞 Support
-
+## Support
 - **Issues**: GitHub Issues
 - **Email**: joshuajomjose@gmail.com
 
