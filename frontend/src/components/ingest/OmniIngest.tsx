@@ -25,7 +25,8 @@ export function OmniIngest() {
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     setUrl(val)
-    if (val && !isValidUrl) {
+    const isValid = val.trim() && REPO_REGEX.test(val.trim())
+    if (val && !isValid) {
       setUrlError('Invalid repo URL. Use GitHub, GitLab, Gitea, or Codeberg.')
     } else {
       setUrlError('')
