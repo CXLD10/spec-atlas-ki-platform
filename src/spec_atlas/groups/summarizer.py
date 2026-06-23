@@ -25,6 +25,7 @@ class GroupSummarizer:
         member_edges: list[Edge],
         related_specs: list[Spec],
         llm_provider: LLMProvider,
+        session: Session | None = None,
     ) -> tuple[str, dict]:
         """Generate a markdown summary for a group.
 
@@ -34,6 +35,9 @@ class GroupSummarizer:
             member_edges: All edges within this group (not crossing groups).
             related_specs: Specs linked to this group.
             llm_provider: LLM provider to generate the summary.
+            session: Analysis DB session, used to resolve member nodes' file
+                paths for provenance. If omitted, provenance falls back to
+                the raw file_id (e.g. in unit tests with mocked nodes).
 
         Returns:
             Tuple of (summary_markdown, provenance_dict).
@@ -54,7 +58,7 @@ class GroupSummarizer:
             summary_md = str(response)
 
         # Build provenance
-        provenance = GroupSummarizer._build_provenance(group, member_nodes)
+        provenance = GroupSummarizer._build_provenance(group, member_nodes, session)
 
         return summary_md, provenance
 
@@ -122,24 +126,44 @@ class GroupSummarizer:
         return "\n".join(lines)
 
     @staticmethod
-    def _build_provenance(group: Group, member_nodes: list[Node]) -> dict:
+    def _file_paths_for_nodes(member_nodes: list[Node], session: Session | None) -> dict:
+        """Resolve member nodes' file_id -> File.path, via one batched query.
+
+        Falls back to ``str(file_id)`` per node when no session is given
+        (e.g. unit tests with mocked nodes) or a file_id has no matching row.
+        """
+        if not session or not member_nodes:
+            return {}
+
+        from spec_atlas.db.analysis import File
+
+        file_ids = {node.file_id for node in member_nodes}
+        rows = session.query(File).filter(File.id.in_(file_ids)).all()
+        return {row.id: row.path for row in rows}
+
+    @staticmethod
+    def _build_provenance(
+        group: Group, member_nodes: list[Node], session: Session | None = None
+    ) -> dict:
         """Build provenance mapping for the group summary.
 
         Args:
             group: The group.
             member_nodes: Member nodes (source of spans).
+            session: Analysis DB session, used to resolve real file paths.
 
         Returns:
             Provenance dict: {section: [{file, start_line, end_line}, ...]}
         """
         provenance = {}
+        file_paths = GroupSummarizer._file_paths_for_nodes(member_nodes, session)
 
         # For each section, map to the spans of member nodes
         if member_nodes:
             # "Key Components" comes from the member nodes themselves
             key_components_spans = [
                 {
-                    "file": str(node.file_id),
+                    "file": file_paths.get(node.file_id, str(node.file_id)),
                     "start_line": node.start_line,
                     "end_line": node.end_line,
                 }
@@ -152,7 +176,7 @@ class GroupSummarizer:
                 if node.docstring:
                     provenance["Purpose"] = [
                         {
-                            "file": str(node.file_id),
+                            "file": file_paths.get(node.file_id, str(node.file_id)),
                             "start_line": node.start_line,
                             "end_line": node.end_line,
                         }

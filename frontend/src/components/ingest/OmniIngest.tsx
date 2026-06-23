@@ -78,17 +78,24 @@ export function OmniIngest() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setUrlError('')
 
     if (stagingFile) {
       uploadDocument(stagingFile, {
         onSuccess: (job) => {
           navigate(`/index/${job.job_id}`)
         },
+        onError: (err) => {
+          setUrlError(err instanceof Error ? err.message : 'Document upload failed')
+        },
       })
     } else if (isValidUrl) {
       ingestRepo(url.trim(), {
         onSuccess: (job) => {
           navigate(`/index/${job.job_id}`)
+        },
+        onError: (err) => {
+          setUrlError(err instanceof Error ? err.message : 'Repository ingest failed')
         },
       })
     }

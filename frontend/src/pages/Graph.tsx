@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { IsoGraph, GraphNode, GraphEdge } from '../components/graph/IsoGraph'
 import { Inspector } from '../components/graph/Inspector'
-import { client, MockFallback } from '../lib/api'
-import { MOCK_SUBGRAPH } from '../lib/mock'
+import { client } from '../api/client'
 import './Graph.css'
 
 type SubgraphData = {
@@ -27,8 +26,16 @@ export default function Graph() {
     setError(null)
 
     const fetchGraph = async () => {
+      if (!focusNode) {
+        if (!cancelled) {
+          setError('No focus node selected. Open the graph from a node link (e.g. a Knowledge Card) to see its neighborhood.')
+          setLoading(false)
+        }
+        return
+      }
+
       try {
-        const data = await client.getSubgraph(focusNode || undefined, 2)
+        const data = await client.getSubgraph(focusNode, 2)
         if (!cancelled) {
           setGraphData({
             nodes: data.nodes as GraphNode[],
@@ -37,14 +44,7 @@ export default function Graph() {
         }
       } catch (err) {
         if (cancelled) return
-        if (err instanceof MockFallback) {
-          setGraphData({
-            nodes: MOCK_SUBGRAPH.nodes as GraphNode[],
-            edges: MOCK_SUBGRAPH.edges as GraphEdge[],
-          })
-        } else {
-          setError(err instanceof Error ? err.message : 'Failed to fetch graph data')
-        }
+        setError(err instanceof Error ? err.message : 'Failed to fetch graph data')
       } finally {
         if (!cancelled) setLoading(false)
       }

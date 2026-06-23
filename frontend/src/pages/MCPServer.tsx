@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Copy, Check, Circle } from 'lucide-react'
 import { ToolCard } from '../components/mcp/ToolCard'
 import { Console } from '../components/mcp/Console'
-import { client, MockFallback } from '../lib/api'
+import { client } from '../api/client'
 import './MCPServer.css'
 
 const MCP_TOOLS = [
@@ -47,14 +47,10 @@ export default function MCPServer() {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        await client.health()
-        setHealthy(true)
-      } catch (err) {
-        if (err instanceof MockFallback) {
-          setHealthy(true) // Mock is OK
-        } else {
-          setHealthy(false)
-        }
+        const result = await client.health()
+        setHealthy(result.status === 'ok')
+      } catch {
+        setHealthy(false)
       }
     }
 

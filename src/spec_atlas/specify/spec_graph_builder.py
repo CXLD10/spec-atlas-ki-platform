@@ -8,12 +8,28 @@ from typing import TYPE_CHECKING
 from sqlalchemy.orm import Session
 
 from spec_atlas.db.analysis import Edge, Node
+from spec_atlas.db.analysis import Repo as RepoModel
 from spec_atlas.db.spec import Spec, SpecEdge
 
 if TYPE_CHECKING:
     pass
 
 logger = logging.getLogger(__name__)
+
+# L1 Edge.kind ('imports','calls','inherits','defines') -> L3 SpecEdge.kind
+# ('depends-on','part-of','uses' — see ck_spec_edges_kind in db/spec.py).
+# Without this mapping every insert violates the CHECK constraint, since the
+# two tables use disjoint vocabularies.
+_L1_TO_L3_KIND = {
+    "calls": "uses",
+    "imports": "uses",
+    "inherits": "depends-on",
+    "defines": "part-of",
+}
+
+
+def _map_edge_kind(l1_kind: str) -> str:
+    return _L1_TO_L3_KIND.get(l1_kind, "uses")
 
 
 class SpecGraphBuilder:
@@ -52,6 +68,13 @@ class SpecGraphBuilder:
             return report
 
         try:
+            # Spec.repo / SpecEdge.repo store the repo *name* (loose ref), not
+            # the analysis-DB repo_id UUID — resolve it once so the queries
+            # below compare like with like (varchar = uuid has no implicit
+            # cast in Postgres).
+            repo_row = analysis_session.query(RepoModel).filter(RepoModel.id == repo_id).first()
+            repo_name = repo_row.name if repo_row else str(repo_id)
+
             # Get all edges in the code graph
             all_edges = analysis_session.query(Edge).filter(Edge.repo_id == repo_id).all()
 
@@ -62,7 +85,7 @@ class SpecGraphBuilder:
             all_specs = (
                 spec_session.query(Spec)
                 .filter(
-                    Spec.repo == repo_id,
+                    Spec.repo == repo_name,
                     Spec.status != "error",  # Skip error specs
                 )
                 .all()
@@ -93,15 +116,17 @@ class SpecGraphBuilder:
                     if src_spec_ref not in spec_map or dst_spec_ref not in spec_map:
                         continue
 
+                    spec_edge_kind = _map_edge_kind(edge.kind)
+
                     # Skip if spec edge already exists
                     existing_edge = (
                         spec_session.query(SpecEdge)
                         .filter(
                             SpecEdge.user_id == user_id,
-                            SpecEdge.repo == repo_id,
+                            SpecEdge.repo == repo_name,
                             SpecEdge.src_component_ref == src_spec_ref,
                             SpecEdge.dst_component_ref == dst_spec_ref,
-                            SpecEdge.kind == edge.kind,
+                            SpecEdge.kind == spec_edge_kind,
                         )
                         .first()
                     )
@@ -112,10 +137,10 @@ class SpecGraphBuilder:
                     # Create spec edge
                     spec_edge = SpecEdge(
                         user_id=user_id,
-                        repo=repo_id,
+                        repo=repo_name,
                         src_component_ref=src_spec_ref,
                         dst_component_ref=dst_spec_ref,
-                        kind=edge.kind,
+                        kind=spec_edge_kind,
                         derived_from=edge.kind,
                     )
                     spec_session.add(spec_edge)

@@ -2,8 +2,19 @@
 
 from __future__ import annotations
 
+import uuid
+
+import pytest
+from fastapi import HTTPException
+
+from spec_atlas import db
 from spec_atlas.api.app import create_app
-from spec_atlas.api.groups import GroupDetailResponse, GroupTreeNode, GroupTreeResponse
+from spec_atlas.api.groups import (
+    GroupDetailResponse,
+    GroupTreeNode,
+    GroupTreeResponse,
+    get_group_tree,
+)
 from spec_atlas.config import Settings
 
 
@@ -56,3 +67,43 @@ class TestGroupsAPI:
         """GroupTreeResponse can have None root."""
         response = GroupTreeResponse(root=None)
         assert response.root is None
+
+
+@pytest.mark.db
+class TestGroupsResolveRepoName:
+    """Regression: GET /api/groups?repo=<name> must resolve the real repo,
+    not a hardcoded placeholder UUID (api/groups.py used to always query
+    00000000-0000-0000-0000-000000000001, so real ingested repos never
+    matched and the tree was always empty)."""
+
+    def test_groups_resolves_repo_name(self, migrated: None) -> None:
+        AnalysisSession = db.analysis_session()
+        with AnalysisSession() as session:
+            repo_a = db.Repo(name="repo-a", source="/tmp/repo-a")
+            repo_b = db.Repo(name="repo-b", source="/tmp/repo-b")
+            session.add_all([repo_a, repo_b])
+            session.flush()
+
+            root_a = db.Group(
+                repo_id=repo_a.id, parent_id=None, level=0, path="", title="repo-a"
+            )
+            root_b = db.Group(
+                repo_id=repo_b.id, parent_id=None, level=0, path="", title="repo-b"
+            )
+            session.add_all([root_a, root_b])
+            session.commit()
+
+            response = get_group_tree(repo="repo-a", session_factory=lambda: session)
+            assert response.root is not None
+            assert response.root.title == "repo-a"
+
+            response_b = get_group_tree(repo="repo-b", session_factory=lambda: session)
+            assert response_b.root is not None
+            assert response_b.root.title == "repo-b"
+
+    def test_groups_unknown_repo_returns_404(self, migrated: None) -> None:
+        AnalysisSession = db.analysis_session()
+        with AnalysisSession() as session:
+            with pytest.raises(HTTPException) as exc_info:
+                get_group_tree(repo=f"does-not-exist-{uuid.uuid4()}", session_factory=lambda: session)
+            assert exc_info.value.status_code == 404

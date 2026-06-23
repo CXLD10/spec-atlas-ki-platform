@@ -58,6 +58,13 @@ class GroupClustering:
                 source_fingerprint=None,
             )
 
+            # Must be added before any child group is flushed below — children
+            # reference root_group.id as their parent_id, and the FK requires
+            # the row to actually exist in `groups` by then (regression: this
+            # used to be added only at the very end, after the child flush,
+            # so every repo with subdirectories silently failed clustering).
+            session.add(root_group)
+
             # Path to group mapping
             path_to_group = {"": root_group}
 
@@ -131,12 +138,8 @@ class GroupClustering:
                 if node.id not in assigned_group.member_node_ids:
                     assigned_group.member_node_ids.append(node.id)
 
-            # Add root group and commit all changes
-            session.add(root_group)
-            for group in path_to_group.values():
-                if group.id != root_group.id:
-                    session.add(group)
-
+            # root_group and all child groups were already added to the
+            # session above (before the flush that established their FKs).
             session.commit()
 
             return root_group, node_to_group

@@ -216,3 +216,53 @@ class TestVectorSearch:
 
         # Verify that filter was called (would filter by model)
         mock_query.filter.assert_called_once()
+
+    def test_confidence_is_distance_derived(self) -> None:
+        """Similarity reflects actual vector distance, not result rank.
+
+        Regression test: previously every call used a rank-based formula
+        (1.0 - i*0.2) so the *first* result was always 1.0 regardless of how
+        close it actually was. A close-but-imperfect match must now score
+        below a true exact match, and the score must match
+        ``_distance_to_similarity`` applied to the real Euclidean distance.
+        """
+        query_vector = [1.0] * 384
+
+        embed_provider = MagicMock()
+        embed_provider.embed_one.return_value = query_vector
+
+        exact_group = MagicMock()
+        exact_group.path = "exact"
+        exact_embedding = MagicMock()
+        exact_embedding.vector = [1.0] * 384  # distance 0 -> similarity 1.0
+
+        far_group = MagicMock()
+        far_group.path = "far"
+        far_embedding = MagicMock()
+        far_embedding.vector = [0.0] * 384  # distance sqrt(384) -> similarity 0.0 (clamped)
+
+        mock_session = MagicMock()
+        mock_query = MagicMock()
+        mock_session.query.return_value = mock_query
+        mock_query.scalar.return_value = 1
+        mock_query.join.return_value = mock_query
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value = mock_query
+        mock_query.limit.return_value = mock_query
+        mock_query.all.return_value = [
+            (exact_embedding, exact_group),
+            (far_embedding, far_group),
+        ]
+
+        result = VectorSearch.search(
+            query="test",
+            embed_provider=embed_provider,
+            session=mock_session,
+            k=2,
+        )
+
+        assert result[0][0] == exact_group
+        assert result[0][1] == 1.0
+        assert result[1][0] == far_group
+        assert result[1][1] == 0.0
+        assert result[0][1] > result[1][1]

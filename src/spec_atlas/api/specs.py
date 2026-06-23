@@ -5,10 +5,10 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy.orm import Session
 
-from spec_atlas.db.analysis import Edge, Node
+from spec_atlas.db.analysis import Edge, File, Node
 from spec_atlas.spec.store import SpecStore
 from spec_atlas.specify.engine import SpecifyEngine
 
@@ -49,6 +49,16 @@ def get_llm_provider(request: Request):
     return provider
 
 
+def _stringify(v: object) -> object:
+    """Coerce ORM-native UUID/datetime values to str; pass strings through.
+
+    ``model_validate(spec)`` hands these fields the ORM's real UUID/datetime
+    objects, which Pydantic v2 does not auto-coerce to ``str`` — without this,
+    every endpoint that serializes a Spec straight from the DB 500s.
+    """
+    return None if v is None else str(v)
+
+
 class SpecDetailResponse(BaseModel):
     """Full spec details."""
 
@@ -67,6 +77,10 @@ class SpecDetailResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    _stringify_fields = field_validator(
+        "id", "valid_from", "valid_to", "created_at", mode="before"
+    )(_stringify)
+
 
 class SpecSummaryResponse(BaseModel):
     """Lightweight spec summary for version listing."""
@@ -78,6 +92,8 @@ class SpecSummaryResponse(BaseModel):
     status: str
 
     model_config = ConfigDict(from_attributes=True)
+
+    _stringify_fields = field_validator("id", "valid_from", "valid_to", mode="before")(_stringify)
 
 
 class CreateSpecRequest(BaseModel):
@@ -130,6 +146,100 @@ def create_spec(
     return SpecDetailResponse.model_validate(spec)
 
 
+@router.get("/project-specs")
+async def get_project_specs(
+    project_id: str = Query(...),
+    db: Session = Depends(get_spec_session),
+) -> dict:
+    """Get all specs for a project."""
+    from spec_atlas.db.spec import Spec
+
+    specs = db.query(Spec).filter(Spec.repo == project_id).all()
+
+    return {
+        "specs": [
+            {
+                "component_ref": s.component_ref,
+                "status": s.status,
+                "version": s.version,
+                "confidence": s.content.get("confidence", 0),
+                "interconnections": s.content.get("interconnections", []),
+                "markdown": s.content.get("markdown", ""),
+            }
+            for s in specs
+            if s.valid_to is None  # Current version only
+        ],
+        "total": len(specs),
+        "verified_count": sum(
+            1 for s in specs if s.status == "verified" and s.valid_to is None
+        ),
+    }
+
+
+@router.post("/project-notes")
+async def save_project_notes(
+    project_id: str = Query(...),
+    notes: str = Query(...),
+    db: Session = Depends(get_spec_session),
+) -> dict:
+    """Save research notes for project."""
+    # Store notes as a special spec document
+    from datetime import datetime
+    from spec_atlas.db.spec import Spec as SpecModel
+    import uuid
+
+    notes_spec = SpecModel(
+        id=uuid.uuid4(),
+        user_id="system",
+        repo=project_id,
+        component_ref="__notes__",
+        version=1,
+        status="draft",
+        content={"notes": notes, "type": "research_notes"},
+        provenance=[],
+    )
+
+    # Invalidate old notes
+    db.query(SpecModel).filter(
+        SpecModel.repo == project_id, SpecModel.component_ref == "__notes__"
+    ).update({"valid_to": datetime.now()})
+
+    db.add(notes_spec)
+    db.commit()
+
+    return {"success": True}
+
+
+@router.get("/project-notes")
+async def get_project_notes(
+    project_id: str = Query(...),
+    db: Session = Depends(get_spec_session),
+) -> dict:
+    """Get research notes for project."""
+    from spec_atlas.db.spec import Spec
+
+    notes_spec = (
+        db.query(Spec)
+        .filter(
+            Spec.repo == project_id,
+            Spec.component_ref == "__notes__",
+            Spec.valid_to.is_(None),
+        )
+        .first()
+    )
+
+    return {
+        "notes": notes_spec.content.get("notes", "") if notes_spec else "",
+        "project_id": project_id,
+    }
+
+
+# NOTE: routes below use the single-segment {component_ref} path param and
+# must stay registered after the static "/project-specs" / "/project-notes"
+# routes above — otherwise those static paths get shadowed (matched as if
+# "project-specs"/"project-notes" were a component_ref) since FastAPI/
+# Starlette resolves routes in registration order (regression: see
+# test_route_table_smoke.py).
 @router.get("/{component_ref}", response_model=SpecDetailResponse)
 def get_current_spec(
     component_ref: str,
@@ -350,11 +460,13 @@ def generate_spec(
         )
 
         # Generate spec via LLM
+        focal_file = analysis_session.query(File).filter(File.id == focal_node.file_id).first()
         spec_content, provenance = SpecifyEngine.generate(
             focal_node=focal_node,
             neighbors=neighbors,
             edges=edges,
             llm_provider=llm_provider,
+            focal_file_path=focal_file.path if focal_file else None,
         )
 
         # Persist the spec (version=1, status=draft)
@@ -554,91 +666,3 @@ def verify_spec(
     )
 
 
-@router.get("/project-specs")
-async def get_project_specs(
-    project_id: str = Query(...),
-    db: Session = Depends(get_spec_session),
-) -> dict:
-    """Get all specs for a project."""
-    from spec_atlas.db.spec import Spec
-
-    specs = db.query(Spec).filter(Spec.repo == project_id).all()
-
-    return {
-        "specs": [
-            {
-                "component_ref": s.component_ref,
-                "status": s.status,
-                "version": s.version,
-                "confidence": s.content.get("confidence", 0),
-                "interconnections": s.content.get("interconnections", []),
-                "markdown": s.content.get("markdown", ""),
-            }
-            for s in specs
-            if s.valid_to is None  # Current version only
-        ],
-        "total": len(specs),
-        "verified_count": sum(
-            1 for s in specs if s.status == "verified" and s.valid_to is None
-        ),
-    }
-
-
-@router.post("/project-notes")
-async def save_project_notes(
-    project_id: str = Query(...),
-    notes: str = Query(...),
-    db: Session = Depends(get_spec_session),
-) -> dict:
-    """Save research notes for project."""
-    from spec_atlas.db.spec import Spec
-
-    # Store notes as a special spec document
-    from datetime import datetime
-    from spec_atlas.db.spec import Spec as SpecModel
-    import uuid
-
-    notes_spec = SpecModel(
-        id=uuid.uuid4(),
-        user_id="system",
-        repo=project_id,
-        component_ref="__notes__",
-        version=1,
-        status="draft",
-        content={"notes": notes, "type": "research_notes"},
-        provenance=[],
-    )
-
-    # Invalidate old notes
-    db.query(SpecModel).filter(
-        SpecModel.repo == project_id, SpecModel.component_ref == "__notes__"
-    ).update({"valid_to": datetime.now()})
-
-    db.add(notes_spec)
-    db.commit()
-
-    return {"success": True}
-
-
-@router.get("/project-notes")
-async def get_project_notes(
-    project_id: str = Query(...),
-    db: Session = Depends(get_spec_session),
-) -> dict:
-    """Get research notes for project."""
-    from spec_atlas.db.spec import Spec
-
-    notes_spec = (
-        db.query(Spec)
-        .filter(
-            Spec.repo == project_id,
-            Spec.component_ref == "__notes__",
-            Spec.valid_to.is_(None),
-        )
-        .first()
-    )
-
-    return {
-        "notes": notes_spec.content.get("notes", "") if notes_spec else "",
-        "project_id": project_id,
-    }

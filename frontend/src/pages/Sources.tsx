@@ -7,7 +7,7 @@ import './Sources.css'
 type Filter = 'all' | 'repo' | 'document'
 
 export function Sources() {
-  const { data: sources = [], isLoading } = useSources()
+  const { data: sources = [], isLoading, error } = useSources()
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
 
@@ -68,6 +68,10 @@ export function Sources() {
 
       {isLoading ? (
         <div className="sources-loading">Loading sources…</div>
+      ) : error ? (
+        <div className="sources-empty">
+          Couldn't load sources: {error instanceof Error ? error.message : 'unknown error'}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="sources-empty">
           {search || filter !== 'all'

@@ -2,10 +2,29 @@ import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { TraceSteps, type StepStatus } from '../components/specify/TraceSteps'
 import { KnowledgeCardRender } from '../components/specify/KnowledgeCardRender'
-import { client, MockFallback } from '../lib/api'
+import { client, GeneratedSpecResult } from '../api/client'
 import { KnowledgeCard } from '../lib/types'
-import { MOCK_CARDS } from '../lib/mock'
 import './Specify.css'
+
+// Adapts the real GenerateSpecResponse (specs.py) into the KnowledgeCard shape
+// this page renders. Full fidelity (provenance -> citations, relations) is
+// Phase 1 work (Specify request/response rewiring) — this keeps the page
+// honest about real backend data in the meantime, never mock.
+function toKnowledgeCard(result: GeneratedSpecResult): KnowledgeCard {
+  const purpose = (result.content as { purpose?: string }).purpose
+  const markdown = purpose
+    ? `## Purpose\n\n${purpose}\n\n## Raw content\n\n\`\`\`json\n${JSON.stringify(result.content, null, 2)}\n\`\`\``
+    : `\`\`\`json\n${JSON.stringify(result.content, null, 2)}\n\`\`\``
+
+  return {
+    ref: result.component_ref,
+    title: result.component_ref,
+    status: result.status === 'verified' ? 'verified' : result.status === 'stale' ? 'stale' : 'draft',
+    markdown,
+    provenance: [],
+    relations: [],
+  }
+}
 
 const TRACE_STEPS = [
   { title: 'Locate focal node', detail: 'Finding entity in knowledge graph' },
@@ -59,18 +78,8 @@ export default function Specify() {
       }
 
       // Fetch the spec
-      try {
-        const data = await client.generateSpec(repo, entity)
-        setCard(data)
-      } catch (err) {
-        if (err instanceof MockFallback) {
-          // Use mock card
-          const mockCard = MOCK_CARDS[0]
-          setCard(mockCard)
-        } else {
-          throw err
-        }
-      }
+      const data = await client.generateSpec(repo, entity)
+      setCard(toKnowledgeCard(data))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate specification')
       setGenerating(false)

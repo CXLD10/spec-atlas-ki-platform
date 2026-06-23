@@ -6,7 +6,8 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from spec_atlas.db.analysis import Node
+from spec_atlas.db.analysis import File, Node
+from spec_atlas.db.analysis import Repo as RepoModel
 from spec_atlas.db.spec import Spec
 from spec_atlas.graph.store import GraphStore
 from spec_atlas.specify.engine import SpecifyEngine
@@ -60,6 +61,13 @@ class BatchSpecGenerator:
 
         store = GraphStore(analysis_session, repo_id)
 
+        # Spec.repo stores the repo *name* (loose ref), not the analysis-DB
+        # repo_id UUID — resolve it once. Storing the UUID here silently broke
+        # every later lookup-by-name (api/specs.py, group_writer.py,
+        # spec_graph_builder.py all filter Spec.repo == <name>).
+        repo_row = analysis_session.query(RepoModel).filter(RepoModel.id == repo_id).first()
+        repo_name = repo_row.name if repo_row else str(repo_id)
+
         # Find focal nodes (top-level modules, classes, major functions)
         # For now: all nodes with no parent class (top-level or class-level)
         focal_nodes = (
@@ -72,6 +80,13 @@ class BatchSpecGenerator:
         )
 
         logger.info(f"Batch spec generation: found {len(focal_nodes)} focal nodes")
+
+        file_paths = {
+            row.id: row.path
+            for row in analysis_session.query(File)
+            .filter(File.id.in_({n.file_id for n in focal_nodes}))
+            .all()
+        }
 
         report = {
             "total": len(focal_nodes),
@@ -93,7 +108,11 @@ class BatchSpecGenerator:
 
                 # Generate spec
                 spec_dict, provenance = SpecifyEngine.generate(
-                    focal_node, neighbors, edges, llm_provider
+                    focal_node,
+                    neighbors,
+                    edges,
+                    llm_provider,
+                    focal_file_path=file_paths.get(focal_node.file_id),
                 )
 
                 # Determine component_ref from qualified_name
@@ -102,7 +121,7 @@ class BatchSpecGenerator:
                 # Store in Spec DB
                 spec_obj = Spec(
                     user_id=user_id,
-                    repo=repo_id,
+                    repo=repo_name,
                     component_ref=component_ref,
                     version=1,
                     status="draft",

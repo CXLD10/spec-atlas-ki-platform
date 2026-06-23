@@ -92,13 +92,3 @@ export interface HealthResponse {
   llm?: string
   embed?: string
 }
-
-/**
- * Error class for API calls when no backend is available.
- */
-export class MockFallback extends Error {
-  constructor(message: string = 'No API backend available; using mock data') {
-    super(message)
-    this.name = 'MockFallback'
-  }
-}

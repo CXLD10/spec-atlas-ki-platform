@@ -7,7 +7,7 @@ import './Dashboard.css'
 
 export function Dashboard() {
   const navigate = useNavigate()
-  const { data: sources = [] } = useSources()
+  const { data: sources = [], error } = useSources()
   const omniBaRef = useRef<HTMLDivElement>(null)
 
   const stats = {
@@ -67,7 +67,11 @@ export function Dashboard() {
         <div className="sources-container">
           <h2 className="sources-title">Your sources</h2>
 
-          {sources.length === 0 ? (
+          {error ? (
+            <div className="empty-state">
+              <p>Couldn't load sources: {error instanceof Error ? error.message : 'unknown error'}</p>
+            </div>
+          ) : sources.length === 0 ? (
             <div className="empty-state">
               <p>No sources yet. Upload a document or index a repository to get started.</p>
               <button className="empty-cta" onClick={handleAddSource}>

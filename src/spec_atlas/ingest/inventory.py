@@ -67,7 +67,8 @@ class FileInventory:
             # Count lines
             loc = _count_loc(full_path)
 
-            # Detect language (stub for now; T-001.2 will handle this)
+            # Placeholder; overwritten by LanguageDetector.detect() in the ingest
+            # pipeline's phase 3 (api/ingest.py), which runs after this scan.
             language = "unknown"
 
             # Upsert File row

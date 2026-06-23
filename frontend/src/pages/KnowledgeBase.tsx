@@ -5,7 +5,7 @@ import './KnowledgeBase.css'
 
 export function KnowledgeBase() {
   const navigate = useNavigate()
-  const { data: cards = [], isLoading } = useCards()
+  const { data: cards = [], isLoading, error } = useCards()
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
 
@@ -36,6 +36,10 @@ export function KnowledgeBase() {
         <nav className="kb-card-list">
           {isLoading ? (
             <div className="kb-list-loading">Loading…</div>
+          ) : error ? (
+            <div className="kb-list-empty">
+              Couldn't load cards: {error instanceof Error ? error.message : 'unknown error'}
+            </div>
           ) : filtered.length === 0 ? (
             <div className="kb-list-empty">No cards found.</div>
           ) : (

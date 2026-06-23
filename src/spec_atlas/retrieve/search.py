@@ -14,6 +14,11 @@ if TYPE_CHECKING:
     pass
 
 
+def _euclidean_distance(a: list[float], b: list[float]) -> float:
+    """L2 distance between two equal-length vectors (matches pgvector's `<->`)."""
+    return sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5
+
+
 class VectorSearch:
     """Search for relevant groups via ANN on embeddings, with node-based fallback."""
 
@@ -72,10 +77,13 @@ class VectorSearch:
             .all()
         )
 
-        # Convert results to (Group, similarity_score) tuples
+        # Convert results to (Group, similarity_score) tuples. Distance is computed
+        # from the actual stored vectors (matching the pgvector `<->` L2 metric used
+        # in the ORDER BY above), not derived from result rank.
         output = []
-        for i, (_embedding, group) in enumerate(results):
-            similarity = max(0.0, 1.0 - (i * 0.2))
+        for embedding, group in results:
+            distance = _euclidean_distance(query_vector, embedding.vector)
+            similarity = VectorSearch._distance_to_similarity(distance)
             output.append((group, similarity))
 
         return output

@@ -21,6 +21,7 @@ class SpecifyEngine:
         neighbors: list[Node],
         edges: list[Edge],
         llm_provider: LLMProvider,
+        focal_file_path: str | None = None,
     ) -> tuple[dict, dict]:
         """Generate a spec for a focal node and its neighbors.
 
@@ -29,6 +30,8 @@ class SpecifyEngine:
             neighbors: Adjacent nodes (callers, callees, base classes, etc.)
             edges: Edges connecting focal node to neighbors.
             llm_provider: LLM provider for generation.
+            focal_file_path: Real path of focal_node's file (e.g. "auth/session.py"),
+                used for provenance. Falls back to str(focal_node.file_id) if omitted.
 
         Returns:
             Tuple of (spec_dict, provenance_dict).
@@ -61,7 +64,7 @@ class SpecifyEngine:
         validated_spec["interconnections"] = interconnections
 
         # Build provenance (map each field to source spans)
-        provenance = _build_provenance(focal_node, neighbors, edges, validated_spec)
+        provenance = _build_provenance(focal_node, neighbors, edges, validated_spec, focal_file_path)
 
         return validated_spec, provenance
 
@@ -127,6 +130,7 @@ def _build_provenance(
     neighbors: list[Node],
     edges: list[Edge],
     spec: dict,
+    focal_file_path: str | None = None,
 ) -> dict:
     """Build provenance mapping spec fields to source spans.
 
@@ -135,18 +139,23 @@ def _build_provenance(
         neighbors: Adjacent nodes.
         edges: Relationships.
         spec: The generated spec.
+        focal_file_path: Real path of focal_node's file. Falls back to
+            str(focal_node.file_id) when not provided (e.g. no DB lookup
+            available), so callers without a session still get a valid,
+            if less readable, provenance.
 
     Returns:
         Provenance dict: {field_name: [{file, start_line, end_line}, ...]}
     """
     provenance = {}
+    file_ref = focal_file_path or str(focal_node.file_id)
 
     # purpose comes from focal node's docstring or definition
     if focal_node.docstring:
         # Docstring spans are roughly the node's start to end
         provenance["purpose"] = [
             {
-                "file": str(focal_node.file_id),  # Placeholder: would need file path lookup
+                "file": file_ref,
                 "start_line": focal_node.start_line,
                 "end_line": focal_node.end_line,
             }
@@ -154,7 +163,7 @@ def _build_provenance(
     else:
         provenance["purpose"] = [
             {
-                "file": str(focal_node.file_id),
+                "file": file_ref,
                 "start_line": focal_node.start_line,
                 "end_line": focal_node.start_line,
             }
@@ -164,7 +173,7 @@ def _build_provenance(
     if spec.get("inputs"):
         provenance["inputs"] = [
             {
-                "file": str(focal_node.file_id),
+                "file": file_ref,
                 "start_line": focal_node.start_line,
                 "end_line": focal_node.start_line + 1,  # Rough span for signature
             }
@@ -174,7 +183,7 @@ def _build_provenance(
     if spec.get("outputs"):
         provenance["outputs"] = [
             {
-                "file": str(focal_node.file_id),
+                "file": file_ref,
                 "start_line": focal_node.start_line,
                 "end_line": focal_node.end_line,
             }
@@ -187,7 +196,7 @@ def _build_provenance(
             if edge.kind in ("imports", "calls"):
                 dep_spans.append(
                     {
-                        "file": str(focal_node.file_id),
+                        "file": file_ref,
                         "start_line": focal_node.start_line,
                         "end_line": focal_node.end_line,
                     }
@@ -200,7 +209,7 @@ def _build_provenance(
         if spec.get(field):
             provenance[field] = [
                 {
-                    "file": str(focal_node.file_id),
+                    "file": file_ref,
                     "start_line": focal_node.start_line,
                     "end_line": focal_node.end_line,
                 }

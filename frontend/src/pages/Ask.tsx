@@ -3,8 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { ChatMessage } from '../components/ask/ChatMessage'
 import { Composer } from '../components/ask/Composer'
-import { client, MockFallback } from '../lib/api'
-import { MOCK_ANSWER } from '../lib/mock'
+import { client } from '../api/client'
 import './Ask.css'
 
 interface Message {
@@ -58,7 +57,7 @@ export default function Ask() {
     setStreaming(true)
 
     try {
-      const data = await client.ask(question, scope || undefined)
+      const data = await client.ask({ question, project_id: scope || undefined })
 
       const assistantMsg: Message = {
         id: `msg-${Date.now() + 1}`,
@@ -80,30 +79,12 @@ export default function Ask() {
         prev.map((m) => (m.id === assistantMsg.id ? { ...m, streaming: false } : m))
       )
     } catch (err) {
-      if (err instanceof MockFallback) {
-        const assistantMsg: Message = {
-          id: `msg-${Date.now() + 1}`,
-          role: 'assistant',
-          text: MOCK_ANSWER.answer,
-          streaming: true,
-          claims: MOCK_ANSWER.claims,
-          confidence: MOCK_ANSWER.confidence,
-          route: MOCK_ANSWER.route_used,
-        }
-
-        setMessages((prev) => [...prev, assistantMsg])
-        await new Promise((r) => setTimeout(r, (MOCK_ANSWER.answer?.length || 0) * 20 + 100))
-        setMessages((prev) =>
-          prev.map((m) => (m.id === assistantMsg.id ? { ...m, streaming: false } : m))
-        )
-      } else {
-        const errorMsg: Message = {
-          id: `msg-${Date.now() + 1}`,
-          role: 'assistant',
-          text: `Error: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        }
-        setMessages((prev) => [...prev, errorMsg])
+      const errorMsg: Message = {
+        id: `msg-${Date.now() + 1}`,
+        role: 'assistant',
+        text: `Error: ${err instanceof Error ? err.message : 'Unknown error'}`,
       }
+      setMessages((prev) => [...prev, errorMsg])
     } finally {
       setStreaming(false)
     }

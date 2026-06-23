@@ -7,7 +7,9 @@ from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy.orm import Session
 
+from spec_atlas.db.analysis import Repo
 from spec_atlas.groups.clustering import GroupClustering
 
 if TYPE_CHECKING:
@@ -66,6 +68,30 @@ def get_analysis_session(request: Request):
     return request.app.state.analysis_session_factory
 
 
+def _resolve_repo_id(repo: str, session: Session) -> uuid.UUID:
+    """Resolve a repo name (or raw UUID) to its repo_id, or raise 404.
+
+    Args:
+        repo: Repository name (``Repo.name``) or its UUID as a string.
+        session: Analysis DB session.
+
+    Returns:
+        The matching repo's UUID.
+
+    Raises:
+        HTTPException: 404 if no repo matches.
+    """
+    try:
+        return uuid.UUID(repo)
+    except ValueError:
+        pass
+
+    row = session.query(Repo).filter(Repo.name == repo).first()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Repo not found: {repo!r}")
+    return row.id
+
+
 @router.get("", response_model=GroupTreeResponse)
 def get_group_tree(
     repo: str = Query("default"),
@@ -94,10 +120,10 @@ def get_group_tree(
     """
     session = session_factory()
     try:
-        # Fetch root group for repo
-        # Note: for v1, we assume one repo per database instance
+        repo_id = _resolve_repo_id(repo, session)
+
         root = GroupClustering.get_group_tree(
-            repo_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),  # Placeholder
+            repo_id=repo_id,
             session=session,
         )
 
@@ -115,6 +141,8 @@ def get_group_tree(
             )
 
         return GroupTreeResponse(root=build_tree_node(root))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch group tree: {str(e)}") from e
     finally:

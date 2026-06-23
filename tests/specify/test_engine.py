@@ -204,6 +204,78 @@ class TestSpecifyEngine:
         assert "start_line" in provenance["purpose"][0]
         assert "end_line" in provenance["purpose"][0]
 
+    def test_provenance_uses_real_file_path_when_given(self) -> None:
+        """Provenance "file" is the real path, not str(file_id), when
+        focal_file_path is provided (regression: it used to always be the
+        raw UUID, e.g. 'would need file path lookup')."""
+        repo_id = uuid.uuid4()
+        file_id = uuid.uuid4()
+
+        focal_node = Node(
+            id=uuid.uuid4(),
+            repo_id=repo_id,
+            file_id=file_id,
+            language="python",
+            kind="function",
+            name="test",
+            qualified_name="test",
+            signature="def test():",
+            docstring="Test function.",
+            start_line=10,
+            end_line=20,
+        )
+
+        mock_llm = MagicMock()
+        mock_llm.complete.return_value = {
+            "purpose": "Test",
+            "inputs": [],
+            "outputs": [],
+            "dependencies": [],
+            "invariants": [],
+            "side_effects": [],
+            "failure_modes": [],
+        }
+
+        _, provenance = SpecifyEngine.generate(
+            focal_node, [], [], mock_llm, focal_file_path="auth/session.py"
+        )
+
+        assert provenance["purpose"][0]["file"] == "auth/session.py"
+
+    def test_provenance_falls_back_to_file_id_without_path(self) -> None:
+        """Without focal_file_path, provenance still works (falls back to file_id)."""
+        repo_id = uuid.uuid4()
+        file_id = uuid.uuid4()
+
+        focal_node = Node(
+            id=uuid.uuid4(),
+            repo_id=repo_id,
+            file_id=file_id,
+            language="python",
+            kind="function",
+            name="test",
+            qualified_name="test",
+            signature="def test():",
+            docstring="Test function.",
+            start_line=10,
+            end_line=20,
+        )
+
+        mock_llm = MagicMock()
+        mock_llm.complete.return_value = {
+            "purpose": "Test",
+            "inputs": [],
+            "outputs": [],
+            "dependencies": [],
+            "invariants": [],
+            "side_effects": [],
+            "failure_modes": [],
+        }
+
+        _, provenance = SpecifyEngine.generate(focal_node, [], [], mock_llm)
+
+        assert provenance["purpose"][0]["file"] == str(file_id)
+
     def test_provenance_for_inputs_from_signature(self) -> None:
         """Inputs provenance comes from signature span."""
         repo_id = uuid.uuid4()

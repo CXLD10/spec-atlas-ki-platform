@@ -130,6 +130,45 @@ class TestGroupSummarizer:
         assert len(provenance["Key Components"]) == 2
         assert "Purpose" in provenance
 
+    def test_build_provenance_uses_real_file_path_when_session_given(self) -> None:
+        """Provenance "file" is a real path, not a raw file_id, when a
+        session is available to resolve it (regression for the bug where
+        provenance always stored str(node.file_id))."""
+        from spec_atlas.db.analysis import File
+
+        group = MagicMock()
+
+        node = MagicMock()
+        node.file_id = uuid.uuid4()
+        node.start_line = 10
+        node.end_line = 20
+        node.docstring = "Handler"
+
+        file_row = MagicMock(spec=File)
+        file_row.id = node.file_id
+        file_row.path = "auth/session.py"
+
+        mock_session = MagicMock()
+        mock_session.query.return_value.filter.return_value.all.return_value = [file_row]
+
+        provenance = GroupSummarizer._build_provenance(group, [node], session=mock_session)
+
+        assert provenance["Key Components"][0]["file"] == "auth/session.py"
+        assert provenance["Purpose"][0]["file"] == "auth/session.py"
+
+    def test_build_provenance_falls_back_to_file_id_without_session(self) -> None:
+        """Without a session, provenance still works (falls back to file_id)."""
+        group = MagicMock()
+        node = MagicMock()
+        node.file_id = uuid.uuid4()
+        node.start_line = 10
+        node.end_line = 20
+        node.docstring = None
+
+        provenance = GroupSummarizer._build_provenance(group, [node])
+
+        assert provenance["Key Components"][0]["file"] == str(node.file_id)
+
     def test_compute_fingerprint_deterministic(self) -> None:
         """Fingerprint is deterministic for same nodes."""
         node = MagicMock()

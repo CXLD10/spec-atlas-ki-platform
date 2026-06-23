@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GraphNode } from './IsoGraph'
-import { client, MockFallback } from '../../lib/api'
-import { MOCK_SUBGRAPH } from '../../lib/mock'
+import { client } from '../../api/client'
 import './Inspector.css'
 
 const LAYER_LABELS: Record<string, string> = {
@@ -37,19 +36,10 @@ export function Inspector({ node, allNodes, onSelectNode }: InspectorProps) {
     setLoading(true)
 
     const run = async () => {
-      let edges: Array<{ s: string; d: string; kind: string; layer: string }> = []
-      let nodeMap: Record<string, { id: string; label: string; layer: string }> = {}
-
-      try {
-        const data = await client.getSubgraph(node.id, 1)
-        edges = data.edges
-        for (const n of data.nodes) nodeMap[n.id] = n
-      } catch (err) {
-        if (!(err instanceof MockFallback)) throw err
-        // Derive from mock
-        edges = MOCK_SUBGRAPH.edges
-        for (const n of MOCK_SUBGRAPH.nodes) nodeMap[n.id] = n
-      }
+      const data = await client.getSubgraph(node.id, 1)
+      const edges = data.edges
+      const nodeMap: Record<string, { id: string; label: string; layer: string }> = {}
+      for (const n of data.nodes) nodeMap[n.id] = n
 
       if (cancelled) return
 

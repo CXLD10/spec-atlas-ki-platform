@@ -1,33 +1,21 @@
 /**
  * Data hooks for Spec-Atlas KI.
- * Wraps the API client with React Query if available, else simple useState/useEffect.
- * All hooks degrade gracefully to mock data if the API is unavailable.
+ * Thin React Query wrappers around the single real API client (api/client.ts).
+ * No mock fallback: a failed request surfaces as a real React Query error
+ * (isError/error), and callers render a real loading/error/empty state.
  */
 
-import { useState, useEffect } from 'react'
-import {
-  useQuery,
-  useMutation,
-} from '@tanstack/react-query'
-import { client, MockFallback, Source, KnowledgeCard, JobStatus } from './api'
-import { MOCK_SOURCES, MOCK_CARDS, MOCK_ANSWER } from './mock'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { client } from '../api/client'
+import type { Source, KnowledgeCard, JobStatus } from './types'
 
 /**
  * Hook: List all sources (repos + documents).
  */
 export function useSources() {
-  return useQuery({
+  return useQuery<Source[]>({
     queryKey: ['sources'],
-    queryFn: async () => {
-      try {
-        return await client.listSources()
-      } catch (err) {
-        if (err instanceof MockFallback) {
-          return MOCK_SOURCES
-        }
-        throw err
-      }
-    },
+    queryFn: () => client.listKnowledgeSources(),
     staleTime: 1000 * 60 * 5, // 5 minutes
   })
 }
@@ -36,20 +24,9 @@ export function useSources() {
  * Hook: Get a single source.
  */
 export function useSource(id: string) {
-  return useQuery({
+  return useQuery<Source>({
     queryKey: ['source', id],
-    queryFn: async () => {
-      try {
-        return await client.getSource(id)
-      } catch (err) {
-        if (err instanceof MockFallback) {
-          const mock = MOCK_SOURCES.find(s => s.id === id)
-          if (!mock) throw new Error(`Source ${id} not found`)
-          return mock
-        }
-        throw err
-      }
-    },
+    queryFn: () => client.getKnowledgeSource(id),
     enabled: !!id,
   })
 }
@@ -59,21 +36,7 @@ export function useSource(id: string) {
  */
 export function useIngestRepo() {
   return useMutation({
-    mutationFn: async (repoUrl: string) => {
-      try {
-        return await client.ingestRepo(repoUrl)
-      } catch (err) {
-        if (err instanceof MockFallback) {
-          // Return a mock job ID
-          return {
-            job_id: `mock-repo-${Date.now()}`,
-            status: 'queued' as const,
-            progress: 0,
-          }
-        }
-        throw err
-      }
-    },
+    mutationFn: (repoUrl: string) => client.postIngest(repoUrl),
   })
 }
 
@@ -82,21 +45,7 @@ export function useIngestRepo() {
  */
 export function useUploadDocument() {
   return useMutation({
-    mutationFn: async (file: File) => {
-      try {
-        return await client.uploadDocument(file)
-      } catch (err) {
-        if (err instanceof MockFallback) {
-          // Return a mock job ID
-          return {
-            job_id: `mock-document-${Date.now()}`,
-            status: 'queued' as const,
-            progress: 0,
-          }
-        }
-        throw err
-      }
-    },
+    mutationFn: (file: File) => client.uploadDocument(file),
   })
 }
 
@@ -104,48 +53,15 @@ export function useUploadDocument() {
  * Hook: Poll ingestion status.
  */
 export function useIngestStatus(jobId: string, enabled: boolean = true) {
-  const [mockProgress, setMockProgress] = useState(0)
-
-  // Simulate mock progress climbing
-  useEffect(() => {
-    if (!jobId.startsWith('mock-') || !enabled) return
-
-    const interval = setInterval(() => {
-      setMockProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          return 100
-        }
-        return prev + Math.random() * 20
-      })
-    }, 800)
-
-    return () => clearInterval(interval)
-  }, [jobId, enabled])
-
-  return useQuery({
+  return useQuery<JobStatus>({
     queryKey: ['ingestStatus', jobId],
-    queryFn: async () => {
-      try {
-        return await client.ingestStatus(jobId)
-      } catch (err) {
-        if (err instanceof MockFallback) {
-          // Return a mock status that climbs toward 100
-          const progress = Math.min(mockProgress, 100)
-          return {
-            job_id: jobId,
-            status:
-              progress < 100
-                ? ('in_progress' as const)
-                : ('done' as const),
-            progress,
-          }
-        }
-        throw err
-      }
+    queryFn: () => client.getIngestStatus(jobId),
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data || data.status === 'done' || data.status === 'failed') return false
+      return 1200
     },
-    refetchInterval: enabled && !jobId.startsWith('mock-') ? 1200 : false,
-    enabled,
+    enabled: enabled && !!jobId,
   })
 }
 
@@ -153,18 +69,9 @@ export function useIngestStatus(jobId: string, enabled: boolean = true) {
  * Hook: List all knowledge cards.
  */
 export function useCards() {
-  return useQuery({
+  return useQuery<KnowledgeCard[]>({
     queryKey: ['cards'],
-    queryFn: async () => {
-      try {
-        return await client.listCards()
-      } catch (err) {
-        if (err instanceof MockFallback) {
-          return MOCK_CARDS
-        }
-        throw err
-      }
-    },
+    queryFn: () => client.listKnowledgeCards(),
     staleTime: 1000 * 60 * 5,
   })
 }
@@ -173,20 +80,9 @@ export function useCards() {
  * Hook: Get a single knowledge card.
  */
 export function useCard(ref: string) {
-  return useQuery({
+  return useQuery<KnowledgeCard>({
     queryKey: ['card', ref],
-    queryFn: async () => {
-      try {
-        return await client.getCard(ref)
-      } catch (err) {
-        if (err instanceof MockFallback) {
-          const mock = MOCK_CARDS.find(c => c.ref === ref)
-          if (!mock) throw new Error(`Card ${ref} not found`)
-          return mock
-        }
-        throw err
-      }
-    },
+    queryFn: () => client.getKnowledgeCard(ref),
     enabled: !!ref,
   })
 }
@@ -196,22 +92,8 @@ export function useCard(ref: string) {
  */
 export function useAsk() {
   return useMutation({
-    mutationFn: async ({
-      question,
-      projectId,
-    }: {
-      question: string
-      projectId?: string
-    }) => {
-      try {
-        return await client.ask(question, projectId)
-      } catch (err) {
-        if (err instanceof MockFallback) {
-          return MOCK_ANSWER
-        }
-        throw err
-      }
-    },
+    mutationFn: ({ question, projectId }: { question: string; projectId?: string }) =>
+      client.ask({ question, project_id: projectId }),
   })
 }
 
@@ -221,16 +103,7 @@ export function useAsk() {
 export function useHealth() {
   return useQuery({
     queryKey: ['health'],
-    queryFn: async () => {
-      try {
-        return await client.health()
-      } catch (err) {
-        if (err instanceof MockFallback) {
-          return { status: 'offline' }
-        }
-        throw err
-      }
-    },
+    queryFn: () => client.health(),
     refetchInterval: 10000, // Every 10 seconds
   })
 }

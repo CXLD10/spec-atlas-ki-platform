@@ -28,7 +28,6 @@ from spec_atlas.graph.edges_crossfile import CrossFileEdgeExtractor
 from spec_atlas.graph.edges_intrafile import IntraFileEdgeExtractor
 from spec_atlas.groups.clustering import GroupClustering
 from spec_atlas.groups.group_writer import GroupWriter
-from spec_atlas.groups.summarizer import GroupSummarizer
 from spec_atlas.ingest.inventory import FileInventory
 from spec_atlas.ingest.job_store import IngestJobStore
 from spec_atlas.ingest.language import LanguageDetector
@@ -144,8 +143,8 @@ def _run_ingest_sync(
     5. Extract edges (80-85%)
     6. Generate specs (85-88%)
     7. Form groups (88-92%)
-    8. Summarize groups (92-94%)
-    8b. Write group.md files and link specs (94-96%)
+    8. Summarize groups + write group.md files + link specs (92-96%) — done in
+       one pass by GroupWriter.write_groups_for_repo (skipped if no spec DB).
     9. Embed groups (96-98%)
     10. Build spec graph (98-99%)
 
@@ -202,11 +201,7 @@ def _run_ingest_sync(
             groups = _form_groups(job_id, repo.id, repo_metadata.working_dir, session)
             IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=92)
 
-            # Phase 8: Summarize groups
-            _summarize_groups(job_id, groups, session)
-            IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=94)
-
-            # Phase 8b: Write group.md files and link specs
+            # Phase 8: Summarize groups, write group.md files, and link specs
             if spec_session_factory:
                 try:
                     spec_session = spec_session_factory()
@@ -415,22 +410,6 @@ def _form_groups(job_id: str, repo_id, repo_path: str, session) -> list:
     except Exception as e:
         logger.warning(f"Group clustering failed: {e}")
         return []
-
-
-def _summarize_groups(job_id: str, groups: list, session) -> None:
-    """Summarize group contents."""
-    count = 0
-    for group in groups:
-        try:
-            summary = GroupSummarizer.summarize(group, session)
-            if summary:
-                group.summary_md = summary
-                count += 1
-        except Exception as e:
-            logger.warning(f"Failed to summarize group {group.path}: {e}")
-
-    session.commit()
-    logger.info(f"Job {job_id}: summarized {count} groups")
 
 
 def _embed_groups(job_id: str, repo_id, groups: list, session) -> None:

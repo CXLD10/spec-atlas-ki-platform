@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy.orm import Session
 
 from spec_atlas.db.analysis import Node
+from spec_atlas.db.analysis import Repo as RepoModel
 from spec_atlas.db.spec import Spec
 from spec_atlas.groups.summarizer import GroupSummarizer
 
@@ -54,6 +55,12 @@ class GroupWriter:
         }
 
         try:
+            # Spec.repo stores the repo *name* (loose ref), not the analysis-DB
+            # repo_id UUID — resolve it once so the queries below compare like
+            # with like (varchar = uuid has no implicit cast in Postgres).
+            repo_row = analysis_session.query(RepoModel).filter(RepoModel.id == repo_id).first()
+            repo_name = repo_row.name if repo_row else str(repo_id)
+
             # Get all groups for this repo
             from spec_atlas.db.analysis import Group as GroupModel
 
@@ -98,7 +105,7 @@ class GroupWriter:
                                 related_specs = (
                                     spec_session.query(Spec)
                                     .filter(
-                                        Spec.repo == repo_id,
+                                        Spec.repo == repo_name,
                                         Spec.component_ref.in_(group.member_spec_refs or []),
                                     )
                                     .all()
@@ -106,7 +113,12 @@ class GroupWriter:
 
                             # Generate summary
                             summary_md, provenance = GroupSummarizer.summarize(
-                                group, member_nodes, member_edges, related_specs, llm_provider
+                                group,
+                                member_nodes,
+                                member_edges,
+                                related_specs,
+                                llm_provider,
+                                session=analysis_session,
                             )
 
                             # Persist
@@ -125,7 +137,9 @@ class GroupWriter:
 
                     # Link specs to this group
                     if spec_session:
-                        _link_specs_to_group(group, member_nodes, spec_session, analysis_session)
+                        _link_specs_to_group(
+                            group, member_nodes, repo_name, spec_session, analysis_session
+                        )
                         report["linked_specs"] += len(group.member_spec_refs or [])
 
                     # Write group.md to disk
@@ -152,6 +166,7 @@ class GroupWriter:
 def _link_specs_to_group(
     group,
     member_nodes: list[Node],
+    repo_name: str,
     spec_session: Session,
     analysis_session: Session,
 ) -> None:
@@ -160,6 +175,7 @@ def _link_specs_to_group(
     Args:
         group: The Group object.
         member_nodes: Member nodes of the group.
+        repo_name: The repo's name (Spec.repo is a loose name ref, not repo_id).
         spec_session: Spec DB session.
         analysis_session: Analysis DB session.
     """
@@ -170,7 +186,7 @@ def _link_specs_to_group(
         specs = (
             spec_session.query(Spec)
             .filter(
-                Spec.repo == group.repo_id,
+                Spec.repo == repo_name,
                 Spec.component_ref.in_(member_qualified_names),
             )
             .all()
