@@ -87,7 +87,7 @@ export function IsoGraph({ nodes, edges, active, selected, onNodeClick }: IsoGra
     const centerY = height / 2
 
     // Clear canvas
-    ctx.fillStyle = 'var(--bg)'
+    ctx.fillStyle = '#0d1117'
     ctx.fillRect(0, 0, width, height)
 
     // Filter active nodes
