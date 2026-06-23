@@ -7,9 +7,41 @@
   z-index: 10;
   display: flex;
   align-items: center;
+  gap: 1rem;
   padding: 0 1rem;
 }
 
-.topbar-placeholder {
+.topbar-hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
   color: var(--mid);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.topbar-hamburger:hover {
+  background: var(--border-soft);
+  color: var(--hi);
+}
+
+.topbar-hamburger:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  .topbar-hamburger {
+    display: flex;
+  }
+}
+
+.topbar-breadcrumb {
+  color: var(--mid);
+  font-size: 0.875rem;
 }
