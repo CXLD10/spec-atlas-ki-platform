@@ -50,8 +50,6 @@ export function Sidebar() {
     },
   ]
 
-  const railWidth = collapsed ? '64px' : '248px'
-
   return (
     <>
       {isMobile && mobileOpen && (
@@ -60,7 +58,6 @@ export function Sidebar() {
       <aside
         ref={navRef}
         className={`sidebar ${isMobile ? 'mobile' : ''} ${mobileOpen ? 'mobile-open' : ''}`}
-        style={{ '--rail': railWidth } as React.CSSProperties}
       >
       <div className="sidebar-header">
         <button
