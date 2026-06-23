@@ -1,10 +1,12 @@
 import { useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useSources } from '../lib/hooks'
 import { OmniIngest } from '../components/ingest/OmniIngest'
 import { SourceCard } from '../components/sources/SourceCard'
 import './Dashboard.css'
 
 export function Dashboard() {
+  const navigate = useNavigate()
   const { data: sources = [] } = useSources()
   const omniBaRef = useRef<HTMLDivElement>(null)
 
@@ -85,6 +87,64 @@ export function Dashboard() {
               </button>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="how-it-works">
+        <div className="how-container">
+          <h2>How it works</h2>
+          <div className="feature-grid">
+            <div className="feature-block">
+              <div className="feature-num">1</div>
+              <h3>Understand section by section</h3>
+              <p>Comprehensive analysis of code and documents with intelligent parsing.</p>
+            </div>
+            <div className="feature-block">
+              <div className="feature-num">2</div>
+              <h3>Generated automatically</h3>
+              <p>LLM reads your code and docs, generates knowledge cards with zero manual work.</p>
+            </div>
+            <div className="feature-block">
+              <div className="feature-num">3</div>
+              <h3>Always up-to-date</h3>
+              <p>Drift detection flags stale cards when code changes, keeping knowledge fresh.</p>
+            </div>
+            <div className="feature-block">
+              <div className="feature-num">4</div>
+              <h3>Linked back to source</h3>
+              <p>Every claim cites file:line, page number, or spreadsheet cell for provenance.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Capabilities */}
+      <section className="capabilities">
+        <div className="caps-container">
+          <h2>Capabilities</h2>
+          <div className="caps-grid">
+            <button className="cap-tile" onClick={() => navigate('/graph')}>
+              <div className="cap-icon">◆</div>
+              <h3>Knowledge Graph</h3>
+              <p>Explore domains, specs, and relationships in 3D.</p>
+            </button>
+            <button className="cap-tile" onClick={() => navigate('/ask')}>
+              <div className="cap-icon">💬</div>
+              <h3>Ask Atlas</h3>
+              <p>Ask questions. Get grounded answers with citations.</p>
+            </button>
+            <button className="cap-tile" onClick={() => navigate('/specify')}>
+              <div className="cap-icon">✓</div>
+              <h3>Specify</h3>
+              <p>Generate knowledge cards for any entity with one click.</p>
+            </button>
+            <button className="cap-tile" onClick={() => navigate('/mcp')}>
+              <div className="cap-icon">⚙</div>
+              <h3>MCP Server</h3>
+              <p>Integration point for your CI/CD and IDE tools.</p>
+            </button>
+          </div>
         </div>
       </section>
     </div>
