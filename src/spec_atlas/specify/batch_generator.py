@@ -10,7 +10,7 @@ from spec_atlas.db.analysis import File, Node
 from spec_atlas.db.analysis import Repo as RepoModel
 from spec_atlas.db.spec import Spec
 from spec_atlas.graph.store import GraphStore
-from spec_atlas.specify.engine import SpecifyEngine
+from spec_atlas.specify.engine import SpecifyEngine, flatten_provenance
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -119,6 +119,7 @@ class BatchSpecGenerator:
                 component_ref = focal_node.qualified_name
 
                 # Store in Spec DB
+                flat_provenance = flatten_provenance(provenance)
                 spec_obj = Spec(
                     user_id=user_id,
                     repo=repo_name,
@@ -126,7 +127,7 @@ class BatchSpecGenerator:
                     version=1,
                     status="draft",
                     content=spec_dict,
-                    provenance=provenance,
+                    provenance=flat_provenance,
                     source_fingerprint=focal_node.id,  # Use node ID as fingerprint for now
                 )
                 spec_session.add(spec_obj)

@@ -218,6 +218,23 @@ def _build_provenance(
     return provenance
 
 
+def flatten_provenance(provenance: dict) -> list[dict]:
+    """Flatten {field_name: [span, ...]} into a flat list of spans tagged by field.
+
+    SpecifyEngine.generate() and GroupSummarizer.summarize() both return
+    provenance keyed by spec field (useful for callers that need per-field
+    spans), but Spec.provenance is a JSONB *list* column and SpecDetailResponse
+    declares it as ``list`` — storing the dict directly fails Pydantic
+    validation on every later read (list_type error). Call this right before
+    persisting.
+    """
+    flat: list[dict] = []
+    for field_name, spans in provenance.items():
+        for span in spans:
+            flat.append({"field": field_name, **span})
+    return flat
+
+
 def _extract_interconnections(
     focal_node: Node,
     neighbors: list[Node],

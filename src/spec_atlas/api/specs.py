@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from spec_atlas.db.analysis import Edge, File, Node
 from spec_atlas.spec.store import SpecStore
-from spec_atlas.specify.engine import SpecifyEngine
+from spec_atlas.specify.engine import SpecifyEngine, flatten_provenance
 
 logger = logging.getLogger(__name__)
 
@@ -388,6 +388,8 @@ class GenerateSpecResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    _stringify_fields = field_validator("created_at", mode="before")(_stringify)
+
 
 @router.post("/generate/{component_ref}", response_model=GenerateSpecResponse)
 def generate_spec(
@@ -475,7 +477,7 @@ def generate_spec(
             repo=repo,
             component_ref=component_ref,
             spec_content=spec_content,
-            provenance=provenance,
+            provenance=flatten_provenance(provenance),
             status="draft",
         )
 

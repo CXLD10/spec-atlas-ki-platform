@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-from spec_atlas.db.analysis import Edge, File, Node
+from spec_atlas.db.analysis import Edge, File, Group, Node, Repo
 from spec_atlas.graph.store import GraphStore
 
 router = APIRouter(prefix="/api/graph", tags=["graph"])
@@ -19,6 +19,18 @@ def get_analysis_session(request: Request) -> Session:
     factory = request.app.state.analysis_session_factory
     if not factory:
         raise HTTPException(status_code=503, detail="Analysis database not configured")
+    session = factory()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+def get_spec_session(request: Request) -> Session:
+    """Get spec DB session from app state."""
+    factory = request.app.state.spec_session_factory
+    if not factory:
+        raise HTTPException(status_code=503, detail="Spec database not configured")
     session = factory()
     try:
         yield session
@@ -369,3 +381,166 @@ def check_reachability(
     reachable = store.reachability(src_id, dst_id)
 
     return ReachabilityResponse(reachable=reachable, path=None)
+
+
+# ── Layered graph (L1 code + L3 specs + L4 groups), for the /graph explorer ──
+# Distinct from /subgraph (requires a node_id, returns only L1 NodeDetail) and
+# /nodes+/edges (L1-only, no layer tagging — see api/useGraph.ts's GraphNode,
+# which expects a `layer` field these never sent).
+
+
+class LayeredNode(BaseModel):
+    """A node in the layered (L1/L3/L4) graph."""
+
+    id: str
+    label: str
+    kind: str
+    layer: str  # "L1" | "L3" | "L4"
+    file_path: str = ""
+    qualified_name: str = ""
+
+
+class LayeredEdge(BaseModel):
+    """An edge in the layered (L1/L3/L4) graph. May cross layers (inter=True)."""
+
+    id: str
+    source: str
+    target: str
+    kind: str
+    confidence: float = 1.0
+    inter: bool = False
+
+
+class LayeredGraphResponse(BaseModel):
+    """Response for the layered graph endpoint."""
+
+    nodes: list[LayeredNode]
+    edges: list[LayeredEdge]
+
+
+def _resolve_repo_id_by_name(repo: str, session: Session) -> uuid.UUID:
+    row = session.query(Repo).filter(Repo.name == repo).first()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Repo not found: {repo!r}")
+    return row.id
+
+
+@router.get("/layered", response_model=LayeredGraphResponse)
+def get_layered_graph(
+    repo: str = Query(...),
+    session: Session = Depends(get_analysis_session),  # noqa: B008
+    spec_session: Session = Depends(get_spec_session),  # noqa: B008
+    max_nodes: int = Query(1000, ge=1, le=5000),
+) -> LayeredGraphResponse:
+    """Get the full layered graph for a repo: L1 code, L3 specs, L4 groups.
+
+    L3 spec nodes are synthetic (specs have no row in the Analysis DB) with
+    id ``spec:{component_ref}``, joined to their L1 node by qualified_name.
+    Inter-layer edges (kind="documents"/"contains"/"member-of") connect
+    L3 specs to the L1 node they describe, and L4 groups to their L1 member
+    nodes and L4 parent group.
+    """
+    from spec_atlas.db.spec import Spec, SpecEdge
+
+    repo_id = _resolve_repo_id_by_name(repo, session)
+
+    nodes_q = session.query(Node).filter(Node.repo_id == repo_id).limit(max_nodes).all()
+    file_map = {f.id: f.path for f in session.query(File).filter(File.repo_id == repo_id).all()}
+    qname_to_node_id = {n.qualified_name: str(n.id) for n in nodes_q}
+
+    nodes: list[LayeredNode] = [
+        LayeredNode(
+            id=str(n.id),
+            label=n.name,
+            kind=n.kind,
+            layer="L1",
+            file_path=file_map.get(n.file_id, ""),
+            qualified_name=n.qualified_name,
+        )
+        for n in nodes_q
+    ]
+
+    edges: list[LayeredEdge] = [
+        LayeredEdge(
+            id=str(e.id),
+            source=str(e.src_node_id),
+            target=str(e.dst_node_id),
+            kind=e.kind,
+            confidence=e.confidence or 0.5,
+            inter=False,
+        )
+        for e in session.query(Edge).filter(Edge.repo_id == repo_id).all()
+    ]
+
+    # L4: groups
+    groups = session.query(Group).filter(Group.repo_id == repo_id).all()
+    for g in groups:
+        nodes.append(
+            LayeredNode(id=str(g.id), label=g.title or g.path or "root", kind="group", layer="L4")
+        )
+        if g.parent_id:
+            edges.append(
+                LayeredEdge(
+                    id=f"group-parent:{g.id}",
+                    source=str(g.id),
+                    target=str(g.parent_id),
+                    kind="part-of",
+                    inter=False,
+                )
+            )
+        for member_id in g.member_node_ids or []:
+            edges.append(
+                LayeredEdge(
+                    id=f"group-member:{g.id}:{member_id}",
+                    source=str(g.id),
+                    target=str(member_id),
+                    kind="contains",
+                    inter=True,
+                )
+            )
+
+    # L3: specs (current versions only) + spec graph edges
+    specs = (
+        spec_session.query(Spec)
+        .filter(Spec.repo == repo, Spec.valid_to.is_(None))
+        .all()
+    )
+    spec_node_id = {s.component_ref: f"spec:{s.component_ref}" for s in specs}
+    for s in specs:
+        nodes.append(
+            LayeredNode(
+                id=spec_node_id[s.component_ref],
+                label=s.component_ref,
+                kind="spec",
+                layer="L3",
+                qualified_name=s.component_ref,
+            )
+        )
+        l1_target = qname_to_node_id.get(s.component_ref)
+        if l1_target:
+            edges.append(
+                LayeredEdge(
+                    id=f"spec-documents:{s.id}",
+                    source=spec_node_id[s.component_ref],
+                    target=l1_target,
+                    kind="documents",
+                    inter=True,
+                )
+            )
+
+    spec_edges = spec_session.query(SpecEdge).filter(SpecEdge.repo == repo).all()
+    for se in spec_edges:
+        src = spec_node_id.get(se.src_component_ref)
+        dst = spec_node_id.get(se.dst_component_ref)
+        if src and dst:
+            edges.append(
+                LayeredEdge(
+                    id=str(se.id),
+                    source=src,
+                    target=dst,
+                    kind=se.kind,
+                    inter=False,
+                )
+            )
+
+    return LayeredGraphResponse(nodes=nodes, edges=edges)

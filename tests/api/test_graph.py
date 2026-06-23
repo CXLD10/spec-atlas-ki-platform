@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import pytest
+from fastapi.testclient import TestClient
+
+from spec_atlas import db
 from spec_atlas.api.app import create_app
-from spec_atlas.config import Settings
+from spec_atlas.config import Settings, get_settings
+from spec_atlas.spec.store import SpecStore
 
 
 class TestGraphAPI:
@@ -119,3 +124,88 @@ class TestGraphAPI:
         required_fields = {"reachable"}
         schema_fields = set(ReachabilityResponse.model_fields.keys())
         assert required_fields.issubset(schema_fields)
+
+
+@pytest.mark.db
+class TestLayeredGraph:
+    """Tests for GET /api/graph/layered (L1 code + L3 specs + L4 groups)."""
+
+    def test_layered_subgraph_tags_l1_l3_l4(self, migrated: None) -> None:
+        AnalysisSession = db.analysis_session()
+        SpecSession = db.spec_session()
+
+        with AnalysisSession() as s:
+            repo = db.Repo(name="layered-repo", source="/tmp/layered-repo")
+            s.add(repo)
+            s.flush()
+
+            file = db.File(
+                repo_id=repo.id, path="a.py", language="python", content_hash="x", loc=10
+            )
+            s.add(file)
+            s.flush()
+
+            node = db.Node(
+                repo_id=repo.id,
+                file_id=file.id,
+                language="python",
+                kind="function",
+                name="f",
+                qualified_name="a.f",
+                signature="def f():",
+                start_line=1,
+                end_line=2,
+            )
+            s.add(node)
+            s.flush()
+
+            group = db.Group(
+                repo_id=repo.id,
+                parent_id=None,
+                level=0,
+                path="",
+                title="layered-repo",
+                member_node_ids=[node.id],
+            )
+            s.add(group)
+            s.commit()
+
+        with SpecSession() as s:
+            SpecStore(s).create(
+                user_id="default",
+                repo="layered-repo",
+                component_ref="a.f",
+                spec_content={"purpose": "test"},
+                provenance=[],
+                status="draft",
+            )
+
+        client = TestClient(create_app(get_settings()))
+        resp = client.get("/api/graph/layered", params={"repo": "layered-repo"})
+        assert resp.status_code == 200
+        data = resp.json()
+
+        layers = {n["layer"] for n in data["nodes"]}
+        assert layers == {"L1", "L3", "L4"}
+
+        l1_node = next(n for n in data["nodes"] if n["layer"] == "L1")
+        assert l1_node["qualified_name"] == "a.f"
+
+        l3_node = next(n for n in data["nodes"] if n["layer"] == "L3")
+        assert l3_node["id"] == "spec:a.f"
+
+        # Every edge must resolve to two real node ids in the response.
+        node_ids = {n["id"] for n in data["nodes"]}
+        for edge in data["edges"]:
+            assert edge["source"] in node_ids
+            assert edge["target"] in node_ids
+
+        # Inter-layer edges exist: L4 group contains the L1 node, L3 spec documents it.
+        inter_kinds = {e["kind"] for e in data["edges"] if e["inter"]}
+        assert "contains" in inter_kinds
+        assert "documents" in inter_kinds
+
+    def test_layered_subgraph_unknown_repo_404s(self, migrated: None) -> None:
+        client = TestClient(create_app(get_settings()))
+        resp = client.get("/api/graph/layered", params={"repo": "does-not-exist"})
+        assert resp.status_code == 404

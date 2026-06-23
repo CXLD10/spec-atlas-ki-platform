@@ -119,10 +119,9 @@ export interface GeneratedSpecsListResponse {
   }>
 }
 
-// Shape returned by GET /api/graph/subgraph (graph.py's NodeDetail/EdgeDetail),
-// adapted client-side to the {id,label,layer,_x,_y,_z} shape the IsoGraph
-// canvas renderer expects. The backend has no notion of layer/position yet
-// (L1 only) — those are filled in with defaults until Phase 1 wires L3/L4.
+// Shape returned by GET /api/graph/subgraph (graph.py's NodeDetail/EdgeDetail):
+// a single L1 node's immediate neighborhood. For the full L1/L3/L4 graph used
+// by the /graph page, see getLayeredGraph (GET /api/graph/layered) below.
 export interface SubgraphNode {
   id: string
   label: string
@@ -155,6 +154,55 @@ export interface GeneratedSpecResult {
   content: Record<string, unknown>
   provenance: unknown[]
   created_at: string
+}
+
+// GET /api/graph/layered?repo=... — L1 code + L3 specs + L4 groups, tagged
+// by layer, with inter-layer edges (group contains node, spec documents
+// node). Note: this interface is intentionally identical in shape to
+// api/useGraph.ts's GraphNode/GraphEdge (kept separate to avoid a circular
+// import — useGraph.ts already imports `client` from this module).
+export interface LayeredGraphNode {
+  id: string
+  label: string
+  kind: string
+  layer: 'L1' | 'L3' | 'L4'
+  file_path?: string
+  qualified_name?: string
+}
+
+export interface LayeredGraphEdge {
+  id: string
+  source: string
+  target: string
+  kind: string
+  confidence?: number
+  inter: boolean
+}
+
+export interface LayeredGraphResult {
+  nodes: LayeredGraphNode[]
+  edges: LayeredGraphEdge[]
+}
+
+// GET /api/reports/verification, /verification/issues, /verification/confidence
+export interface VerificationReport {
+  total_specs: number
+  verified_count: number
+  review_count: number
+  draft_count: number
+  avg_confidence: number
+  verification_rate: number
+  specs_needing_review: number
+}
+
+export interface VerificationIssuesReport {
+  issues: Array<{ reason: string; count: number }>
+  count: number
+}
+
+export interface ConfidenceDistribution {
+  bins: string[]
+  counts: number[]
 }
 
 class ApiClient {
@@ -346,10 +394,10 @@ class ApiClient {
 
   // ── Unified IA: subgraph, knowledge sources/cards, document upload ──────
   // These back the new IA pages (Dashboard/Sources/KnowledgeBase/Graph).
-  // listKnowledgeSources/listKnowledgeCards/getSourceSnippet/uploadDocument
-  // hit routes that don't exist on the backend yet (/api/sources, /api/kb,
-  // /api/documents, /api/source-snippet — see SYSTEM_STATUS_AND_REMEDIATION.md
-  // Phase 1/2); calling them surfaces a real 404, never mock data.
+  // listKnowledgeSources/listKnowledgeCards are real (Phase 1: GET /api/sources,
+  // /api/kb). getSourceSnippet/uploadDocument still hit routes that don't exist
+  // yet (/api/documents, /api/source-snippet — Phase 2 document ingestion);
+  // calling them surfaces a real error, never mock data.
 
   async getSubgraph(nodeId?: string, maxDepth: number = 2): Promise<SubgraphResult> {
     const params = new URLSearchParams()
@@ -428,6 +476,46 @@ class ApiClient {
       'POST',
       `/api/specs/generate/${encodeURIComponent(componentRef)}?${params.toString()}`
     )
+  }
+
+  async getSpecDetail(repo: string, componentRef: string): Promise<GeneratedSpecResult> {
+    const params = new URLSearchParams({ repo })
+    return this.request(
+      'GET',
+      `/api/specs/${encodeURIComponent(componentRef)}?${params.toString()}`
+    )
+  }
+
+  async verifySpec(
+    repo: string,
+    componentRef: string,
+    version: number
+  ): Promise<{ component_ref: string; version: number; status: string; confidence: number; is_grounded: boolean; issues: Array<{ claim: string; reason: string; severity: string }> }> {
+    const params = new URLSearchParams({ repo, version: String(version) })
+    return this.request(
+      'POST',
+      `/api/specs/${encodeURIComponent(componentRef)}/verify?${params.toString()}`
+    )
+  }
+
+  async getLayeredGraph(repo: string): Promise<LayeredGraphResult> {
+    const params = new URLSearchParams({ repo })
+    return this.request('GET', `/api/graph/layered?${params.toString()}`)
+  }
+
+  async getVerificationReport(repo: string): Promise<VerificationReport> {
+    const params = new URLSearchParams({ repo })
+    return this.request('GET', `/api/reports/verification?${params.toString()}`)
+  }
+
+  async getVerificationIssues(repo: string, limit: number = 10): Promise<VerificationIssuesReport> {
+    const params = new URLSearchParams({ repo, limit: String(limit) })
+    return this.request('GET', `/api/reports/verification/issues?${params.toString()}`)
+  }
+
+  async getConfidenceDistribution(repo: string, bins: number = 5): Promise<ConfidenceDistribution> {
+    const params = new URLSearchParams({ repo, bins: String(bins) })
+    return this.request('GET', `/api/reports/verification/confidence?${params.toString()}`)
   }
 }
 

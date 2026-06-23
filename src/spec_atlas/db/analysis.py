@@ -26,6 +26,7 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 EMBED_DIM = 384  # must match Settings.embed_dim and embeddings.vector(N)
@@ -139,11 +140,20 @@ class Group(AnalysisBase):
     path: Mapped[str] = mapped_column(Text, nullable=False)  # e.g. auth/tokens
     title: Mapped[str] = mapped_column(Text, nullable=False)
     summary_md: Mapped[str | None] = mapped_column(Text, nullable=True)  # the group.md page
+    # MutableList: plain ARRAY columns don't track in-place .append()/.remove()
+    # on an already-persistent row (no dirty flag => no UPDATE emitted on
+    # commit) — this silently dropped every member_node_ids/member_spec_refs
+    # mutation made after the owning Group row was flushed (e.g. clustering's
+    # node-to-group assignment, which runs right after an FK-establishing
+    # flush). MutableList.as_mutable wraps the column so in-place edits are
+    # detected like any other attribute change.
     member_node_ids: Mapped[list[uuid.UUID]] = mapped_column(
-        ARRAY(UUID(as_uuid=True)), nullable=False, default=list
+        MutableList.as_mutable(ARRAY(UUID(as_uuid=True))), nullable=False, default=list
     )
     # component_refs into the Spec DB (by value, not FK)
-    member_spec_refs: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)
+    member_spec_refs: Mapped[list[str]] = mapped_column(
+        MutableList.as_mutable(ARRAY(Text)), nullable=False, default=list
+    )
     source_fingerprint: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

@@ -31,7 +31,8 @@ export interface Source {
   progress?: number             // 0..100 for indexing
   stats: {
     entities: number            // symbols for repos, pages for docs
-    cards: number               // generated knowledge cards
+    cards: number                // generated knowledge cards
+    domains: number              // L4 groups (repos only; 0 for documents)
   }
   format?: SourceFormat
   updatedAt: string             // ISO timestamp

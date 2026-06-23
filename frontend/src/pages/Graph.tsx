@@ -1,60 +1,43 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { IsoGraph, GraphNode, GraphEdge } from '../components/graph/IsoGraph'
+import { GraphCanvas3D } from '../components/graph/GraphCanvas3D'
 import { Inspector } from '../components/graph/Inspector'
-import { client } from '../api/client'
+import { useLayeredGraph } from '../api/useGraph'
+import { useSources } from '../lib/hooks'
+import type { LayeredGraphNode } from '../api/client'
 import './Graph.css'
-
-type SubgraphData = {
-  nodes: GraphNode[]
-  edges: GraphEdge[]
-}
 
 export default function Graph() {
   const [searchParams] = useSearchParams()
   const focusNode = searchParams.get('focus')
 
-  const [graphData, setGraphData] = useState<SubgraphData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
+  const { data: sources = [], isLoading: sourcesLoading } = useSources()
+  const repos = useMemo(() => sources.filter((s) => s.type === 'repo'), [sources])
+  const [selectedRepo, setSelectedRepo] = useState<string | null>(null)
+
+  // Default to the first indexed repo once sources load.
+  useEffect(() => {
+    if (!selectedRepo && repos.length > 0) {
+      setSelectedRepo(repos[0].name)
+    }
+  }, [repos, selectedRepo])
+
+  const { data: graphData, isLoading: graphLoading, error } = useLayeredGraph(selectedRepo ?? undefined)
+
+  const [selectedNode, setSelectedNode] = useState<LayeredGraphNode | null>(null)
   const [active, setActive] = useState({ L1: true, L3: true, L4: true })
 
+  // Select the node passed via ?focus= once the graph data is in.
   useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-    setError(null)
-
-    const fetchGraph = async () => {
-      if (!focusNode) {
-        if (!cancelled) {
-          setError('No focus node selected. Open the graph from a node link (e.g. a Knowledge Card) to see its neighborhood.')
-          setLoading(false)
-        }
-        return
-      }
-
-      try {
-        const data = await client.getSubgraph(focusNode, 2)
-        if (!cancelled) {
-          setGraphData({
-            nodes: data.nodes as GraphNode[],
-            edges: data.edges as GraphEdge[],
-          })
-        }
-      } catch (err) {
-        if (cancelled) return
-        setError(err instanceof Error ? err.message : 'Failed to fetch graph data')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
+    if (focusNode && graphData) {
+      const match = graphData.nodes.find(
+        (n) => n.id === focusNode || n.qualified_name === focusNode
+      )
+      if (match) setSelectedNode(match)
     }
+  }, [focusNode, graphData])
 
-    fetchGraph()
-    return () => { cancelled = true }
-  }, [focusNode])
-
-  if (loading) {
+  if (sourcesLoading || (selectedRepo && graphLoading)) {
     return (
       <div className="graph-page graph-page--loading">
         <p>Loading graph…</p>
@@ -62,19 +45,28 @@ export default function Graph() {
     )
   }
 
+  if (repos.length === 0) {
+    return (
+      <div className="graph-page graph-page--error">
+        <p>No indexed repositories yet.</p>
+        <small>Index a repository from the Dashboard to explore its graph.</small>
+      </div>
+    )
+  }
+
   if (error || !graphData) {
     return (
       <div className="graph-page graph-page--error">
-        <p>{error || 'Failed to load graph'}</p>
+        <p>{error instanceof Error ? error.message : 'Failed to load graph'}</p>
         <small>Backend unavailable — check VITE_API_URL</small>
       </div>
     )
   }
 
-  const visibleNodes = graphData.nodes.filter((n) => active[n.layer as 'L1' | 'L3' | 'L4'])
+  const visibleNodes = graphData.nodes.filter((n) => active[n.layer])
   const visibleNodeIds = new Set(visibleNodes.map((n) => n.id))
   const visibleEdges = graphData.edges.filter(
-    (e) => visibleNodeIds.has(e.s) && visibleNodeIds.has(e.d)
+    (e) => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target)
   )
 
   const countL1 = visibleNodes.filter((n) => n.layer === 'L1').length
@@ -83,10 +75,22 @@ export default function Graph() {
 
   return (
     <div className="graph-page">
-      {/* Canvas area */}
       <div className="graph-canvas-area">
-        {/* HUD: layer toggles + stats */}
         <div className="graph-hud">
+          {repos.length > 1 && (
+            <select
+              className="layer-toggle"
+              value={selectedRepo ?? ''}
+              onChange={(e) => setSelectedRepo(e.target.value)}
+              aria-label="Select repository"
+            >
+              {repos.map((r) => (
+                <option key={r.id} value={r.name}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          )}
           <div className="hud-layers">
             {(
               [
@@ -121,28 +125,25 @@ export default function Graph() {
           </div>
         </div>
 
-        {/* Canvas */}
-        <IsoGraph
+        <GraphCanvas3D
           nodes={visibleNodes}
           edges={visibleEdges}
-          active={active}
-          selected={selectedNode}
-          onNodeClick={setSelectedNode}
+          selectedNodeId={selectedNode?.id}
+          onSelectNode={setSelectedNode}
         />
 
-        {/* Help text */}
         <div className="graph-help" aria-hidden="true">
           <p>Drag to rotate · Scroll to zoom · Click a node to inspect</p>
           <p className="graph-help-secondary">
-            Vertical beams show provenance: source → card → domain
+            Cross-layer beams show provenance: source → card → domain
           </p>
         </div>
       </div>
 
-      {/* Inspector: always rendered, shows empty state when nothing selected */}
       <Inspector
         node={selectedNode}
         allNodes={visibleNodes}
+        allEdges={visibleEdges}
         onSelectNode={setSelectedNode}
       />
     </div>

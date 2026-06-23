@@ -25,6 +25,7 @@ const Graph = lazy(() => import('../pages/Graph'))
 const KnowledgeBase = lazy(() => import('../pages/KnowledgeBase'))
 const KnowledgeCard = lazy(() => import('../pages/KnowledgeCard'))
 const MCPServer = lazy(() => import('../pages/MCPServer'))
+const Reports = lazy(() => import('../pages/Reports'))
 
 const PageLoader = () => (
   <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--mid)' }}>
@@ -57,6 +58,7 @@ export function App() {
               <Route path="/graph" element={<Suspense fallback={<PageLoader />}><Graph /></Suspense>} />
               <Route path="/ask" element={<Suspense fallback={<PageLoader />}><Ask /></Suspense>} />
               <Route path="/specify" element={<Suspense fallback={<PageLoader />}><Specify /></Suspense>} />
+              <Route path="/reports" element={<Suspense fallback={<PageLoader />}><Reports /></Suspense>} />
               <Route path="/mcp" element={<Suspense fallback={<PageLoader />}><MCPServer /></Suspense>} />
               <Route path="/docs" element={<Suspense fallback={<PageLoader />}><Docs /></Suspense>} />
               <Route path="/index/:jobId" element={<IndexProgress />} />

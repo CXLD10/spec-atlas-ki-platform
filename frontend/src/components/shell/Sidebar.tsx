@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Menu, Zap, FileText, Network, BookOpen, MessageCircle, Wrench, Webhook, Library } from 'lucide-react'
+import { Menu, Zap, FileText, Network, BookOpen, MessageCircle, Wrench, Webhook, Library, ShieldCheck } from 'lucide-react'
 import { useSidebar } from './useSidebar'
 import { ThemeToggle } from './ThemeToggle'
 import './Sidebar.css'
@@ -31,6 +31,7 @@ export function Sidebar() {
         { icon: Network, label: 'Knowledge Graph', path: '/graph' },
         { icon: MessageCircle, label: 'Ask Atlas', path: '/ask' },
         { icon: Wrench, label: 'Specify', path: '/specify' },
+        { icon: ShieldCheck, label: 'Verification', path: '/reports' },
       ],
     },
     {

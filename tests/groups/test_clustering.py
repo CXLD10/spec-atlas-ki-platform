@@ -5,6 +5,9 @@ from __future__ import annotations
 import uuid
 from unittest.mock import MagicMock
 
+import pytest
+
+from spec_atlas import db
 from spec_atlas.groups.clustering import GroupClustering
 
 
@@ -118,10 +121,66 @@ class TestGroupClustering:
         # Complex integration test; requires real or comprehensive mocking
         pass
 
-    def test_cluster_file_to_group_assignment(self) -> None:
-        """Files in subdirectories are assigned to appropriate groups."""
-        # Complex integration test
-        pass
+    @pytest.mark.db
+    def test_cluster_file_to_group_assignment(self, migrated: None) -> None:
+        """Files in subdirectories are assigned to appropriate groups, and
+        that assignment actually persists to a fresh session.
+
+        Regression: Group.member_node_ids/member_spec_refs were plain ARRAY
+        columns. cluster_from_directory assigns nodes via in-place
+        `.append()` on groups that were already flushed (to establish FK
+        parent_id relationships first) — SQLAlchemy doesn't dirty-track
+        in-place list mutation on a persistent row without MutableList, so
+        every node assignment was silently dropped on commit. Caught by
+        actually re-querying in a new session instead of trusting the
+        in-memory object the test already holds a reference to.
+        """
+        AnalysisSession = db.analysis_session()
+
+        with AnalysisSession() as s:
+            repo = db.Repo(name="cluster-assign-repo", source="/tmp/cluster-assign-repo")
+            s.add(repo)
+            s.flush()
+
+            file = db.File(
+                repo_id=repo.id,
+                path="pkg/mod.py",
+                language="python",
+                content_hash="abc",
+                loc=5,
+            )
+            s.add(file)
+            s.flush()
+
+            node = db.Node(
+                repo_id=repo.id,
+                file_id=file.id,
+                language="python",
+                kind="function",
+                name="f",
+                qualified_name="pkg.mod.f",
+                signature="def f():",
+                start_line=1,
+                end_line=2,
+            )
+            s.add(node)
+            s.commit()
+            repo_id, file_id, node_id = repo.id, file.id, node.id
+
+        with AnalysisSession() as s:
+            GroupClustering.cluster_from_directory(repo_id, "/tmp/cluster-assign-repo", s)
+
+        # Fresh session: no identity-map carryover from the call above.
+        with AnalysisSession() as fresh:
+            from spec_atlas.db.analysis import Group as GroupModel
+
+            pkg_group = (
+                fresh.query(GroupModel)
+                .filter(GroupModel.repo_id == repo_id, GroupModel.path == "pkg")
+                .first()
+            )
+            assert pkg_group is not None
+            assert pkg_group.member_node_ids == [node_id]
 
     def test_cluster_root_when_no_subdirs(self) -> None:
         """All files go to root if no subdirectories exist."""

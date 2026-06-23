@@ -37,3 +37,13 @@ export function useGraphEdges(projectId: string) {
     refetchInterval: false,
   })
 }
+
+/** Real L1+L3+L4 layered graph for a repo (GET /api/graph/layered). */
+export function useLayeredGraph(repo: string | undefined) {
+  return useQuery({
+    queryKey: ['layered-graph', repo],
+    queryFn: () => client.getLayeredGraph(repo as string),
+    enabled: !!repo,
+    staleTime: 1000 * 30,
+  })
+}

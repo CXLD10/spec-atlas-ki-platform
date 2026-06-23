@@ -3,38 +3,64 @@ import { useSearchParams } from 'react-router-dom'
 import { TraceSteps, type StepStatus } from '../components/specify/TraceSteps'
 import { KnowledgeCardRender } from '../components/specify/KnowledgeCardRender'
 import { client, GeneratedSpecResult } from '../api/client'
-import { KnowledgeCard } from '../lib/types'
+import { KnowledgeCard, Provenance, ProvenanceKind } from '../lib/types'
 import './Specify.css'
 
-// Adapts the real GenerateSpecResponse (specs.py) into the KnowledgeCard shape
-// this page renders. Full fidelity (provenance -> citations, relations) is
-// Phase 1 work (Specify request/response rewiring) — this keeps the page
-// honest about real backend data in the meantime, never mock.
+function provenanceKind(filePath: string): ProvenanceKind {
+  if (filePath.endsWith('.pdf')) return 'pdf'
+  if (filePath.endsWith('.xlsx')) return 'xlsx'
+  if (filePath.endsWith('.md') || filePath.endsWith('.markdown')) return 'md'
+  return 'code'
+}
+
+// Adapts the real GenerateSpecResponse (specs.py) into the KnowledgeCard
+// shape this page renders. Spec content is a structured object (purpose,
+// inputs, outputs, ...), not pre-rendered markdown — rendered here so the
+// card shows real fields, and real provenance spans (flattened server-side
+// from {field: [span,...]} into a tagged list — see flatten_provenance).
 function toKnowledgeCard(result: GeneratedSpecResult): KnowledgeCard {
-  const purpose = (result.content as { purpose?: string }).purpose
-  const markdown = purpose
-    ? `## Purpose\n\n${purpose}\n\n## Raw content\n\n\`\`\`json\n${JSON.stringify(result.content, null, 2)}\n\`\`\``
-    : `\`\`\`json\n${JSON.stringify(result.content, null, 2)}\n\`\`\``
+  const content = result.content as Record<string, unknown>
+  const lines: string[] = [`# ${result.component_ref}`, '']
+
+  if (content.purpose) lines.push('## Purpose', '', String(content.purpose), '')
+
+  const listSection = (title: string, key: string) => {
+    const items = content[key]
+    if (Array.isArray(items) && items.length > 0) {
+      lines.push(`## ${title}`, '')
+      for (const item of items) {
+        lines.push(`- ${typeof item === 'string' ? item : JSON.stringify(item)}`)
+      }
+      lines.push('')
+    }
+  }
+  listSection('Inputs', 'inputs')
+  listSection('Outputs', 'outputs')
+  listSection('Dependencies', 'dependencies')
+  listSection('Invariants', 'invariants')
+  listSection('Side Effects', 'side_effects')
+  listSection('Failure Modes', 'failure_modes')
+
+  const provenance: Provenance[] = (
+    Array.isArray(result.provenance) ? (result.provenance as Array<Record<string, unknown>>) : []
+  ).map((span) => {
+    const file = String(span.file ?? '')
+    return {
+      ref: file,
+      kind: provenanceKind(file),
+      loc: `${span.start_line ?? '?'}-${span.end_line ?? '?'}${span.field ? ` (${span.field})` : ''}`,
+    }
+  })
 
   return {
     ref: result.component_ref,
     title: result.component_ref,
     status: result.status === 'verified' ? 'verified' : result.status === 'stale' ? 'stale' : 'draft',
-    markdown,
-    provenance: [],
+    markdown: lines.join('\n'),
+    provenance,
     relations: [],
   }
 }
-
-const TRACE_STEPS = [
-  { title: 'Locate focal node', detail: 'Finding entity in knowledge graph' },
-  { title: 'Fetch graph neighbourhood', detail: 'Retrieving related code and specs' },
-  { title: 'Read source spans', detail: 'Extracting relevant code segments' },
-  { title: 'LLM draft spec', detail: 'Generating structured specification' },
-  { title: 'Validate & bind citations', detail: 'Linking claims to source locations' },
-]
-
-type StageKey = 'locate' | 'fetch' | 'read' | 'llm' | 'validate'
 
 export default function Specify() {
   const [searchParams] = useSearchParams()
@@ -45,14 +71,10 @@ export default function Specify() {
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [card, setCard] = useState<KnowledgeCard | null>(null)
-
-  const [stages, setStages] = useState<Record<StageKey, StepStatus>>({
-    locate: 'queued',
-    fetch: 'queued',
-    read: 'queued',
-    llm: 'queued',
-    validate: 'queued',
-  })
+  const [version, setVersion] = useState<number | null>(null)
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [verifyState, setVerifyState] = useState<'idle' | 'verifying' | 'error'>('idle')
+  const [stage, setStage] = useState<StepStatus>('queued')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -64,36 +86,49 @@ export default function Specify() {
     setGenerating(true)
     setError(null)
     setCard(null)
-    setStages({ locate: 'queued', fetch: 'queued', read: 'queued', llm: 'queued', validate: 'queued' })
+    setSaveState('idle')
+    setVerifyState('idle')
+    setStage('running')
 
     try {
-      // Animate through stages
-      const stageSequence: StageKey[] = ['locate', 'fetch', 'read', 'llm', 'validate']
-      const stageDurations = { locate: 200, fetch: 400, read: 600, llm: 1200, validate: 200 }
-
-      for (const stage of stageSequence) {
-        setStages((prev) => ({ ...prev, [stage]: 'running' }))
-        await new Promise((r) => setTimeout(r, stageDurations[stage]))
-        setStages((prev) => ({ ...prev, [stage]: 'done' }))
-      }
-
-      // Fetch the spec
-      const data = await client.generateSpec(repo, entity)
+      // One real, atomic backend call — no fabricated multi-stage timing.
+      const data = await client.generateSpec(repo.trim(), entity.trim())
+      setStage('done')
+      setVersion(data.version)
       setCard(toKnowledgeCard(data))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate specification')
+      setStage('queued')
+    } finally {
       setGenerating(false)
     }
   }
 
-  const handleSave = () => {
-    alert('Version saved! (This is a demo stub)')
+  const handleSave = async () => {
+    if (!card) return
+    setSaveState('saving')
+    try {
+      // Generate-on-demand already persisted this spec server-side; "Save"
+      // confirms that by re-fetching from the Spec DB rather than trusting
+      // local state — a real round trip, not a local flag flip.
+      const fresh = await client.getSpecDetail(repo.trim(), card.ref)
+      setVersion(fresh.version)
+      setCard(toKnowledgeCard(fresh))
+      setSaveState('saved')
+    } catch {
+      setSaveState('error')
+    }
   }
 
-  const handleVerify = () => {
-    if (card) {
-      setCard({ ...card, status: 'verified' })
-      alert('Card marked as verified!')
+  const handleVerify = async () => {
+    if (!card || version === null) return
+    setVerifyState('verifying')
+    try {
+      const result = await client.verifySpec(repo.trim(), card.ref, version)
+      setCard({ ...card, status: result.status === 'verified' ? 'verified' : 'draft' })
+      setVerifyState('idle')
+    } catch {
+      setVerifyState('error')
     }
   }
 
@@ -108,12 +143,20 @@ export default function Specify() {
               setCard(null)
               setEntity('')
               setRepo('')
+              setVersion(null)
+              setSaveState('idle')
+              setVerifyState('idle')
             }}
           >
             ← Generate another
           </button>
         </div>
         <KnowledgeCardRender card={card} onSave={handleSave} onVerify={handleVerify} />
+        {saveState === 'saving' && <p className="specify-status">Confirming save…</p>}
+        {saveState === 'saved' && <p className="specify-status">Saved — v{version} persisted in the Spec DB.</p>}
+        {saveState === 'error' && <p className="specify-error">Save failed — could not confirm persistence.</p>}
+        {verifyState === 'verifying' && <p className="specify-status">Verifying…</p>}
+        {verifyState === 'error' && <p className="specify-error">Verification failed.</p>}
       </div>
     )
   }
@@ -133,13 +176,13 @@ export default function Specify() {
       <form onSubmit={handleSubmit} className="specify-form">
         <div className="specify-form-group">
           <label htmlFor="repo-input" className="specify-label">
-            Repository or workspace
+            Repository name
           </label>
           <input
             id="repo-input"
             type="text"
             className="specify-input"
-            placeholder="e.g., huggingface/transformers or my-workspace"
+            placeholder="e.g., the name shown on the Sources page"
             value={repo}
             onChange={(e) => setRepo(e.target.value)}
             disabled={generating}
@@ -148,13 +191,13 @@ export default function Specify() {
 
         <div className="specify-form-group">
           <label htmlFor="entity-input" className="specify-label">
-            Entity name
+            Component qualified name
           </label>
           <input
             id="entity-input"
             type="text"
             className="specify-input"
-            placeholder="e.g., validate_credentials, Pipeline"
+            placeholder="e.g., auth.session.mint_token"
             value={entity}
             onChange={(e) => setEntity(e.target.value)}
             disabled={generating}
@@ -176,13 +219,15 @@ export default function Specify() {
       {generating && (
         <div className="specify-trace">
           <TraceSteps
-            steps={TRACE_STEPS.map((step, idx) => ({
-              id: ['locate', 'fetch', 'read', 'llm', 'validate'][idx] as StageKey,
-              icon: null,
-              title: step.title,
-              detail: step.detail,
-              status: stages[['locate', 'fetch', 'read', 'llm', 'validate'][idx] as StageKey],
-            }))}
+            steps={[
+              {
+                id: 'generate',
+                icon: null,
+                title: 'Generating spec',
+                detail: 'Fetching graph context and calling the LLM (POST /api/specs/generate)',
+                status: stage,
+              },
+            ]}
           />
         </div>
       )}

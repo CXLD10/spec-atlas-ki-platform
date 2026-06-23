@@ -22,6 +22,7 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.ext.mutable import MutableDict, MutableList
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 SPEC_STATUSES = ("draft", "verified", "stale")
@@ -56,9 +57,16 @@ class Spec(SpecBase):
     )
     valid_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String, nullable=False, default="draft")
-    content: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    # MutableDict/MutableList: plain JSONB columns don't track in-place
+    # mutation (e.g. spec.content["_verification_metadata"] = {...} in
+    # SpecStore.verify_spec) once the row is persistent — no dirty flag, no
+    # UPDATE on commit. Same class of bug as Group.member_node_ids; wrapped
+    # here so verification metadata actually survives commit.
+    content: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSONB), nullable=False)
     # list of {file_path, start_line, end_line}
-    provenance: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    provenance: Mapped[list] = mapped_column(
+        MutableList.as_mutable(JSONB), nullable=False, default=list
+    )
     source_fingerprint: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

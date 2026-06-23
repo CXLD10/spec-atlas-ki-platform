@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+from spec_atlas import db
 from spec_atlas.spec.store import SpecStore
 
 
@@ -138,3 +141,81 @@ def test_spec_store_has_verify_spec_method():
     # Verify the method exists and is callable
     assert hasattr(store, "verify_spec")
     assert callable(store.verify_spec)
+
+
+@pytest.mark.db
+def test_verification_metadata_persists_and_feeds_reports(migrated: None) -> None:
+    """Regression: Spec.content was a plain JSONB column, so
+    spec.content["_verification_metadata"] = {...} (an in-place dict
+    mutation) was never dirty-tracked by SQLAlchemy and silently never
+    committed. avg_confidence/confidence distribution always read back 0/empty
+    no matter how many specs were verified. Caught by re-querying in a fresh
+    session instead of trusting the same Python object the test created."""
+    AnalysisSession = db.analysis_session()
+    SpecSession = db.spec_session()
+
+    with AnalysisSession() as s:
+        repo = db.Repo(name="verify-meta-repo", source="/tmp/verify-meta-repo")
+        s.add(repo)
+        s.flush()
+
+        file = db.File(
+            repo_id=repo.id, path="a.py", language="python", content_hash="x", loc=10
+        )
+        s.add(file)
+        s.flush()
+
+        s.add(
+            db.Node(
+                repo_id=repo.id,
+                file_id=file.id,
+                language="python",
+                kind="function",
+                name="f",
+                qualified_name="a.f",
+                signature="def f():",
+                docstring="Docstring for grounding.",
+                start_line=1,
+                end_line=2,
+            )
+        )
+        s.commit()
+
+    with SpecSession() as s:
+        SpecStore(s).create(
+            user_id="default",
+            repo="verify-meta-repo",
+            component_ref="a.f",
+            spec_content={"purpose": "Docstring for grounding."},
+            provenance=[{"file": "a.py", "start_line": 1, "end_line": 2}],
+            status="draft",
+        )
+
+    with SpecSession() as spec_s, AnalysisSession() as analysis_s:
+        SpecStore(spec_s).verify_spec(
+            user_id="default",
+            repo="verify-meta-repo",
+            component_ref="a.f",
+            version=1,
+            analysis_session=analysis_s,
+        )
+
+    # Fresh sessions: no identity-map carryover from the verify call above.
+    with SpecSession() as fresh:
+        from spec_atlas.db.spec import Spec
+
+        spec = (
+            fresh.query(Spec)
+            .filter(Spec.repo == "verify-meta-repo", Spec.component_ref == "a.f")
+            .first()
+        )
+        assert "_verification_metadata" in spec.content
+        assert spec.content["_verification_metadata"]["confidence"] > 0
+
+        report = SpecStore(fresh).get_verification_report("default", "verify-meta-repo")
+        assert report["avg_confidence"] > 0
+
+        distribution = SpecStore(fresh).get_confidence_distribution(
+            "default", "verify-meta-repo"
+        )
+        assert sum(distribution["counts"]) >= 1

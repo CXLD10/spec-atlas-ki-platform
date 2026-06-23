@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { GraphNode } from './IsoGraph'
-import { client } from '../../api/client'
+import type { LayeredGraphNode, LayeredGraphEdge } from '../../api/client'
 import './Inspector.css'
 
 const LAYER_LABELS: Record<string, string> = {
@@ -19,48 +17,14 @@ interface Neighbor {
 }
 
 interface InspectorProps {
-  node: GraphNode | null
-  allNodes: GraphNode[]
-  onSelectNode: (node: GraphNode) => void
+  node: LayeredGraphNode | null
+  allNodes: LayeredGraphNode[]
+  allEdges: LayeredGraphEdge[]
+  onSelectNode: (node: LayeredGraphNode) => void
 }
 
-export function Inspector({ node, allNodes, onSelectNode }: InspectorProps) {
+export function Inspector({ node, allNodes, allEdges, onSelectNode }: InspectorProps) {
   const navigate = useNavigate()
-  const [neighbors, setNeighbors] = useState<Neighbor[]>([])
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (!node) { setNeighbors([]); return }
-
-    let cancelled = false
-    setLoading(true)
-
-    const run = async () => {
-      const data = await client.getSubgraph(node.id, 1)
-      const edges = data.edges
-      const nodeMap: Record<string, { id: string; label: string; layer: string }> = {}
-      for (const n of data.nodes) nodeMap[n.id] = n
-
-      if (cancelled) return
-
-      const list: Neighbor[] = []
-      for (const e of edges) {
-        if (e.s === node.id && nodeMap[e.d]) {
-          const t = nodeMap[e.d]
-          list.push({ id: t.id, label: t.label, layer: t.layer as Neighbor['layer'], kind: e.kind, dir: 'out' })
-        } else if (e.d === node.id && nodeMap[e.s]) {
-          const t = nodeMap[e.s]
-          list.push({ id: t.id, label: t.label, layer: t.layer as Neighbor['layer'], kind: e.kind, dir: 'in' })
-        }
-      }
-
-      setNeighbors(list)
-      setLoading(false)
-    }
-
-    run().catch(() => setLoading(false))
-    return () => { cancelled = true }
-  }, [node?.id])
 
   if (!node) {
     return (
@@ -78,16 +42,28 @@ export function Inspector({ node, allNodes, onSelectNode }: InspectorProps) {
     )
   }
 
-  // Derive kb ref from node id: card-foo-bar → foo-bar, or just use id
+  // Neighbors are computed from the already-fetched graph — no extra request.
+  const nodeMap = new Map(allNodes.map((n) => [n.id, n]))
+  const neighbors: Neighbor[] = []
+  for (const e of allEdges) {
+    if (e.source === node.id && nodeMap.has(e.target)) {
+      const t = nodeMap.get(e.target)!
+      neighbors.push({ id: t.id, label: t.label, layer: t.layer, kind: e.kind, dir: 'out' })
+    } else if (e.target === node.id && nodeMap.has(e.source)) {
+      const t = nodeMap.get(e.source)!
+      neighbors.push({ id: t.id, label: t.label, layer: t.layer, kind: e.kind, dir: 'in' })
+    }
+  }
+
   const isCard = node.layer === 'L3'
-  const kbRef = node.id.startsWith('card-') ? node.id.slice(5) : node.id
+  const kbRef = node.qualified_name || node.label
 
   return (
     <aside className="inspector">
       <header className="inspector-header">
         <span className={`inspector-tag inspector-tag--${node.layer.toLowerCase()}`}>{node.layer}</span>
         <h2 className="inspector-title">{node.label}</h2>
-        <code className="inspector-id">{node.id}</code>
+        <code className="inspector-id">{node.kind}{node.file_path ? ` · ${node.file_path}` : ''}</code>
       </header>
 
       <div className="inspector-body">
@@ -97,23 +73,19 @@ export function Inspector({ node, allNodes, onSelectNode }: InspectorProps) {
         </section>
 
         <section className="inspector-section">
-          <h3 className="inspector-section-label">
-            Neighbors
-            {loading && <span className="inspector-spinner"> ···</span>}
-          </h3>
-          {!loading && neighbors.length === 0 && (
+          <h3 className="inspector-section-label">Neighbors</h3>
+          {neighbors.length === 0 && (
             <p className="inspector-dim">No edges in current view.</p>
           )}
           <div className="inspector-neighbor-list">
             {neighbors.map((nb, i) => {
-              const graphNode = allNodes.find((n) => n.id === nb.id)
+              const graphNode = nodeMap.get(nb.id)
               return (
                 <button
                   key={`${nb.id}-${i}`}
-                  className={`inspector-neighbor ${!graphNode ? 'inspector-neighbor--faded' : ''}`}
+                  className="inspector-neighbor"
                   onClick={() => graphNode && onSelectNode(graphNode)}
-                  disabled={!graphNode}
-                  title={graphNode ? `Select ${nb.label}` : 'Not in current view'}
+                  title={`Select ${nb.label}`}
                 >
                   <span className={`inspector-nb-dot inspector-nb-dot--${nb.layer.toLowerCase()}`} />
                   <span className="inspector-nb-kind">{nb.kind}</span>
@@ -136,7 +108,7 @@ export function Inspector({ node, allNodes, onSelectNode }: InspectorProps) {
         <button
           className={`inspector-btn inspector-btn--ghost ${!isCard ? 'inspector-btn--disabled' : ''}`}
           disabled={!isCard}
-          onClick={() => isCard && navigate(`/kb/${kbRef}`)}
+          onClick={() => isCard && navigate(`/kb/${encodeURIComponent(kbRef)}`)}
           title={!isCard ? 'Only available for L3 Knowledge Card nodes' : `Open card: ${kbRef}`}
         >
           Open Knowledge Card

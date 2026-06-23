@@ -13,7 +13,7 @@ export function Dashboard() {
   const stats = {
     entities: sources.reduce((sum, s) => sum + s.stats.entities, 0),
     cards: sources.reduce((sum, s) => sum + s.stats.cards, 0),
-    domains: Math.ceil(sources.length * 0.3), // Mock: ~30% of sources become domains
+    domains: sources.reduce((sum, s) => sum + s.stats.domains, 0),
   }
 
   const handleAddSource = () => {
