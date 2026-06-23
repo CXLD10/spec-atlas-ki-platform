@@ -12,6 +12,7 @@ import SpecifyTool from '../pages/SpecifyTool'
 import SpecView from '../pages/SpecView'
 import Docs from '../pages/Docs'
 import Dashboard from '../pages/Dashboard'
+import Graph from '../pages/Graph'
 import IndexProgress from '../pages/IndexProgress'
 import Sources from '../pages/Sources'
 import SourceDetail from '../pages/SourceDetail'
@@ -41,7 +42,7 @@ export function App() {
               <Route path="/sources/:id" element={<SourceDetail />} />
               <Route path="/kb" element={<KnowledgeBase />} />
               <Route path="/kb/:ref" element={<KnowledgeCard />} />
-              <Route path="/graph" element={<RepoGraphify />} />
+              <Route path="/graph" element={<Graph />} />
               <Route path="/ask" element={<RepoAsk />} />
               <Route path="/specify" element={<SpecifyTool />} />
               <Route path="/mcp" element={<Dashboard />} />

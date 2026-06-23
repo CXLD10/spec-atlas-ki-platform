@@ -176,6 +176,23 @@ export const client = {
     if (page) params.append('page', String(page))
     return request<{ snippet: string }>('GET', `/api/source-snippet?${params.toString()}`)
   },
+
+  /**
+   * Get a subgraph of nodes and edges.
+   * BACKEND-DEP: GET /api/graph/subgraph?node_id=&max_depth=2
+   */
+  async getSubgraph(nodeId?: string, maxDepth: number = 2): Promise<{
+    nodes: Array<{ id: string; label: string; layer: string; _x: number; _y: number; _z: number }>
+    edges: Array<{ s: string; d: string; kind: string; layer: string; inter?: boolean }>
+  }> {
+    const params = new URLSearchParams()
+    if (nodeId) params.append('node_id', nodeId)
+    params.append('max_depth', String(maxDepth))
+    return request(
+      'GET',
+      `/api/graph/subgraph?${params.toString()}`
+    )
+  },
 }
 
 export type { Source, KnowledgeCard, JobStatus, AskResponse }
