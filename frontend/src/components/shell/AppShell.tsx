@@ -6,7 +6,7 @@ import './AppShell.css'
 
 export function AppShell() {
   const { collapsed } = useSidebar()
-  const railWidth = collapsed ? '40px' : '248px'
+  const railWidth = collapsed ? '50px' : '248px'
 
   return (
     <div className="app-shell" style={{ '--rail': railWidth } as React.CSSProperties}>

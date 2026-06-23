@@ -1,7 +1,7 @@
 .sidebar {
   background: transparent;
   border: none;
-  width: var(--rail, 40px);
+  width: var(--rail, 50px);
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -18,7 +18,7 @@
 }
 
 .sidebar.collapsed {
-  width: var(--rail, 40px) !important;
+  width: var(--rail, 50px) !important;
 }
 
 .sidebar-header {
@@ -57,6 +57,10 @@
   margin: 0;
   flex-shrink: 0;
   box-sizing: border-box;
+  position: fixed;
+  left: 2px;
+  top: 12px;
+  z-index: 101;
 }
 
 .sidebar-hamburger:hover {
