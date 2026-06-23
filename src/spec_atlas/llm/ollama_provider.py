@@ -39,7 +39,7 @@ class OllamaProvider(LLMProvider):
         prompt = self._format_messages(messages)
 
         try:
-            async with httpx.AsyncClient(timeout=120) as client:
+            async with httpx.AsyncClient(timeout=300) as client:
                 response = await client.post(
                     f"{self.base_url}/api/generate",
                     json={
@@ -47,6 +47,7 @@ class OllamaProvider(LLMProvider):
                         "prompt": prompt,
                         "stream": False,
                         "temperature": temperature,
+                        "num_predict": 4096,
                     },
                 )
             response.raise_for_status()
@@ -92,16 +93,21 @@ class GroqProvider(LLMProvider):
     ) -> str | dict:
         """Generate a completion using Groq's chat completions endpoint."""
         try:
-            async with httpx.AsyncClient(timeout=60) as client:
+            async with httpx.AsyncClient(timeout=120) as client:
+                payload = {
+                    "model": self.model,
+                    "messages": list(messages),
+                    "temperature": temperature,
+                    "max_tokens": 4096,
+                }
+                # Groq supports response_format for JSON output (OpenAI-compatible)
+                if schema:
+                    payload["response_format"] = {"type": "json_object"}
+
                 response = await client.post(
                     self.API_URL,
                     headers={"Authorization": f"Bearer {self.api_key}"},
-                    json={
-                        "model": self.model,
-                        "messages": list(messages),
-                        "temperature": temperature,
-                        "max_tokens": 2048,
-                    },
+                    json=payload,
                 )
             response.raise_for_status()
         except httpx.HTTPError as e:
