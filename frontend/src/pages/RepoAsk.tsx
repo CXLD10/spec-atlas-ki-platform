@@ -230,8 +230,8 @@ export function RepoAsk() {
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-        <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 scroll-smooth" style={{ scrollBehavior: 'smooth' }}>
+        <div className="max-w-4xl mx-auto space-y-6 flex flex-col">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full min-h-96 text-center">
               <h2 className="text-xl font-semibold text-white mb-2">What would you like to know?</h2>
