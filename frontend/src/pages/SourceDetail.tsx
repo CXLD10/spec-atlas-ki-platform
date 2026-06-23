@@ -74,14 +74,16 @@ export function SourceDetail() {
             <RefreshCw size={16} style={{ animation: isReingestingLoading ? 'spin 1s linear infinite' : 'none' }} />
             {isReingestingLoading ? 'Reingesting...' : 'Re-ingest'}
           </button>
-          <button
-            className="specify-btn"
-            onClick={() => navigate(`/specify?repo=${encodeURIComponent(source.name)}&entity=${encodeURIComponent(source.name)}`)}
-            title="Generate knowledge cards for this source"
-          >
-            <Zap size={16} />
-            Specify
-          </button>
+          {source.type === 'repo' && (
+            <button
+              className="specify-btn"
+              onClick={() => navigate(`/specify?repo=${encodeURIComponent(source.name)}&entity=${encodeURIComponent(source.name)}`)}
+              title="Generate knowledge cards for this source"
+            >
+              <Zap size={16} />
+              Specify
+            </button>
+          )}
         </div>
       </div>
 

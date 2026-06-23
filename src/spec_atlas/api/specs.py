@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy.orm import Session
 
-from spec_atlas.db.analysis import Edge, File, Node
+from spec_atlas.db.analysis import Edge, File, Node, Repo, SourceUnit
+from spec_atlas.ingest.handlers import DocumentSpecGenerator
 from spec_atlas.spec.store import SpecStore
 from spec_atlas.specify.engine import SpecifyEngine, flatten_provenance
 
@@ -184,9 +185,10 @@ async def save_project_notes(
 ) -> dict:
     """Save research notes for project."""
     # Store notes as a special spec document
-    from datetime import datetime
-    from spec_atlas.db.spec import Spec as SpecModel
     import uuid
+    from datetime import datetime
+
+    from spec_atlas.db.spec import Spec as SpecModel
 
     notes_spec = SpecModel(
         id=uuid.uuid4(),
@@ -401,11 +403,16 @@ def generate_spec(
 ) -> GenerateSpecResponse:
     """Generate or retrieve a spec for a component (generate-on-demand).
 
+    Handles both code components and document sources.
+
     If spec exists: return cached (no LLM call).
     If not: generate via LLM, persist as v1, return.
 
+    For documents: component_ref is the document source_id (e.g., "doc.pdf").
+    For code: component_ref is the qualified name (e.g., "auth.authenticate").
+
     Args:
-        component_ref: Component reference (qualified name).
+        component_ref: Component reference (qualified name) or document source_id.
         repo: Repository name.
         spec_session: Spec DB session.
         analysis_session: Analysis DB session.
@@ -432,44 +439,78 @@ def generate_spec(
     logger.info(f"Generating spec for {component_ref}")
 
     try:
-        # Fetch focal node from analysis DB
+        # Detect source type: is this a document or a code component?
+        # First try to find as a code node
         focal_node = (
             analysis_session.query(Node).filter(Node.qualified_name == component_ref).first()
         )
 
-        if not focal_node:
-            raise HTTPException(
-                status_code=404, detail=f"Component not found: {component_ref}"
-            ) from None
+        if focal_node:
+            # Code component spec generation
+            logger.info(f"Generating code spec for {component_ref}")
 
-        # Fetch neighbors (related nodes) and edges
-        neighbors = (
-            analysis_session.query(Node)
-            .join(
-                Edge,
-                (Edge.src_node_id == Node.id) | (Edge.dst_node_id == Node.id),
+            # Fetch neighbors (related nodes) and edges
+            neighbors = (
+                analysis_session.query(Node)
+                .join(
+                    Edge,
+                    (Edge.src_node_id == Node.id) | (Edge.dst_node_id == Node.id),
+                )
+                .filter((Edge.src_node_id == focal_node.id) | (Edge.dst_node_id == focal_node.id))
+                .limit(20)
+                .all()
             )
-            .filter((Edge.src_node_id == focal_node.id) | (Edge.dst_node_id == focal_node.id))
-            .limit(20)
-            .all()
-        )
 
-        edges = (
-            analysis_session.query(Edge)
-            .filter((Edge.src_node_id == focal_node.id) | (Edge.dst_node_id == focal_node.id))
-            .limit(10)
-            .all()
-        )
+            edges = (
+                analysis_session.query(Edge)
+                .filter((Edge.src_node_id == focal_node.id) | (Edge.dst_node_id == focal_node.id))
+                .limit(10)
+                .all()
+            )
 
-        # Generate spec via LLM
-        focal_file = analysis_session.query(File).filter(File.id == focal_node.file_id).first()
-        spec_content, provenance = SpecifyEngine.generate(
-            focal_node=focal_node,
-            neighbors=neighbors,
-            edges=edges,
-            llm_provider=llm_provider,
-            focal_file_path=focal_file.path if focal_file else None,
-        )
+            # Generate spec via LLM
+            focal_file = analysis_session.query(File).filter(File.id == focal_node.file_id).first()
+            spec_content, provenance = SpecifyEngine.generate(
+                focal_node=focal_node,
+                neighbors=neighbors,
+                edges=edges,
+                llm_provider=llm_provider,
+                focal_file_path=focal_file.path if focal_file else None,
+            )
+
+        else:
+            # Try document source spec generation
+            logger.info(f"Attempting document spec generation for {component_ref}")
+
+            # Get the repository to determine if it's a document
+            repo_record = analysis_session.query(Repo).filter(Repo.name == repo).first()
+            if not repo_record:
+                raise HTTPException(
+                    status_code=404, detail=f"Repository not found: {repo}"
+                ) from None
+
+            # For documents, component_ref should be the source_id
+            # Try to find a source unit with this source_id
+            source_unit = (
+                analysis_session.query(SourceUnit)
+                .filter(
+                    SourceUnit.repo_id == repo_record.id,
+                    SourceUnit.source_id == component_ref,
+                )
+                .first()
+            )
+
+            if not source_unit:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Component or document not found: {component_ref}",
+                ) from None
+
+            # Generate document spec via LLM
+            spec_content, provenance = DocumentSpecGenerator.analyze_document(
+                source_unit=source_unit,
+                llm_provider=llm_provider,
+            )
 
         # Persist the spec (version=1, status=draft)
         spec = store.create(
