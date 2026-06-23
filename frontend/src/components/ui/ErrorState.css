@@ -1,0 +1,92 @@
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem 2rem;
+  text-align: center;
+  min-height: 300px;
+}
+
+.error-state-icon {
+  color: var(--rose);
+  opacity: 0.6;
+}
+
+.error-state-title {
+  margin: 0;
+  font-family: var(--disp);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--rose);
+}
+
+.error-state-message {
+  margin: 0;
+  max-width: 400px;
+  font-size: 0.95rem;
+  color: var(--mid);
+  line-height: 1.6;
+}
+
+.error-state-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.error-state-btn {
+  padding: 0.625rem 1.125rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.error-state-btn:hover {
+  background: #5aa3ff;
+}
+
+.error-state-btn--secondary {
+  background: var(--border-soft);
+  color: var(--mid);
+  border: 1px solid var(--border);
+}
+
+.error-state-btn--secondary:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+@media (max-width: 768px) {
+  .error-state {
+    padding: 2rem 1rem;
+    min-height: 200px;
+  }
+
+  .error-state-title {
+    font-size: 1.1rem;
+  }
+
+  .error-state-message {
+    font-size: 0.9rem;
+  }
+
+  .error-state-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .error-state-btn,
+  .error-state-btn--secondary {
+    width: 100%;
+  }
+}

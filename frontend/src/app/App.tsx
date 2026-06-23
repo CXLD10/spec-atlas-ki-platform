@@ -1,27 +1,36 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Suspense, lazy } from 'react'
 import { ThemeProvider } from './theme/ThemeProvider'
 import { AppShell } from '../components/shell/AppShell'
 import Landing from '../pages/Landing'
 import Projects from '../pages/Projects'
-import Ask from '../pages/Ask'
 import RepoAsk from '../pages/RepoAsk'
 import RepoExplore from '../pages/RepoExplore'
 import RepoSpec from '../pages/RepoSpec'
 import RepoGraphify from '../pages/RepoGraphify'
-import Specify from '../pages/Specify'
 import SpecifyTool from '../pages/SpecifyTool'
 import SpecView from '../pages/SpecView'
-import Docs from '../pages/Docs'
-import Dashboard from '../pages/Dashboard'
-import Graph from '../pages/Graph'
 import IndexProgress from '../pages/IndexProgress'
+import Dashboard from '../pages/Dashboard'
 import Sources from '../pages/Sources'
 import SourceDetail from '../pages/SourceDetail'
-import KnowledgeBase from '../pages/KnowledgeBase'
-import KnowledgeCard from '../pages/KnowledgeCard'
-import MCPServer from '../pages/MCPServer'
 import '../styles/global.css'
+
+// Code-split heavy routes
+const Ask = lazy(() => import('../pages/Ask'))
+const Specify = lazy(() => import('../pages/Specify'))
+const Docs = lazy(() => import('../pages/Docs'))
+const Graph = lazy(() => import('../pages/Graph'))
+const KnowledgeBase = lazy(() => import('../pages/KnowledgeBase'))
+const KnowledgeCard = lazy(() => import('../pages/KnowledgeCard'))
+const MCPServer = lazy(() => import('../pages/MCPServer'))
+
+const PageLoader = () => (
+  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--mid)' }}>
+    Loading…
+  </div>
+)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,13 +52,13 @@ export function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/sources" element={<Sources />} />
               <Route path="/sources/:id" element={<SourceDetail />} />
-              <Route path="/kb" element={<KnowledgeBase />} />
-              <Route path="/kb/:ref" element={<KnowledgeCard />} />
-              <Route path="/graph" element={<Graph />} />
-              <Route path="/ask" element={<Ask />} />
-              <Route path="/specify" element={<Specify />} />
-              <Route path="/mcp" element={<MCPServer />} />
-              <Route path="/docs" element={<Docs />} />
+              <Route path="/kb" element={<Suspense fallback={<PageLoader />}><KnowledgeBase /></Suspense>} />
+              <Route path="/kb/:ref" element={<Suspense fallback={<PageLoader />}><KnowledgeCard /></Suspense>} />
+              <Route path="/graph" element={<Suspense fallback={<PageLoader />}><Graph /></Suspense>} />
+              <Route path="/ask" element={<Suspense fallback={<PageLoader />}><Ask /></Suspense>} />
+              <Route path="/specify" element={<Suspense fallback={<PageLoader />}><Specify /></Suspense>} />
+              <Route path="/mcp" element={<Suspense fallback={<PageLoader />}><MCPServer /></Suspense>} />
+              <Route path="/docs" element={<Suspense fallback={<PageLoader />}><Docs /></Suspense>} />
               <Route path="/index/:jobId" element={<IndexProgress />} />
 
               {/* Backward compatibility / old repo-scoped routes */}
