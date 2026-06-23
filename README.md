@@ -376,8 +376,7 @@ MIT — See LICENSE file.
 
 ## Author
 
-**Joshua Joseph** (CXLD10)  
-Engineered by Claude (Anthropic)
+**Joshua Jom** (CXLD10)  
 
 ---
 
