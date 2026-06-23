@@ -5,7 +5,7 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   transition: width 0.3s ease;
   overflow: hidden;
   box-sizing: border-box;
@@ -14,6 +14,7 @@
   left: 0;
   top: 0;
   z-index: 100;
+  padding: 0;
 }
 
 .sidebar-header {
@@ -28,6 +29,7 @@
   width: 100%;
   background: transparent;
   box-sizing: border-box;
+  padding-left: 2px;
 }
 
 .sidebar:not(.collapsed) .sidebar-header {
@@ -77,7 +79,7 @@
   transition: all 0.2s ease;
   flex-shrink: 0;
   box-sizing: border-box;
-  margin: 2px auto;
+  margin: 2px;
 }
 
 .sidebar:not(.collapsed) .sidebar-home {
@@ -190,7 +192,7 @@
   text-decoration: none;
   transition: all 0.2s ease;
   border-left: none;
-  margin: 2px auto;
+  margin: 2px;
   flex-shrink: 0;
   box-sizing: border-box;
 }
