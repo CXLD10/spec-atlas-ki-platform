@@ -1,7 +1,7 @@
 .sidebar {
-  background: transparent !important;
+  background: transparent;
   border: none;
-  width: var(--rail, 40px) !important;
+  width: var(--rail, 40px);
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -15,6 +15,10 @@
   top: 0;
   z-index: 100;
   padding: 0;
+}
+
+.sidebar.collapsed {
+  width: var(--rail, 40px) !important;
 }
 
 .sidebar-header {
@@ -118,7 +122,7 @@
 
 /* EXPANDED state (not collapsed) */
 .sidebar:not(.collapsed) {
-  width: 248px;
+  width: 248px !important;
   background: rgba(13, 17, 23, 0.95);
   backdrop-filter: blur(8px);
   border-right: 1px solid rgba(255, 255, 255, 0.1);
