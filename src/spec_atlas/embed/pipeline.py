@@ -167,7 +167,7 @@ class EmbeddingPipeline:
         # Fetch all current specs for the repo
         specs = (
             spec_session.query(Spec)
-            .filter(Spec.user_id == user_id, Spec.repo == repo.name, Spec.valid_to.is_(None))
+            .filter(Spec.session_id == user_id, Spec.repo == repo.name, Spec.valid_to.is_(None))
             .all()
         )
 

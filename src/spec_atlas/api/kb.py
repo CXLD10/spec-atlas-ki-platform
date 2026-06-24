@@ -77,7 +77,7 @@ def _spec_to_card(spec: Spec, session: Session) -> KnowledgeCardResponse:
         for edge in (
             session.query(SpecEdge)
             .filter(
-                SpecEdge.user_id == spec.user_id,
+                SpecEdge.session_id == spec.session_id,
                 SpecEdge.repo == spec.repo,
                 SpecEdge.src_component_ref == spec.component_ref,
             )

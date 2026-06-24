@@ -55,7 +55,7 @@ class SpecStore:
             self.session.query(func.max(Spec.version))
             .filter(
                 and_(
-                    Spec.user_id == user_id,
+                    Spec.session_id == user_id,
                     Spec.repo == repo,
                     Spec.component_ref == component_ref,
                 )
@@ -115,7 +115,7 @@ class SpecStore:
             self.session.query(Spec)
             .filter(
                 and_(
-                    Spec.user_id == user_id,
+                    Spec.session_id == user_id,
                     Spec.repo == repo,
                     Spec.component_ref == component_ref,
                     Spec.valid_to.is_(None),  # current version
@@ -140,7 +140,7 @@ class SpecStore:
             self.session.query(Spec)
             .filter(
                 and_(
-                    Spec.user_id == user_id,
+                    Spec.session_id == user_id,
                     Spec.repo == repo,
                     Spec.component_ref == component_ref,
                     Spec.version == version,
@@ -164,7 +164,7 @@ class SpecStore:
             self.session.query(Spec)
             .filter(
                 and_(
-                    Spec.user_id == user_id,
+                    Spec.session_id == user_id,
                     Spec.repo == repo,
                     Spec.component_ref == component_ref,
                 )
@@ -209,7 +209,7 @@ class SpecStore:
             self.session.query(SpecEdge)
             .filter(
                 and_(
-                    SpecEdge.user_id == user_id,
+                    SpecEdge.session_id == user_id,
                     SpecEdge.repo == repo,
                     SpecEdge.src_component_ref == src_component_ref,
                 )
@@ -328,7 +328,7 @@ class SpecStore:
             self.session.query(Spec)
             .filter(
                 and_(
-                    Spec.user_id == user_id,
+                    Spec.session_id == user_id,
                     Spec.repo == repo,
                     Spec.valid_to.is_(None),  # current versions only
                 )
@@ -386,7 +386,7 @@ class SpecStore:
             self.session.query(Spec)
             .filter(
                 and_(
-                    Spec.user_id == user_id,
+                    Spec.session_id == user_id,
                     Spec.repo == repo,
                     Spec.valid_to.is_(None),  # current versions only
                 )
@@ -422,7 +422,7 @@ class SpecStore:
             self.session.query(Spec)
             .filter(
                 and_(
-                    Spec.user_id == user_id,
+                    Spec.session_id == user_id,
                     Spec.repo == repo,
                     Spec.valid_to.is_(None),  # current versions only
                 )

@@ -576,7 +576,7 @@ def get_spec_graph(
     dependencies = (
         session.query(SpecEdge)
         .filter(
-            SpecEdge.user_id == "default",
+            SpecEdge.session_id == "default",
             SpecEdge.repo == repo,
             SpecEdge.src_component_ref == component_ref,
         )
@@ -587,7 +587,7 @@ def get_spec_graph(
     dependents = (
         session.query(SpecEdge)
         .filter(
-            SpecEdge.user_id == "default",
+            SpecEdge.session_id == "default",
             SpecEdge.repo == repo,
             SpecEdge.dst_component_ref == component_ref,
         )

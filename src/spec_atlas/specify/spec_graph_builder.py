@@ -122,7 +122,7 @@ class SpecGraphBuilder:
                     existing_edge = (
                         spec_session.query(SpecEdge)
                         .filter(
-                            SpecEdge.user_id == user_id,
+                            SpecEdge.session_id == user_id,
                             SpecEdge.repo == repo_name,
                             SpecEdge.src_component_ref == src_spec_ref,
                             SpecEdge.dst_component_ref == dst_spec_ref,
