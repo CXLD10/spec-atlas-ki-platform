@@ -9,7 +9,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from spec_atlas.session.manager import SessionManager
-from spec_atlas.db.analysis import get_analysis_session
+from spec_atlas.db import get_analysis_session
 
 logger = logging.getLogger(__name__)
 

@@ -45,6 +45,8 @@ __all__ = [
     "spec_engine",
     "analysis_session",
     "spec_session",
+    "get_analysis_session",
+    "get_spec_session",
 ]
 
 
@@ -78,3 +80,13 @@ def analysis_session(settings: Settings | None = None) -> sessionmaker[Session]:
 
 def spec_session(settings: Settings | None = None) -> sessionmaker[Session]:
     return sessionmaker(bind=spec_engine(settings), expire_on_commit=False, future=True)
+
+
+def get_analysis_session(settings: Settings | None = None) -> Session:
+    """Get a new session instance for the Analysis DB."""
+    return analysis_session(settings)()
+
+
+def get_spec_session(settings: Settings | None = None) -> Session:
+    """Get a new session instance for the Spec DB."""
+    return spec_session(settings)()
