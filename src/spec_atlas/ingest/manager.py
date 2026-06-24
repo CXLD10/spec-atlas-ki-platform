@@ -40,13 +40,14 @@ PHASE_PROGRESS = {
 }
 
 # Default estimated durations (in seconds) for each phase if no history
+# Note: "specs" is higher due to Groq free-tier rate limiting (1.5s throttle between requests)
 DEFAULT_PHASE_DURATIONS = {
     "resolve": 30,
     "inventory": 20,
     "languages": 3,
     "symbols": 10,
     "edges": 10,
-    "specs": 30,
+    "specs": 240,  # 35 specs × 1.5s delay + LLM time ≈ 3-5 min
     "groups": 15,
     "summarize": 30,
     "embed": 10,

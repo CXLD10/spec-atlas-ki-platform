@@ -80,6 +80,14 @@ class Phase6SpecGenerator:
 
         # Phase 3: Batch and generate specs
         print(f"[Phase 6] Generating specs in batches of {self.batch_size}...")
+
+        # Show ETA accounting for rate limit throttling
+        delay_time = (len(selected_entities) - 1) * 1.5  # 1.5s between specs
+        llm_time_estimate = len(selected_entities) * 5  # ~5s per LLM call
+        total_eta = delay_time + llm_time_estimate
+        print(f"  ⏱️  Rate-limited to ~1 request/1.5s to avoid Groq free-tier limits")
+        print(f"  ⏱️  ETA: {int(total_eta)}s (~{int(total_eta/60)} min) for {len(selected_entities)} specs")
+
         specs = self._generate_specs_batched(
             session,
             repo,
@@ -108,7 +116,10 @@ class Phase6SpecGenerator:
         Returns:
             List of (spec, provenance) tuples.
         """
+        import time
+
         all_specs = []
+        spec_count = 0
 
         # Batch into groups of batch_size
         for batch_idx in range(0, len(selected_entities), self.batch_size):
@@ -117,6 +128,10 @@ class Phase6SpecGenerator:
 
             for selected in batch:
                 try:
+                    # Small delay between requests to avoid rate limits on free tier
+                    if spec_count > 0:
+                        time.sleep(1.5)
+
                     # Fetch focal node from DB
                     focal_node = (
                         session.query(Node).filter(Node.id == selected.node_id).first()
@@ -151,6 +166,7 @@ class Phase6SpecGenerator:
                     )
 
                     all_specs.append((spec, provenance))
+                    spec_count += 1
                     print(f"    ✓ {selected.qualified_name} ({selected.reason})")
 
                 except Exception as e:

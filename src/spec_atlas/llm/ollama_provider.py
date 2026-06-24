@@ -90,28 +90,59 @@ class GroqProvider(LLMProvider):
         messages: list[Message],
         schema: dict | None = None,
         temperature: float = 0.7,
+        retries: int = 3,
     ) -> str | dict:
-        """Generate a completion using Groq's chat completions endpoint."""
-        try:
-            async with httpx.AsyncClient(timeout=120) as client:
-                payload = {
-                    "model": self.model,
-                    "messages": list(messages),
-                    "temperature": temperature,
-                    "max_tokens": 4096,
-                }
-                # Groq supports response_format for JSON output (OpenAI-compatible)
-                if schema:
-                    payload["response_format"] = {"type": "json_object"}
+        """Generate a completion using Groq's chat completions endpoint.
 
-                response = await client.post(
-                    self.API_URL,
-                    headers={"Authorization": f"Bearer {self.api_key}"},
-                    json=payload,
-                )
-            response.raise_for_status()
-        except httpx.HTTPError as e:
-            raise RuntimeError(f"Groq error: {e}") from e
+        Retries on 429 (rate limit) with exponential backoff; fails immediately on 401.
+        """
+        import asyncio
+
+        payload = {
+            "model": self.model,
+            "messages": list(messages),
+            "temperature": temperature,
+            "max_tokens": 4096,
+        }
+        if schema:
+            payload["response_format"] = {"type": "json_object"}
+
+        for attempt in range(retries):
+            try:
+                async with httpx.AsyncClient(timeout=120) as client:
+                    response = await client.post(
+                        self.API_URL,
+                        headers={"Authorization": f"Bearer {self.api_key}"},
+                        json=payload,
+                    )
+
+                if response.status_code == 401:
+                    try:
+                        error_data = response.json()
+                        error_msg = error_data.get("error", {}).get("message", "Unauthorized")
+                        raise RuntimeError(f"Groq API authentication failed (401): {error_msg}. Check your GROQ_API_KEY.")
+                    except (json.JSONDecodeError, KeyError):
+                        raise RuntimeError(f"Groq API authentication failed (401). Check your GROQ_API_KEY is valid and not expired.")
+
+                if response.status_code == 429:
+                    if attempt < retries - 1:
+                        wait_secs = 2 ** attempt  # 1s, 2s, 4s
+                        print(f"Groq rate limited (429). Retrying in {wait_secs}s (attempt {attempt + 1}/{retries})...")
+                        await asyncio.sleep(wait_secs)
+                        continue
+                    else:
+                        raise RuntimeError(f"Groq rate limited (429). Hit max retries ({retries}). Try again in a moment.")
+
+                response.raise_for_status()
+                break
+
+            except httpx.HTTPError as e:
+                if attempt < retries - 1:
+                    wait_secs = 2 ** attempt
+                    print(f"Groq request failed: {e}. Retrying in {wait_secs}s...")
+                    await asyncio.sleep(wait_secs)
+                    continue
+                raise RuntimeError(f"Groq error: {e}") from e
 
         text = response.json()["choices"][0]["message"]["content"]
 
