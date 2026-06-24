@@ -68,11 +68,10 @@ def health(request: Request, response: Response) -> dict[str, Any]:
     analysis_db = _check_database(analysis_factory)
     spec_db = _check_database(spec_factory)
     llm = _provider_status(llm_provider, settings.llm_provider, {"model": settings.llm_model})
-    embed = _provider_status(
-        embed_provider,
-        settings.embed_provider,
-        {"model": settings.embed_model, "dim": embed_provider.dim},
-    )
+    embed_details = {"model": settings.embed_model}
+    if embed_provider is not None:
+        embed_details["dim"] = embed_provider.dim
+    embed = _provider_status(embed_provider, settings.embed_provider, embed_details)
 
     overall_status = (
         "ok" if analysis_db["status"] == "ok" and spec_db["status"] == "ok" else "degraded"

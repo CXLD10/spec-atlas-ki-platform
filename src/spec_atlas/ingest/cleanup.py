@@ -6,7 +6,8 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 
-from spec_atlas.db.analysis import Session, get_analysis_session
+from spec_atlas.db import get_analysis_session
+from spec_atlas.db.analysis import Session
 
 logger = logging.getLogger(__name__)
 
