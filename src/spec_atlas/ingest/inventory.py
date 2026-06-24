@@ -18,6 +18,7 @@ class FileInventory:
         repo_metadata,
         file_paths: list[str],
         analysis_db_session: Session,
+        session_id=None,
     ) -> tuple[Repo, list[File]]:
         """Scan files, compute hashes/LOC, upsert to DB.
 
@@ -43,6 +44,7 @@ class FileInventory:
 
         if repo is None:
             repo = Repo(
+                session_id=session_id,
                 name=repo_metadata.name,
                 source=repo_metadata.source,
                 default_branch=repo_metadata.default_branch,

@@ -197,7 +197,7 @@ def _to_job_status(job) -> JobStatus:
 
 
 def _run_ingest_sync(
-    job_id: str, repo_url: str, session_factory, spec_session_factory=None, llm_provider=None
+    job_id: str, repo_url: str, session_factory, spec_session_factory=None, llm_provider=None, session_id=None
 ) -> None:
     """Synchronous ingest work: resolve, inventory, detect languages, parse, cluster, embed,
     spec, and build graphs.
@@ -224,7 +224,7 @@ def _run_ingest_sync(
         repo_metadata = RepoResolver.resolve_git(repo_url)
         _update_phase_progress(session, job_id, "inventory", 40)
 
-        repo, files = FileInventory.scan(repo_metadata, repo_metadata.file_paths, session)
+        repo, files = FileInventory.scan(repo_metadata, repo_metadata.file_paths, session, session_id)
 
         # Harvest recent commits and persist on the Repo row so GET /api/git/history
         # can serve real data without requiring the ephemeral clone to still exist.
@@ -347,11 +347,11 @@ def _run_ingest_sync(
 
 
 async def _process_ingest_job(
-    job_id: str, repo_url: str, session_factory, spec_session_factory=None, llm_provider=None
+    job_id: str, repo_url: str, session_factory, spec_session_factory=None, llm_provider=None, session_id=None
 ) -> None:
     """Background task: real ingest work, run off the event loop."""
     await asyncio.to_thread(
-        _run_ingest_sync, job_id, repo_url, session_factory, spec_session_factory, llm_provider
+        _run_ingest_sync, job_id, repo_url, session_factory, spec_session_factory, llm_provider, session_id
     )
 
 
@@ -620,6 +620,7 @@ async def start_ingest(
         session_factory,
         spec_session_factory,
         llm_provider,
+        session_id,
     )
     logger.info(f"Started ingest job {job_id} for {body.repo_url}")
 
@@ -693,7 +694,8 @@ async def upload_document(
 
     session = session_factory()
     try:
-        job_id = IngestJobStore.create_job(session, file.filename)
+        session_id = request.state.session_id
+        job_id = IngestJobStore.create_job(session, file.filename, session_id)
         job = IngestJobStore.get_job(session, job_id)
         status_response = _to_job_status(job)
     finally:
@@ -707,6 +709,7 @@ async def upload_document(
         source_format,
         session_factory,
         embed_provider,
+        session_id,
     )
     logger.info(f"Started document ingest job {job_id} for {file.filename!r}")
 
