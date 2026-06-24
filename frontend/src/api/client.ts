@@ -2,9 +2,7 @@
 
 import type { Source as KISource, KnowledgeCard } from '../lib/types'
 
-const API_URL =
-  ((import.meta as any).env?.VITE_API_URL as string | undefined) ||
-  'http://localhost:8000'
+const API_URL = '' // Use relative paths; Vercel rewrites to backend
 
 export interface AskRequest {
   question: string
