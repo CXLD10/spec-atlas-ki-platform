@@ -42,6 +42,9 @@ class EmbeddingPipeline:
         if not groups:
             return []
 
+        # Extract session_id from first group (all in list should have same session_id)
+        session_id = groups[0].session_id if groups else None
+
         # Collect texts: use summary_md for each group
         texts = []
         group_paths = []
@@ -60,6 +63,7 @@ class EmbeddingPipeline:
         embeddings = []
         for path, vector in zip(group_paths, vectors, strict=True):
             embedding = Embedding(
+                session_id=session_id,
                 owner_kind="group",
                 owner_ref=path,
                 model=DEFAULT_MODEL,
@@ -78,6 +82,7 @@ class EmbeddingPipeline:
         specs: list[Spec],
         embed_provider: EmbeddingProvider,
         session: Session,
+        session_id: uuid.UUID = None,
     ) -> list[Embedding]:
         """Batch embed spec purpose + content preview and store in DB.
 
@@ -86,12 +91,17 @@ class EmbeddingPipeline:
             specs: List of current Spec objects (valid_to is None).
             embed_provider: Embedding provider.
             session: Analysis DB session.
+            session_id: Session ID for multi-user isolation.
 
         Returns:
             List of persisted Embedding objects.
         """
         if not specs:
             return []
+
+        # Extract session_id from specs if not provided
+        if not session_id and specs:
+            session_id = specs[0].session_id
 
         # Collect texts: use spec purpose + preview of content
         texts = []
@@ -124,6 +134,7 @@ class EmbeddingPipeline:
         embeddings = []
         for spec_ref, vector in zip(spec_refs, vectors, strict=True):
             embedding = Embedding(
+                session_id=session_id,
                 owner_kind="spec",
                 owner_ref=spec_ref,
                 model=DEFAULT_MODEL,
