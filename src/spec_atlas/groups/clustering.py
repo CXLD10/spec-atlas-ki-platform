@@ -22,6 +22,7 @@ class GroupClustering:
         repo_id: uuid.UUID,
         repo_path: str,
         session: Session,
+        session_id: uuid.UUID = None,
     ) -> tuple[Group, dict[uuid.UUID, Group]]:
         """Form groups from directory/package structure.
 
@@ -47,6 +48,7 @@ class GroupClustering:
             # Create root group
             root_group = Group(
                 id=uuid.uuid4(),
+                session_id=session_id,
                 repo_id=repo_id,
                 parent_id=None,
                 level=0,
@@ -97,6 +99,7 @@ class GroupClustering:
 
                 group = Group(
                     id=uuid.uuid4(),
+                    session_id=session_id,
                     repo_id=repo_id,
                     parent_id=parent_group.id,
                     level=len(path_parts),
@@ -153,6 +156,7 @@ class GroupClustering:
             # Return empty structure to allow ingest to continue
             root_group = Group(
                 id=uuid.uuid4(),
+                session_id=session_id,
                 repo_id=repo_id,
                 parent_id=None,
                 level=0,

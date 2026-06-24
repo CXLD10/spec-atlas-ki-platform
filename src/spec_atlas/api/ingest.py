@@ -273,7 +273,7 @@ def _run_ingest_sync(
         # Phase 7-9: Group clustering (L4) - optional, skip on error
         groups = []
         try:
-            groups = _form_groups(job_id, repo.id, repo_metadata.working_dir, session)
+            groups = _form_groups(job_id, repo.id, repo_metadata.working_dir, session, session_id)
             _update_phase_progress(session, job_id, "groups", 92)
 
             # Phase 8: Summarize groups, write group.md files, and link specs
@@ -526,11 +526,11 @@ def _extract_edges(job_id: str, repo_id, repo_path: str, files, session, session
     logger.info(f"Job {job_id}: extracted {count} edges")
 
 
-def _form_groups(job_id: str, repo_id, repo_path: str, session) -> list:
+def _form_groups(job_id: str, repo_id, repo_path: str, session, session_id=None) -> list:
     """Form groups from directory structure."""
     try:
         root_group, node_to_group_map = GroupClustering.cluster_from_directory(
-            repo_id, repo_path, session
+            repo_id, repo_path, session, session_id
         )
 
         # Collect all groups
