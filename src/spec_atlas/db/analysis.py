@@ -254,9 +254,13 @@ class SourceUnit(AnalysisBase):
     __table_args__ = (
         CheckConstraint("source_type IN ('pdf','excel','markdown','jira')", name="ck_source_units_type"),
         Index("ix_source_units_repo", "repo_id"),
+        Index("ix_source_units_session_id", "session_id"),
     )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
+    )
     repo_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("repos.id", ondelete="CASCADE"), nullable=False
     )

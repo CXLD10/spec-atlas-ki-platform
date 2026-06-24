@@ -74,13 +74,14 @@ def _locator_fields(source_format: str, locator: str) -> dict[str, object]:
 
 
 def persist_source_units(
-    repo_id, source_type: str, units: list[SourceUnitDC], source_format: str, session: Session
+    repo_id, source_type: str, units: list[SourceUnitDC], source_format: str, session: Session, session_id=None
 ) -> list[SourceUnitRow]:
     """Persist in-memory adapter SourceUnits as durable, citable DB rows."""
     rows = []
     for unit in units:
         locator = unit.citation_locator()
         row = SourceUnitRow(
+            session_id=session_id,
             repo_id=repo_id,
             source_id=unit.source_id,
             source_type=source_type,
@@ -96,7 +97,7 @@ def persist_source_units(
 
 
 def embed_source_units(
-    repo_id, rows: list[SourceUnitRow], embed_provider: EmbeddingProvider, session: Session
+    repo_id, rows: list[SourceUnitRow], embed_provider: EmbeddingProvider, session: Session, session_id=None
 ) -> int:
     """Embed each SourceUnit's text and store in the embeddings table."""
     from spec_atlas.db.analysis import Embedding
@@ -110,6 +111,7 @@ def embed_source_units(
     for row, vector in zip(rows, vectors, strict=True):
         session.add(
             Embedding(
+                session_id=session_id,
                 owner_kind="source_unit",
                 owner_ref=str(row.id),
                 model=EMBED_MODEL,
@@ -156,11 +158,11 @@ def run_document_ingest_sync(
         session.flush()
 
         rows = persist_source_units(
-            repo.id, SOURCE_TYPE_BY_FORMAT[source_format], units, source_format, session
+            repo.id, SOURCE_TYPE_BY_FORMAT[source_format], units, source_format, session, session_id
         )
         IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=80)
 
-        embed_source_units(repo.id, rows, embed_provider, session)
+        embed_source_units(repo.id, rows, embed_provider, session, session_id)
         IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=99)
 
         logger.info(
