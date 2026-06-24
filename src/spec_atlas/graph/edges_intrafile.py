@@ -36,10 +36,13 @@ class IntraFileEdgeExtractor:
         # Map qualified_name to node for fast lookup
         nodes_by_qname = {node.qualified_name: node for node in nodes}
 
+        # Extract session_id from nodes (all nodes in a file have the same session_id)
+        session_id = nodes[0].session_id if nodes else None
+
         if language == "python":
-            edges.extend(_extract_python_edges(file_content, nodes_by_qname, file_id))
+            edges.extend(_extract_python_edges(file_content, nodes_by_qname, file_id, session_id))
         elif language in ("typescript", "javascript"):
-            edges.extend(_extract_ts_edges(file_content, language, nodes_by_qname, file_id))
+            edges.extend(_extract_ts_edges(file_content, language, nodes_by_qname, file_id, session_id))
 
         return edges
 
@@ -48,6 +51,7 @@ def _extract_python_edges(
     file_content: str,
     nodes_by_qname: dict[str, Node],
     file_id: uuid.UUID,
+    session_id: uuid.UUID = None,
 ) -> list[Edge]:
     """Extract Python intra-file edges (calls, inherits, defines)."""
     edges = []
@@ -94,6 +98,7 @@ def _extract_python_edges(
                                 method_node = nodes_by_qname[method_qname]
                                 edges.append(
                                     Edge(
+                                        session_id=session_id,
                                         repo_id=class_src_node.repo_id,
                                         src_node_id=class_src_node.id,
                                         dst_node_id=method_node.id,
@@ -131,6 +136,7 @@ def _extract_python_edges(
                     dst = nodes_by_qname[dst_qname]
                     edges.append(
                         Edge(
+                            session_id=session_id,
                             repo_id=src.repo_id,
                             src_node_id=src.id,
                             dst_node_id=dst.id,
@@ -140,13 +146,13 @@ def _extract_python_edges(
                     )
 
     # Third pass: extract calls (function/method calls)
-    _extract_python_calls(tree.root_node, file_content, nodes_by_qname, edges)
+    _extract_python_calls(tree.root_node, file_content, nodes_by_qname, edges, session_id)
 
     return edges
 
 
 def _extract_python_calls(
-    node, file_content: str, nodes_by_qname: dict[str, Node], edges: list[Edge]
+    node, file_content: str, nodes_by_qname: dict[str, Node], edges: list[Edge], session_id: uuid.UUID = None
 ) -> None:
     """Recursively extract Python call edges."""
     if node.type == "call":
@@ -181,7 +187,7 @@ def _extract_python_calls(
 
     # Recurse
     for child in node.children:
-        _extract_python_calls(child, file_content, nodes_by_qname, edges)
+        _extract_python_calls(child, file_content, nodes_by_qname, edges, session_id)
 
 
 def _extract_ts_edges(
@@ -189,6 +195,7 @@ def _extract_ts_edges(
     language: str,
     nodes_by_qname: dict[str, Node],
     file_id: uuid.UUID,
+    session_id: uuid.UUID = None,
 ) -> list[Edge]:
     """Extract TypeScript/JavaScript intra-file edges (calls, inherits, defines)."""
     edges = []
@@ -239,6 +246,7 @@ def _extract_ts_edges(
                 dst = nodes_by_qname[method_qname]
                 edges.append(
                     Edge(
+                        session_id=session_id,
                         repo_id=src.repo_id,
                         src_node_id=src.id,
                         dst_node_id=dst.id,
@@ -257,6 +265,7 @@ def _extract_ts_edges(
                 dst = nodes_by_qname[dst_qname]
                 edges.append(
                     Edge(
+                        session_id=session_id,
                         repo_id=src.repo_id,
                         src_node_id=src.id,
                         dst_node_id=dst.id,

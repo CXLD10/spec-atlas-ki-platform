@@ -246,11 +246,11 @@ def _run_ingest_sync(
         )
 
         # Phase 4: Extract symbols from source files (L1)
-        _extract_symbols(job_id, repo.id, repo_metadata.working_dir, files, session)
+        _extract_symbols(job_id, repo.id, repo_metadata.working_dir, files, session, session_id)
         _update_phase_progress(session, job_id, "symbols", 80)
 
         # Phase 5: Extract edges between symbols (L1)
-        _extract_edges(job_id, repo.id, repo_metadata.working_dir, files, session)
+        _extract_edges(job_id, repo.id, repo_metadata.working_dir, files, session, session_id)
         _update_phase_progress(session, job_id, "edges", 85)
 
         # Phase 6: Generate specs from code graph (L2) - optional, skip if no spec session
@@ -393,7 +393,7 @@ def _harvest_commits(repo_path: str, limit: int = 100) -> list[dict]:
     return commits
 
 
-def _extract_symbols(job_id: str, repo_id, repo_path: str, files, session) -> None:
+def _extract_symbols(job_id: str, repo_id, repo_path: str, files, session, session_id=None) -> None:
     """Extract symbols (functions, classes) from source files."""
     from spec_atlas.db.analysis import Node
 
@@ -447,6 +447,7 @@ def _extract_symbols(job_id: str, repo_id, repo_path: str, files, session) -> No
             else:
                 # Create new node
                 node = Node(
+                    session_id=session_id,
                     repo_id=repo_id,
                     file_id=file.id,
                     kind=sym.kind,
@@ -465,7 +466,7 @@ def _extract_symbols(job_id: str, repo_id, repo_path: str, files, session) -> No
     logger.info(f"Job {job_id}: extracted {count} symbols")
 
 
-def _extract_edges(job_id: str, repo_id, repo_path: str, files, session) -> None:
+def _extract_edges(job_id: str, repo_id, repo_path: str, files, session, session_id=None) -> None:
     """Extract edges (calls, imports) between symbols."""
     from spec_atlas.db.analysis import Node
 
