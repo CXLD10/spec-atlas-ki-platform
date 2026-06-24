@@ -76,13 +76,14 @@ class OllamaProvider(LLMProvider):
 
 
 class GroqProvider(LLMProvider):
-    """Groq cloud LLM provider (OpenAI-compatible REST API). Free tier available."""
+    """Groq cloud LLM provider with multi-key rotation and 429 fallback."""
 
     API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-    def __init__(self, api_key: str, model: str = "llama-3.1-8b-instant"):
+    def __init__(self, api_key: str = None, model: str = "llama-3.1-8b-instant", key_manager=None):
         self.api_key = api_key
         self.model = model
+        self.key_manager = key_manager
         self.provider_name = "groq"
 
     async def complete(
@@ -90,12 +91,11 @@ class GroqProvider(LLMProvider):
         messages: list[Message],
         schema: dict | None = None,
         temperature: float = 0.7,
+        session_id=None,
+        db_session=None,
         retries: int = 3,
     ) -> str | dict:
-        """Generate a completion using Groq's chat completions endpoint.
-
-        Retries on 429 (rate limit) with exponential backoff; fails immediately on 401.
-        """
+        """Generate completion with multi-key rotation on 429."""
         import asyncio
 
         payload = {
@@ -109,10 +109,20 @@ class GroqProvider(LLMProvider):
 
         for attempt in range(retries):
             try:
+                # Get appropriate API key
+                if session_id and db_session and self.key_manager:
+                    api_key = self.key_manager.get_key_for_session(db_session, session_id)
+                    if not api_key:
+                        from spec_atlas.llm.fake import FakeLLMProvider
+                        fake = FakeLLMProvider()
+                        return await fake.complete(messages, schema, temperature)
+                else:
+                    api_key = self.api_key
+
                 async with httpx.AsyncClient(timeout=120) as client:
                     response = await client.post(
                         self.API_URL,
-                        headers={"Authorization": f"Bearer {self.api_key}"},
+                        headers={"Authorization": f"Bearer {api_key}"},
                         json=payload,
                     )
 
@@ -120,18 +130,24 @@ class GroqProvider(LLMProvider):
                     try:
                         error_data = response.json()
                         error_msg = error_data.get("error", {}).get("message", "Unauthorized")
-                        raise RuntimeError(f"Groq API authentication failed (401): {error_msg}. Check your GROQ_API_KEY.")
+                        raise RuntimeError(f"Groq API auth failed (401): {error_msg}. Check your GROQ_API_KEY.")
                     except (json.JSONDecodeError, KeyError):
-                        raise RuntimeError(f"Groq API authentication failed (401). Check your GROQ_API_KEY is valid and not expired.")
+                        raise RuntimeError(f"Groq API auth failed (401). Check your GROQ_API_KEY.")
 
                 if response.status_code == 429:
+                    if session_id and db_session and self.key_manager:
+                        key_idx = self.key_manager.keys.index(api_key) if api_key in self.key_manager.keys else 0
+                        self.key_manager.on_429_error(db_session, key_idx)
+                        self.key_manager.rotate_key_for_session(db_session, session_id)
+
                     if attempt < retries - 1:
-                        wait_secs = 2 ** attempt  # 1s, 2s, 4s
-                        print(f"Groq rate limited (429). Retrying in {wait_secs}s (attempt {attempt + 1}/{retries})...")
+                        wait_secs = 2 ** attempt
+                        import logging
+                        logging.getLogger(__name__).warning(f"Groq 429. Retrying in {wait_secs}s...")
                         await asyncio.sleep(wait_secs)
                         continue
                     else:
-                        raise RuntimeError(f"Groq rate limited (429). Hit max retries ({retries}). Try again in a moment.")
+                        raise RuntimeError(f"Groq rate limited (429). Hit max retries. Try again later.")
 
                 response.raise_for_status()
                 break
@@ -139,7 +155,8 @@ class GroqProvider(LLMProvider):
             except httpx.HTTPError as e:
                 if attempt < retries - 1:
                     wait_secs = 2 ** attempt
-                    print(f"Groq request failed: {e}. Retrying in {wait_secs}s...")
+                    import logging
+                    logging.getLogger(__name__).warning(f"Groq request failed: {e}. Retrying...")
                     await asyncio.sleep(wait_secs)
                     continue
                 raise RuntimeError(f"Groq error: {e}") from e

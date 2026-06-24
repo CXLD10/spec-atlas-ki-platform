@@ -17,6 +17,14 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Handle startup and shutdown events."""
     logger.info("Spec-Atlas starting up")
+
+    # Start cleanup job for expired sessions
+    try:
+        from spec_atlas.ingest.cleanup import start_cleanup_job
+        start_cleanup_job()
+    except Exception as e:
+        logger.warning(f"Failed to start cleanup job: {e}")
+
     yield
     logger.info("Spec-Atlas shutting down")
 
@@ -51,8 +59,15 @@ def create_app(settings=None) -> FastAPI:
     try:
         from spec_atlas.embed import get_embedding_provider
         from spec_atlas.llm import get_llm_provider
+        from spec_atlas.llm.groq_manager import GroqKeyManager
 
-        app.state.llm_provider = get_llm_provider(resolved)
+        llm_provider = get_llm_provider(resolved)
+
+        # Inject GroqKeyManager into GroqProvider if applicable
+        if resolved.llm_provider == "groq" and hasattr(llm_provider, "key_manager"):
+            llm_provider.key_manager = GroqKeyManager()
+
+        app.state.llm_provider = llm_provider
         app.state.embedding_provider = get_embedding_provider(resolved)
     except Exception as e:
         logger.warning(f"Failed to initialize providers: {e}")
