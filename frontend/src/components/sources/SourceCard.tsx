@@ -1,15 +1,43 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Trash2 } from 'lucide-react'
 import { Source } from '../../lib/types'
 import { TypeBadge } from './TypeBadge'
 import { StatusPill } from './StatusPill'
 import './SourceCard.css'
 
-export function SourceCard({ source }: { source: Source }) {
+export function SourceCard({ source, onDelete }: { source: Source; onDelete?: (id: string) => void }) {
   const navigate = useNavigate()
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleClick = () => {
     navigate(`/sources/${source.id}`)
+  }
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+
+    if (!confirm(`Delete "${source.name}"? This cannot be undone.`)) {
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/sources/${source.id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete source')
+      }
+
+      onDelete?.(source.id)
+      window.location.reload()
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert('Failed to delete source')
+      setIsDeleting(false)
+    }
   }
 
   return (
@@ -46,6 +74,14 @@ export function SourceCard({ source }: { source: Source }) {
 
       <div className="card-footer">
         <ArrowRight size={16} />
+        <button
+          className="card-delete-btn"
+          onClick={handleDelete}
+          disabled={isDeleting}
+          title="Delete this source"
+        >
+          <Trash2 size={16} />
+        </button>
       </div>
     </button>
   )

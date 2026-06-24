@@ -338,3 +338,59 @@ async def import_jira_export(
         Path(tmp_path).unlink(missing_ok=True)
 
     return {"project_key": project_key, "repo_id": repo_id, "indexed": count}
+
+
+@router.delete("/sources/{repo_id}")
+async def delete_repo(request: Request, repo_id: str):
+    """Delete a repository (session-scoped). Cascades all related data."""
+    session_id = request.state.session_id
+    db_session = get_analysis_session_simple()
+
+    try:
+        repo = db_session.query(Repo).filter(
+            Repo.id == uuid.UUID(repo_id),
+            Repo.session_id == session_id
+        ).first()
+
+        if not repo:
+            raise HTTPException(status_code=404, detail="Repository not found")
+
+        from spec_atlas.session.manager import SessionManager
+        SessionManager.decrement_repo_count(db_session, session_id)
+
+        db_session.delete(repo)
+        db_session.commit()
+
+        logger.info(f"Deleted repo {repo_id} from session {session_id}")
+        return {"status": "deleted", "repo_id": repo_id}
+
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid repo ID")
+    finally:
+        db_session.close()
+
+
+@router.delete("/session/data")
+async def delete_all_session_data(request: Request):
+    """Delete all user data for current session."""
+    session_id = request.state.session_id
+    db_session = get_analysis_session_simple()
+
+    try:
+        from spec_atlas.db.analysis import Session
+
+        session = db_session.query(Session).filter(Session.id == session_id).first()
+        if session:
+            session.is_deleted = True
+            db_session.commit()
+            logger.info(f"Deleted all data for session {session_id}")
+
+        return {"status": "all_data_deleted"}
+    finally:
+        db_session.close()
+
+
+def get_analysis_session_simple() -> Session:
+    """Get analysis session without FastAPI dependency injection."""
+    from spec_atlas.db.analysis import get_analysis_session as get_session
+    return get_session()

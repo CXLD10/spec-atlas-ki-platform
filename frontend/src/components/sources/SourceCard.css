@@ -139,13 +139,46 @@
 
 .card-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   color: var(--mid);
   transition: color 0.2s ease;
 }
 
 .source-card:hover .card-footer {
   color: var(--primary);
+}
+
+.card-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--dim);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0;
+}
+
+.source-card:hover .card-delete-btn {
+  opacity: 1;
+  color: var(--err, #ff4444);
+  border-color: var(--err, #ff4444);
+}
+
+.card-delete-btn:hover:not(:disabled) {
+  background: var(--err, #ff4444);
+  color: white;
+}
+
+.card-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media (prefers-reduced-motion: reduce) {

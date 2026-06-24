@@ -593,6 +593,19 @@ async def start_ingest(
 
     session = session_factory()
     try:
+        # Check 3-repo limit per session
+        from spec_atlas.db.analysis import Repo as RepoModel
+        session_id = request.state.session_id
+        repo_count = session.query(func.count(RepoModel.id)).filter(
+            RepoModel.session_id == session_id
+        ).scalar() or 0
+
+        if repo_count >= 3:
+            raise HTTPException(
+                status_code=429,
+                detail="Max 3 repositories per session. Delete one to add another."
+            )
+
         job_id = IngestJobStore.create_job(session, body.repo_url)
         job = IngestJobStore.get_job(session, job_id)
         status_response = _to_job_status(job)

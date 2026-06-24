@@ -22,6 +22,9 @@ export function AppShell() {
       <Sidebar />
       <div className="app-shell-main">
         <Topbar />
+        <div className="privacy-banner">
+          🔒 <strong>Privacy First:</strong> Your data is automatically deleted after 2 hours of inactivity. No accounts, no tracking, completely local.
+        </div>
         <div className="app-shell-content">
           <Outlet />
         </div>
