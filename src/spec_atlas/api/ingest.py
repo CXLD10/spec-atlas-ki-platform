@@ -607,7 +607,7 @@ async def start_ingest(
                 detail="Max 3 repositories per session. Delete one to add another."
             )
 
-        job_id = IngestJobStore.create_job(session, body.repo_url)
+        job_id = IngestJobStore.create_job(session, body.repo_url, session_id)
         job = IngestJobStore.get_job(session, job_id)
         status_response = _to_job_status(job)
     finally:

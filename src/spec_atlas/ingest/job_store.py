@@ -17,18 +17,20 @@ class IngestJobStore:
     """Store and retrieve ingest jobs from the database."""
 
     @staticmethod
-    def create_job(session: Session, repo_url: str) -> str:
+    def create_job(session: Session, repo_url: str, session_id: str | None = None) -> str:
         """Create a new ingest job.
 
         Args:
             session: Analysis DB session.
             repo_url: Repository URL to ingest.
+            session_id: Session ID for multi-user isolation.
 
         Returns:
             Job ID (UUID string).
         """
         job = IngestJob(
             id=uuid.uuid4(),
+            session_id=session_id,
             repo_url=repo_url,
             status="queued",
             progress_pct=0,
