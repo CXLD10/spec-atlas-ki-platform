@@ -25,6 +25,7 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy import func
 
 from spec_atlas.embed.pipeline import EmbeddingPipeline
 from spec_atlas.graph.edges_crossfile import CrossFileEdgeExtractor
