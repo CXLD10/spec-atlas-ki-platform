@@ -85,6 +85,7 @@ class FileInventory:
 
             if file is None:
                 file = File(
+                    session_id=session_id,
                     repo_id=repo.id,
                     path=file_path,
                     language=language,
