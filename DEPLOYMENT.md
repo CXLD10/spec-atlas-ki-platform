@@ -28,6 +28,7 @@
    SPEC_DB_URL=postgresql://...
    PYTHONUNBUFFERED=1
    ```
+   **Get keys from**: https://console.groq.com/keys (comma-separated, no spaces)
 
 4. **Auto-deployment**
    - Dockerfile runs `alembic upgrade head` → migrations applied
