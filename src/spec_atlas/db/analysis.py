@@ -46,6 +46,40 @@ def _uuid_pk() -> Mapped[uuid.UUID]:
     return mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
 
+class Session(AnalysisBase):
+    """User session for multi-user isolation. 2-hour auto-expiry."""
+
+    __tablename__ = "sessions"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    last_interaction_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    assigned_groq_key_index: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    repo_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    is_deleted: Mapped[bool] = mapped_column(nullable=False, server_default="false")
+
+    __table_args__ = (
+        Index("ix_sessions_expires_at", expires_at),
+        Index("ix_sessions_is_deleted", is_deleted),
+    )
+
+
+class GroqKeyStatus(AnalysisBase):
+    """Track rate limit status per Groq API key."""
+
+    __tablename__ = "groq_key_status"
+
+    key_index: Mapped[int] = mapped_column(Integer, primary_key=True)
+    last_429_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    consecutive_failures: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    is_available: Mapped[bool] = mapped_column(nullable=False, server_default="true")
+
+
 class Repo(AnalysisBase):
     """A top-level indexed source: a git repo, or (Phase 2) a single uploaded
     document. Documents reuse this table — `source_format` distinguishes them
@@ -59,9 +93,13 @@ class Repo(AnalysisBase):
         CheckConstraint(
             "source_format IN ('git','pdf','xlsx','md')", name="ck_repos_source_format"
         ),
+        Index("ix_repos_session_id", "session_id"),
     )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
+    )
     name: Mapped[str] = mapped_column(String, nullable=False)
     source: Mapped[str] = mapped_column(String, nullable=False)  # local path or URL
     default_branch: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -80,9 +118,15 @@ class Repo(AnalysisBase):
 
 class File(AnalysisBase):
     __tablename__ = "files"
-    __table_args__ = (UniqueConstraint("repo_id", "path", name="uq_files_repo_path"),)
+    __table_args__ = (
+        UniqueConstraint("repo_id", "path", name="uq_files_repo_path"),
+        Index("ix_files_session_id", "session_id"),
+    )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
+    )
     repo_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("repos.id", ondelete="CASCADE"), nullable=False
     )
@@ -99,9 +143,13 @@ class Node(AnalysisBase):
     __table_args__ = (
         UniqueConstraint("repo_id", "language", "qualified_name", "kind", name="uq_nodes_identity"),
         CheckConstraint("kind IN ('module','class','function','method')", name="ck_nodes_kind"),
+        Index("ix_nodes_session_id", "session_id"),
     )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
+    )
     repo_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("repos.id", ondelete="CASCADE"), nullable=False
     )
@@ -125,9 +173,13 @@ class Edge(AnalysisBase):
         CheckConstraint("confidence >= 0 AND confidence <= 1", name="ck_edges_confidence"),
         Index("ix_edges_repo_src", "repo_id", "src_node_id"),
         Index("ix_edges_repo_dst", "repo_id", "dst_node_id"),
+        Index("ix_edges_session_id", "session_id"),
     )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
+    )
     repo_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("repos.id", ondelete="CASCADE"), nullable=False
     )
@@ -145,9 +197,15 @@ class Group(AnalysisBase):
     """L4 group.md tree node (self-referential parent/child)."""
 
     __tablename__ = "groups"
-    __table_args__ = (Index("ix_groups_repo_parent", "repo_id", "parent_id"),)
+    __table_args__ = (
+        Index("ix_groups_repo_parent", "repo_id", "parent_id"),
+        Index("ix_groups_session_id", "session_id"),
+    )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
+    )
     repo_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("repos.id", ondelete="CASCADE"), nullable=False
     )
@@ -232,11 +290,15 @@ class Embedding(AnalysisBase):
         CheckConstraint(
             "owner_kind IN ('group','spec','source_unit')", name="ck_embeddings_owner_kind"
         ),
+        Index("ix_embeddings_session_id", "session_id"),
     )
 
     owner_kind: Mapped[str] = mapped_column(String, primary_key=True)
     owner_ref: Mapped[str] = mapped_column(Text, primary_key=True)
     model: Mapped[str] = mapped_column(String, primary_key=True)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
+    )
     repo_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("repos.id", ondelete="CASCADE"), nullable=False
     )
@@ -254,6 +316,9 @@ class IngestJob(AnalysisBase):
     __tablename__ = "ingest_jobs"
 
     id: Mapped[uuid.UUID] = _uuid_pk()
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
+    )
     repo_url: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(
         String, nullable=False, default="queued"

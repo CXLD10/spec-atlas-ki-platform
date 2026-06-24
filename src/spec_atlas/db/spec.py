@@ -42,13 +42,13 @@ class Spec(SpecBase):
 
     __tablename__ = "specs"
     __table_args__ = (
-        UniqueConstraint("user_id", "repo", "component_ref", "version", name="uq_specs_version"),
+        UniqueConstraint("session_id", "repo", "component_ref", "version", name="uq_specs_version"),
         CheckConstraint("status IN ('draft','verified','stale')", name="ck_specs_status"),
-        Index("ix_specs_lookup", "user_id", "repo", "component_ref"),
+        Index("ix_specs_lookup", "session_id", "repo", "component_ref"),
     )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    user_id: Mapped[str] = mapped_column(String, nullable=False)
+    session_id: Mapped[str] = mapped_column(String, nullable=False)  # UUID as string (loose ref)
     repo: Mapped[str] = mapped_column(String, nullable=False)  # loose ref
     component_ref: Mapped[str] = mapped_column(String, nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False)  # monotonic per area
@@ -82,11 +82,11 @@ class SpecEdge(SpecBase):
     __tablename__ = "spec_edges"
     __table_args__ = (
         CheckConstraint("kind IN ('depends-on','part-of','uses')", name="ck_spec_edges_kind"),
-        Index("ix_spec_edges_src", "user_id", "repo", "src_component_ref"),
+        Index("ix_spec_edges_src", "session_id", "repo", "src_component_ref"),
     )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    user_id: Mapped[str] = mapped_column(String, nullable=False)
+    session_id: Mapped[str] = mapped_column(String, nullable=False)  # UUID as string (loose ref)
     repo: Mapped[str] = mapped_column(String, nullable=False)
     src_component_ref: Mapped[str] = mapped_column(String, nullable=False)
     dst_component_ref: Mapped[str] = mapped_column(String, nullable=False)

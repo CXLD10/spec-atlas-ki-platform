@@ -71,6 +71,11 @@ def create_app(settings=None) -> FastAPI:
     except Exception as e:
         logger.debug(f"slowapi wiring skipped: {e}")
 
+    # Session Middleware (automatic multi-user isolation)
+    from spec_atlas.api.middleware import SessionMiddleware
+
+    app.add_middleware(SessionMiddleware)
+
     # CORS Middleware (permissive for local dev)
     app.add_middleware(
         CORSMiddleware,
