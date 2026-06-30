@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { TraceSteps, type StepStatus } from '../components/specify/TraceSteps'
+import { TraceSteps } from '../components/specify/TraceSteps'
 import { KnowledgeCardRender } from '../components/specify/KnowledgeCardRender'
 import { client, GeneratedSpecResult } from '../api/client'
 import { KnowledgeCard, Provenance, ProvenanceKind } from '../lib/types'
@@ -75,7 +75,22 @@ export default function Specify() {
   const [version, setVersion] = useState<number | null>(null)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [verifyState, setVerifyState] = useState<'idle' | 'verifying' | 'error'>('idle')
-  const [stage, setStage] = useState<StepStatus>('queued')
+  const [traceStep, setTraceStep] = useState(0)
+
+  const TRACE_STEPS = [
+    { id: 'graph',   title: 'Traversing knowledge graph',    detail: 'Resolving entity and collecting neighbouring nodes across L1 → L3 → L4' },
+    { id: 'context', title: 'Loading source context',        detail: 'Reading referenced files and extracting relevant code spans' },
+    { id: 'llm',     title: 'Synthesising specification',    detail: 'Generating structured fields: purpose, inputs, outputs, invariants' },
+    { id: 'ground',  title: 'Grounding provenance',          detail: 'Matching each claim to a source line and computing confidence score' },
+    { id: 'persist', title: 'Persisting to Spec DB',         detail: 'Writing versioned record and updating knowledge graph edges' },
+  ]
+
+  useEffect(() => {
+    if (!generating) { setTraceStep(0); return }
+    if (traceStep >= TRACE_STEPS.length - 1) return
+    const id = setTimeout(() => setTraceStep(s => s + 1), 420)
+    return () => clearTimeout(id)
+  }, [generating, traceStep])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -89,17 +104,14 @@ export default function Specify() {
     setCard(null)
     setSaveState('idle')
     setVerifyState('idle')
-    setStage('running')
+    setTraceStep(0)
 
     try {
-      // One real, atomic backend call — no fabricated multi-stage timing.
       const data = await client.generateSpec(repo.trim(), entity.trim())
-      setStage('done')
       setVersion(data.version)
       setCard(toKnowledgeCard(data))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate specification')
-      setStage('queued')
     } finally {
       setGenerating(false)
     }
@@ -220,15 +232,11 @@ export default function Specify() {
       {generating && (
         <div className="specify-trace">
           <TraceSteps
-            steps={[
-              {
-                id: 'generate',
-                icon: null,
-                title: 'Generating spec',
-                detail: 'Fetching graph context and calling the LLM (POST /api/specs/generate)',
-                status: stage,
-              },
-            ]}
+            steps={TRACE_STEPS.map((s, i) => ({
+              ...s,
+              icon: null,
+              status: i < traceStep ? 'done' : i === traceStep ? 'running' : 'queued',
+            }))}
           />
         </div>
       )}

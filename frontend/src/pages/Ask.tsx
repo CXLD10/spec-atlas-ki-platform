@@ -8,8 +8,6 @@ import './Ask.css'
 const API_URL =
   ((import.meta as any).env?.VITE_API_URL as string | undefined) || 'http://localhost:8000'
 
-/** POST /api/ask/stream — consumes the SSE response token-by-token.
- *  Calls onToken for each incremental word; resolves with the final payload. */
 async function streamAsk(
   question: string,
   onToken: (token: string) => void,
@@ -35,7 +33,6 @@ async function streamAsk(
     if (done) break
     buffer += decoder.decode(value, { stream: true })
 
-    // SSE lines end with \n\n; process complete events
     const parts = buffer.split('\n\n')
     buffer = parts.pop() ?? ''
 

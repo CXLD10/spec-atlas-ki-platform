@@ -7,24 +7,43 @@ import './MCPServer.css'
 
 const MCP_TOOLS = [
   {
-    name: 'search_knowledge',
-    signature: 'search_knowledge(query: string, repo?: string, limit?: number) → SearchResult[]',
-    description: 'Runs the full router→retriever pipeline and returns matched groups and source units with relevance scores.',
+    name: 'spec_atlas_ask',
+    signature: 'spec_atlas_ask(question: string, repo?: string, strategy?: "vector"|"graph"|"hybrid") → Answer',
+    description: 'Answer a natural-language question using the full knowledge graph. Returns a grounded answer with source citations and a confidence score.',
+    params: [
+      { name: 'question', type: 'string', required: true,  desc: 'The question to answer' },
+      { name: 'repo',     type: 'string', required: false, desc: 'Repository name to scope the search (defaults to all)' },
+      { name: 'strategy', type: '"vector"|"graph"|"hybrid"', required: false, desc: 'Retrieval strategy — defaults to "hybrid"' },
+    ],
   },
   {
-    name: 'get_spec',
-    signature: 'get_spec(component_ref: string, repo?: string, version?: number) → Spec',
-    description: 'Fetches the current spec/card with purpose, I/O, status and citations.',
+    name: 'spec_atlas_search',
+    signature: 'spec_atlas_search(query: string, repo?: string, limit?: number) → SearchResult[]',
+    description: 'Semantic search across all indexed sources. Runs the full router → retriever pipeline and returns matched groups and source units with relevance scores.',
+    params: [
+      { name: 'query', type: 'string', required: true,  desc: 'Natural-language or keyword search query' },
+      { name: 'repo',  type: 'string', required: false, desc: 'Repository name to restrict search scope' },
+      { name: 'limit', type: 'number', required: false, desc: 'Max results to return (default 10)' },
+    ],
   },
   {
-    name: 'get_graph',
-    signature: 'get_graph(repo?: string, layer?: string, limit?: number) → Graph',
-    description: 'Returns graph nodes and edges for the requested layer (source/group/all).',
+    name: 'spec_atlas_get_spec',
+    signature: 'spec_atlas_get_spec(component_ref: string, repo?: string, version?: number) → Spec',
+    description: 'Retrieve a structured spec for any component. Returns the knowledge card with purpose, inputs, outputs, invariants, and provenance citations.',
+    params: [
+      { name: 'component_ref', type: 'string', required: true,  desc: 'Qualified component name (e.g. "InferenceEngine")' },
+      { name: 'repo',          type: 'string', required: false, desc: 'Repository name (defaults to first indexed repo)' },
+      { name: 'version',       type: 'number', required: false, desc: 'Spec version to retrieve (defaults to latest)' },
+    ],
   },
   {
-    name: 'ask_question',
-    signature: 'ask_question(question: string, repo?: string) → Answer',
-    description: 'Answers a natural-language question using retrieval + LLM with real confidence scoring.',
+    name: 'spec_atlas_list_groups',
+    signature: 'spec_atlas_list_groups(repo?: string, include_summary?: boolean) → Group[]',
+    description: 'List all knowledge groups with summaries. Returns semantic clusters auto-generated from the codebase with member counts and purpose summaries.',
+    params: [
+      { name: 'repo',            type: 'string',  required: false, desc: 'Repository to list groups for' },
+      { name: 'include_summary', type: 'boolean', required: false, desc: 'Include full group summary text (default true)' },
+    ],
   },
 ]
 

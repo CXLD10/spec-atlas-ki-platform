@@ -1,157 +1,68 @@
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PipelineHUD } from '../components/hud/PipelineHUD'
 import { useIndexJob } from '../api/useIndexJob'
 import './IndexProgress.css'
 
-function formatETADisplay(etaSeconds: number | null | undefined): string {
-  if (etaSeconds === null || etaSeconds === undefined || etaSeconds <= 0) {
-    return 'Almost done!'
-  }
-
-  const minutes = Math.floor(etaSeconds / 60)
-  const seconds = etaSeconds % 60
-
-  if (minutes === 0) {
-    return `${seconds} sec remaining`
-  } else if (seconds === 0) {
-    return `${minutes} min remaining`
-  } else {
-    return `${minutes} min ${seconds} sec remaining`
-  }
-}
-
 export function IndexProgress() {
   const navigate = useNavigate()
   const { jobId } = useParams()
   const { data: job, isLoading, error } = useIndexJob(jobId || '')
-  const phase = calculatePhase(job?.progress || 0)
-  const [showGoToSources, setShowGoToSources] = React.useState(false)
+  const progress = job?.progress ?? 0
 
-  // Show "go to sources" popup if stuck at 96% for more than 30 seconds
-  React.useEffect(() => {
-    if (job?.progress === 96) {
-      const timer = setTimeout(() => setShowGoToSources(true), 30000)
-      return () => clearTimeout(timer)
-    } else {
-      setShowGoToSources(false)
-    }
-  }, [job?.progress])
-
-  // Auto-redirect to Sources page when indexing completes
   useEffect(() => {
     if (job?.status === 'done') {
-      // Small delay to let animation settle
-      const timer = setTimeout(() => {
-        navigate(`/sources`)
-      }, 500)
+      const timer = setTimeout(() => navigate('/sources'), 800)
       return () => clearTimeout(timer)
     }
-
-    if (job?.status === 'failed') {
-      // Stay on error page
-    }
-  }, [job?.status, job?.status, navigate, jobId])
+  }, [job?.status, navigate])
 
   if (error) {
     return (
-      <div className="index-progress-page">
-        <main className="error-container">
-          <div className="error-message" role="alert">
-            <strong>Indexing failed:</strong> {error.message}
-          </div>
-          <button
-            onClick={() => navigate('/')}
-            className="back-button"
-          >
-            ← Back to home
-          </button>
-        </main>
+      <div className="ip-page">
+        <div className="ip-error">
+          <strong>Indexing failed:</strong> {error.message}
+          <button className="ip-back" onClick={() => navigate('/')}>← Back</button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="index-progress-page">
-      {showGoToSources && (
-        <div style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          backgroundColor: '#1a1f3a',
-          border: '2px solid #4493f8',
-          borderRadius: '8px',
-          padding: '2rem',
-          zIndex: 1000,
-          textAlign: 'center',
-          maxWidth: '400px'
-        }}>
-          <h2 style={{ color: '#fff', marginBottom: '1rem' }}>Indexing in Progress</h2>
-          <p style={{ color: '#aaa', marginBottom: '1.5rem' }}>
-            The final steps are processing. You can view your sources while we finish indexing.
-          </p>
-          <button
-            onClick={() => navigate('/sources')}
-            style={{
-              backgroundColor: '#4493f8',
-              color: 'white',
-              border: 'none',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '1rem'
-            }}
-          >
-            Go to Sources
-          </button>
+    <div className="ip-page">
+      <div className="ip-inner">
+        <div className="ip-eyebrow">Knowledge Intelligence Platform</div>
+        <h1 className="ip-title">Building your knowledge base</h1>
+
+        <div className="ip-hud-wrap">
+          {(job || isLoading) && <PipelineHUD progress={progress} />}
         </div>
-      )}
 
-      <main className="progress-main">
-        <div className="progress-content">
-          {job && <PipelineHUD activePhase={phase} />}
-
-          {job?.show_warning && (
-            <div className="warning-banner">
-              <p className="warning-text">{job.warning_message || 'Large repository may take longer than usual'}</p>
-            </div>
-          )}
-
-          <div className="status-overlay">
-            {isLoading && !job ? (
-              <p>Loading indexing status...</p>
-            ) : job ? (
-              <>
-                <p className="status-text">Indexing {jobId}</p>
-
-                {job.status === 'in_progress' && job.eta_seconds !== null && (
-                  <p className="eta-text">{formatETADisplay(job.eta_seconds)}</p>
-                )}
-
-                <div className="progress-bar">
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${job.progress}%` }}
-                  />
-                </div>
-                <p className="progress-text">{job.progress}%</p>
-
-                {job.status === 'failed' && (
-                  <p className="error-text">{job.error}</p>
-                )}
-              </>
-            ) : null}
+        <div className="ip-bar-wrap">
+          <div className="ip-bar">
+            <div className="ip-bar-fill" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="ip-bar-labels">
+            <span className="ip-pct">{progress}%</span>
+            {job?.eta_seconds != null && job.eta_seconds > 0 && (
+              <span className="ip-eta">{formatETA(job.eta_seconds)}</span>
+            )}
           </div>
         </div>
-      </main>
+      </div>
+
+      {job?.show_warning && (
+        <div className="ip-warning">{job.warning_message ?? 'Large repository — this may take a while'}</div>
+      )}
     </div>
   )
 }
 
-// Helper to convert progress % to phase (0-4)
-function calculatePhase(progressPct: number) {
-  return Math.min(Math.floor((progressPct / 100) * 4), 4)
+function formatETA(s: number): string {
+  const m = Math.floor(s / 60), sec = s % 60
+  if (m === 0) return `${sec}s remaining`
+  if (sec === 0) return `${m}m remaining`
+  return `${m}m ${sec}s remaining`
 }
 
 export default IndexProgress

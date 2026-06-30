@@ -148,14 +148,18 @@ def run_document_ingest_sync(
         units = asyncio.run(adapter.ingest())
         IngestJobStore.update_job_status(session, job_id, status="in_progress", progress_pct=50)
 
-        repo = Repo(
-            session_id=session_id,
-            name=original_filename,
-            source=original_filename,
-            source_format=source_format,
-        )
-        session.add(repo)
-        session.flush()
+        repo = session.query(Repo).filter_by(name=original_filename, source=original_filename).first()
+        if repo is None:
+            repo = Repo(
+                session_id=session_id,
+                name=original_filename,
+                source=original_filename,
+                source_format=source_format,
+            )
+            session.add(repo)
+            session.flush()
+        else:
+            repo.source_format = source_format
 
         rows = persist_source_units(
             repo.id, SOURCE_TYPE_BY_FORMAT[source_format], units, source_format, session, session_id

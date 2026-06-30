@@ -259,16 +259,27 @@ class ApiClient {
   async ask(request: AskRequest): Promise<AskResponse> {
     return this.request('POST', '/api/ask', {
       question: request.question,
-      project_id: request.project_id || 'default',
+      repo: request.project_id || 'default',
     })
   }
 
   async getGroups(): Promise<GroupNode[]> {
-    return this.request('GET', '/api/groups')
+    const sources: KISource[] = await this.request('GET', '/api/sources')
+    const repo = sources.find((s) => s.type === 'repo' && s.status === 'ready')
+    if (!repo) return []
+    const tree: { root: GroupNode } = await this.request('GET', `/api/groups?repo=${encodeURIComponent(repo.name)}`)
+    return tree.root?.children ?? []
   }
 
   async getGroup(id: string): Promise<GroupDetail> {
-    return this.request('GET', `/api/groups/${id}`)
+    const raw: any = await this.request('GET', `/api/groups/${id}`)
+    return {
+      id: raw.id,
+      path: raw.path,
+      summary_md: raw.summary_md ?? '',
+      children: (raw.children ?? []).map((p: string) => ({ id: p, path: p })),
+      member_specs: raw.member_spec_refs ?? [],
+    }
   }
 
   async getSpec(ref: string): Promise<Spec> {
@@ -467,7 +478,7 @@ class ApiClient {
   }
 
   async getKnowledgeCard(ref: string): Promise<KnowledgeCard> {
-    return this.request('GET', `/api/kb/${ref}`)
+    return this.request('GET', `/api/kb/${encodeURIComponent(ref)}`)
   }
 
   async getSourceSnippet(docId: string, page?: number): Promise<{ snippet: string }> {
@@ -479,18 +490,12 @@ class ApiClient {
 
   async generateSpec(repo: string, componentRef: string): Promise<GeneratedSpecResult> {
     const params = new URLSearchParams({ repo })
-    return this.request(
-      'POST',
-      `/api/specs/generate/${encodeURIComponent(componentRef)}?${params.toString()}`
-    )
+    return this.request('POST', `/api/specs/generate/${encodeURIComponent(componentRef)}?${params.toString()}`)
   }
 
   async getSpecDetail(repo: string, componentRef: string): Promise<GeneratedSpecResult> {
     const params = new URLSearchParams({ repo })
-    return this.request(
-      'GET',
-      `/api/specs/${encodeURIComponent(componentRef)}?${params.toString()}`
-    )
+    return this.request('GET', `/api/specs/${encodeURIComponent(componentRef)}?${params.toString()}`)
   }
 
   async verifySpec(
@@ -499,10 +504,7 @@ class ApiClient {
     version: number
   ): Promise<{ component_ref: string; version: number; status: string; confidence: number; is_grounded: boolean; issues: Array<{ claim: string; reason: string; severity: string }> }> {
     const params = new URLSearchParams({ repo, version: String(version) })
-    return this.request(
-      'POST',
-      `/api/specs/${encodeURIComponent(componentRef)}/verify?${params.toString()}`
-    )
+    return this.request('POST', `/api/specs/${encodeURIComponent(componentRef)}/verify?${params.toString()}`)
   }
 
   async getLayeredGraph(repo: string): Promise<LayeredGraphResult> {
@@ -527,3 +529,5 @@ class ApiClient {
 }
 
 export const client = new ApiClient()
+
+// Fallback repo used only when the real API returns nothing

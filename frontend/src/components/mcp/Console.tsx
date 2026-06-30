@@ -5,12 +5,12 @@ import './Console.css'
 const API_URL =
   ((import.meta as any).env?.VITE_API_URL as string | undefined) || 'http://localhost:8000'
 
-// Maps the single text argument to the right field name per tool.
-const TOOL_ARG_KEY: Record<string, string> = {
-  search_knowledge: 'query',
-  get_spec: 'component_ref',
-  get_graph: 'layer',
-  ask_question: 'question',
+// Maps frontend tool names → backend tool name + which arg key the single input maps to.
+// spec_atlas_list_groups has no MCP handler so it calls /api/groups directly.
+const TOOL_MAP: Record<string, { backendTool: string; argKey: string }> = {
+  spec_atlas_ask:         { backendTool: 'ask_question',     argKey: 'question' },
+  spec_atlas_search:      { backendTool: 'search_knowledge', argKey: 'query' },
+  spec_atlas_get_spec:    { backendTool: 'get_spec',         argKey: 'component_ref' },
 }
 
 interface ConsoleProps {
@@ -81,28 +81,34 @@ export function Console({ tools }: ConsoleProps) {
     setOutput(null)
 
     try {
-      const argKey = TOOL_ARG_KEY[selectedTool] ?? 'query'
-      const resp = await fetch(`${API_URL}/api/mcp/call`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tool: selectedTool, args: { [argKey]: toolArg } }),
-      })
-
       let data: unknown
-      if (resp.ok) {
+
+      if (selectedTool === 'spec_atlas_list_groups') {
+        const params = new URLSearchParams({ repo: toolArg.trim() })
+        const resp = await fetch(`${API_URL}/api/groups?${params.toString()}`)
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
         data = await resp.json()
       } else {
-        let detail = `HTTP ${resp.status}`
-        try {
-          const err = await resp.json()
-          detail = err.detail || detail
-        } catch { /* ignore */ }
-        data = { error: detail }
+        const mapping = TOOL_MAP[selectedTool]
+        if (!mapping) throw new Error(`Unknown tool: ${selectedTool}`)
+        const resp = await fetch(`${API_URL}/api/mcp/call`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tool: mapping.backendTool,
+            args: { [mapping.argKey]: toolArg.trim(), repo: 'default' },
+          }),
+        })
+        if (!resp.ok) {
+          const text = await resp.text().catch(() => '')
+          throw new Error(`HTTP ${resp.status}: ${text}`)
+        }
+        data = await resp.json()
       }
 
       setOutput(JSON.stringify(data, null, 2))
     } catch (err) {
-      setOutput(JSON.stringify({ error: 'Call failed', message: String(err) }, null, 2))
+      setOutput(JSON.stringify({ error: err instanceof Error ? err.message : 'Unknown error' }, null, 2))
     } finally {
       setCalling(false)
     }
@@ -148,7 +154,7 @@ export function Console({ tools }: ConsoleProps) {
             id="arg-input"
             className="console-input"
             type="text"
-            placeholder='e.g. "tokenizer" or "auth/session"'
+            placeholder='e.g. "how does auth work?" or "InferenceEngine"'
             value={toolArg}
             onChange={(e) => setToolArg(e.target.value)}
             disabled={calling}

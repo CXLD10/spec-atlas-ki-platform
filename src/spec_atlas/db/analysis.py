@@ -1,5 +1,6 @@
 """Analysis DB models (SQLAlchemy 2.0).
 
+
 The Analysis DB is the **rebuildable** index: the L1 code graph (``repos``,
 ``files``, ``nodes``, ``edges``), the L4 ``groups`` tree, and ``embeddings``
 (pgvector). It is disposable and re-derivable from source. See DATA-MODEL.md.
