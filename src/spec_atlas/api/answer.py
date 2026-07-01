@@ -382,7 +382,14 @@ async def ask_stream(
         raise HTTPException(status_code=503, detail="Analysis database not configured")
 
     answer_router = get_answer_router(request)
-    result = await answer_router.answer(body.question, body.repo)
+    try:
+        result = await answer_router.answer(body.question, body.repo)
+    except Exception as e:
+        logger.error(f"ask_stream failed before streaming: {e}")
+        async def _error():
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        return StreamingResponse(_error(), media_type="text/event-stream",
+                                  headers={"Cache-Control": "no-cache"})
 
     async def _generate():
         # Emit the answer word-by-word so the client can render progressively.

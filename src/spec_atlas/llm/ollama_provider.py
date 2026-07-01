@@ -76,27 +76,66 @@ class OllamaProvider(LLMProvider):
 
 
 class GroqProvider(LLMProvider):
-    """Groq cloud LLM provider with multi-key rotation and 429 fallback."""
+    """Groq cloud LLM provider with in-memory multi-key rotation and 429 handling."""
 
     API_URL = "https://api.groq.com/openai/v1/chat/completions"
+    COOLDOWN_SECONDS = 300  # 5 minutes per key after a 429
 
-    def __init__(self, api_key: str = None, model: str = "llama-3.1-8b-instant", key_manager=None):
-        self.api_key = api_key
+    def __init__(self, model: str = "llama-3.1-8b-instant"):
+        import os
+        from datetime import datetime
+
+        # Accept comma-separated keys in GROQ_API_KEYS, fall back to single GROQ_API_KEY
+        multi = os.environ.get("GROQ_API_KEYS", "")
+        self.keys: list[str] = [k.strip() for k in multi.split(",") if k.strip()]
+        if not self.keys:
+            single = os.environ.get("GROQ_API_KEY", "")
+            if single:
+                self.keys = [single]
+
         self.model = model
-        self.key_manager = key_manager
         self.provider_name = "groq"
+        self._current_idx: int = 0
+        # key_index → datetime when cooldown expires (or None)
+        self._cooldowns: dict[int, datetime] = {}
+
+    def _next_available_key(self) -> tuple[int, str] | None:
+        """Return (index, key) for the next key not in cooldown, or None if all are cooling."""
+        from datetime import datetime
+
+        for offset in range(len(self.keys)):
+            idx = (self._current_idx + offset) % len(self.keys)
+            expires = self._cooldowns.get(idx)
+            if expires is None or datetime.utcnow() >= expires:
+                self._cooldowns.pop(idx, None)
+                self._current_idx = idx
+                return idx, self.keys[idx]
+        return None
+
+    def _mark_cooldown(self, idx: int) -> None:
+        from datetime import datetime, timedelta
+        import logging
+        self._cooldowns[idx] = datetime.utcnow() + timedelta(seconds=self.COOLDOWN_SECONDS)
+        self._current_idx = (idx + 1) % len(self.keys)
+        logging.getLogger(__name__).warning(
+            f"Groq key [{idx}] rate-limited — cooling down for {self.COOLDOWN_SECONDS}s. "
+            f"Rotating to key [{self._current_idx}]."
+        )
 
     async def complete(
         self,
         messages: list[Message],
         schema: dict | None = None,
         temperature: float = 0.7,
-        session_id=None,
-        db_session=None,
-        retries: int = 3,
     ) -> str | dict:
-        """Generate completion with multi-key rotation on 429."""
+        """Generate completion, rotating keys automatically on 429."""
         import asyncio
+        import logging
+
+        log = logging.getLogger(__name__)
+
+        if not self.keys:
+            raise RuntimeError("No Groq API keys configured. Set GROQ_API_KEYS or GROQ_API_KEY in .env.")
 
         payload = {
             "model": self.model,
@@ -107,18 +146,16 @@ class GroqProvider(LLMProvider):
         if schema:
             payload["response_format"] = {"type": "json_object"}
 
-        for attempt in range(retries):
-            try:
-                # Get appropriate API key
-                if session_id and db_session and self.key_manager:
-                    api_key = self.key_manager.get_key_for_session(db_session, session_id)
-                    if not api_key:
-                        from spec_atlas.llm.fake import FakeLLMProvider
-                        fake = FakeLLMProvider()
-                        return await fake.complete(messages, schema, temperature)
-                else:
-                    api_key = self.api_key
+        # Try each key up to len(keys) times; after all are exhausted, raise.
+        max_attempts = len(self.keys) * 2
+        for attempt in range(max_attempts):
+            result = self._next_available_key()
+            if result is None:
+                raise RuntimeError("All Groq API keys are rate-limited. Try again in a few minutes.")
 
+            key_idx, api_key = result
+
+            try:
                 async with httpx.AsyncClient(timeout=120) as client:
                     response = await client.post(
                         self.API_URL,
@@ -127,46 +164,30 @@ class GroqProvider(LLMProvider):
                     )
 
                 if response.status_code == 401:
-                    try:
-                        error_data = response.json()
-                        error_msg = error_data.get("error", {}).get("message", "Unauthorized")
-                        raise RuntimeError(f"Groq API auth failed (401): {error_msg}. Check your GROQ_API_KEY.")
-                    except (json.JSONDecodeError, KeyError):
-                        raise RuntimeError(f"Groq API auth failed (401). Check your GROQ_API_KEY.")
+                    error_msg = response.json().get("error", {}).get("message", "Unauthorized")
+                    raise RuntimeError(f"Groq key [{key_idx}] auth failed (401): {error_msg}")
 
                 if response.status_code == 429:
-                    if session_id and db_session and self.key_manager:
-                        key_idx = self.key_manager.keys.index(api_key) if api_key in self.key_manager.keys else 0
-                        self.key_manager.on_429_error(db_session, key_idx)
-                        self.key_manager.rotate_key_for_session(db_session, session_id)
-
-                    if attempt < retries - 1:
-                        wait_secs = 2 ** attempt
-                        import logging
-                        logging.getLogger(__name__).warning(f"Groq 429. Retrying in {wait_secs}s...")
-                        await asyncio.sleep(wait_secs)
-                        continue
-                    else:
-                        raise RuntimeError(f"Groq rate limited (429). Hit max retries. Try again later.")
+                    self._mark_cooldown(key_idx)
+                    wait = min(2 ** attempt, 16)
+                    log.warning(f"Groq 429 on key [{key_idx}]. Waiting {wait}s before retry.")
+                    await asyncio.sleep(wait)
+                    continue
 
                 response.raise_for_status()
-                break
 
             except httpx.HTTPError as e:
-                if attempt < retries - 1:
-                    wait_secs = 2 ** attempt
-                    import logging
-                    logging.getLogger(__name__).warning(f"Groq request failed: {e}. Retrying...")
-                    await asyncio.sleep(wait_secs)
+                if attempt < max_attempts - 1:
+                    await asyncio.sleep(2 ** min(attempt, 4))
                     continue
-                raise RuntimeError(f"Groq error: {e}") from e
+                raise RuntimeError(f"Groq HTTP error: {e}") from e
 
-        text = response.json()["choices"][0]["message"]["content"]
+            text = response.json()["choices"][0]["message"]["content"]
+            if schema:
+                try:
+                    return json.loads(_extract_json_block(text))
+                except (json.JSONDecodeError, IndexError):
+                    return text
+            return text
 
-        if schema:
-            try:
-                return json.loads(_extract_json_block(text))
-            except (json.JSONDecodeError, IndexError):
-                return text
-
-        return text
+        raise RuntimeError("Groq: exceeded max retry attempts across all keys.")

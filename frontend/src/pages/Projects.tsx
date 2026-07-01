@@ -68,14 +68,7 @@ export default function Projects() {
       }
 
       // TODO: Ingest Excel file when API endpoint is available
-      if (formData.excelFile) {
-        console.log('Excel upload not yet implemented')
-      }
-
       // TODO: Ingest Markdown file when API endpoint is available
-      if (formData.markdownFile) {
-        console.log('Markdown upload not yet implemented')
-      }
 
       // Navigate to ask page
       navigate(`/repo/${projectId}/ask`)
