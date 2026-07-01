@@ -1,7 +1,7 @@
 # Spec-Atlas — Comprehensive Status Report
 **Date**: 2026-06-23  
 **Status**: Phase 6a (Frontend revamp in progress)  
-**Overall**: 275+ backend tests passing, zero cost, offline capable  
+**Overall**: 442 backend tests passing, zero cost, offline capable  
 
 ---
 
@@ -11,7 +11,7 @@
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| **Backend Core** | ✅ DONE | Phases 0-4 complete; 275 tests passing |
+| **Backend Core** | ✅ DONE | Phases 0-4 complete; 442 tests passing |
 | **Database** | ✅ DONE | PostgreSQL + pgvector; schema finalized |
 | **LLM Integration** | ✅ DONE | Gemini/Groq free tier + Ollama fallback |
 | **Frontend** | 🔄 IN-PROGRESS | Phase 6a: Revamp complete, routes functional |
@@ -58,9 +58,9 @@ Retrieval: Vector search → tree descent → LLM answer
 
 **Endpoints**:
 ```
-POST /api/ingest/repo          # Queue code repo for ingestion
-POST /api/ingest/document      # Upload PDF/Markdown/Excel
-GET  /api/ingest/status/{job}  # Poll ingestion progress
+POST /api/ingest               # Queue code repo for ingestion
+POST /api/documents            # Upload PDF/Markdown/Excel
+GET  /api/ingest/{job_id}      # Poll ingestion progress
 ```
 
 **Tests**: 123 passing (Phase 1)  
@@ -79,10 +79,10 @@ GET  /api/ingest/status/{job}  # Poll ingestion progress
 
 **Endpoints**:
 ```
-GET /api/graph/subgraph              # Fetch focal L1 + edges
+GET /api/graph/nodes                 # Fetch all L1 nodes
+GET /api/graph/edges                 # Fetch all edges
 GET /api/groups                      # List group tree
-GET /api/groups/{group_id}/specs     # Specs in group
-GET /api/specs/{spec_id}             # Fetch versioned spec
+GET /api/specs/{component_ref}       # Fetch versioned spec
 ```
 
 **Tests**: 150+ passing (Phases 1-3)  
@@ -101,9 +101,9 @@ GET /api/specs/{spec_id}             # Fetch versioned spec
 
 **Endpoints**:
 ```
-POST /api/specify/generate           # Trigger spec generation
-GET  /api/specs/{spec_id}/versions   # Version history
-GET  /api/specs/by-hash/{hash}       # Content-addressed fetch
+POST /api/specs/generate/{component_ref}   # Trigger spec generation
+GET  /api/specs/{component_ref}            # Fetch spec (latest version)
+POST /api/specs/{component_ref}/verify     # Mark spec verified
 ```
 
 **Schema Fields**: intent, dependencies, risks, examples, use_cases, related_specs  
@@ -120,16 +120,12 @@ GET  /api/specs/by-hash/{hash}       # Content-addressed fetch
 **Status**: COMPLETE  
 **What works**:
 - ✅ Batch embedding (FastEmbed via onnxruntime, local)
-- ✅ pgvector storage (512-dim vectors)
+- ✅ pgvector storage (384-dim vectors)
 - ✅ Cosine distance search
 - ✅ Pagination + filtering
 
-**Endpoints**:
-```
-POST /api/embed/batch                # Queue embeddings
-GET  /api/search                     # Vector search by query
-GET  /api/search/semantic/{query}    # Semantic search
-```
+**Endpoints**: Embeddings are computed internally during ingest (no public API).
+Vector search is exposed via `POST /api/ask` and `POST /api/mcp/call` (tool: `search_knowledge`).
 
 **Tests**: 30+ passing  
 **Cost**: $0 (FastEmbed is fully local)  
@@ -149,7 +145,7 @@ GET  /api/search/semantic/{query}    # Semantic search
 **Endpoints**:
 ```
 POST /api/ask                        # Ask a question + get answer
-GET  /api/ask/history                # Conversation memory
+POST /api/ask/stream                 # SSE streaming variant
 ```
 
 **Answer Format**:
@@ -187,11 +183,11 @@ GET  /api/ask/history                # Conversation memory
 - ✅ Tool export (graph, search, ask, specs)
 - ✅ Async communication
 
-**Tools Exposed**:
-- `get_subgraph(node_id)` → L1 + edges + specs
-- `search(query)` → Vector search + semantic results
-- `ask(question)` → Full RAG pipeline
-- `list_specs()` → All specs with citations
+**Tools Exposed** (via `POST /api/mcp/call`):
+- `search_knowledge(query)` → Vector search + semantic results
+- `ask_question(question)` → Full RAG pipeline
+- `get_spec(component_ref)` → Fetch spec by ref
+- `get_graph(repo)` → Graph nodes and edges
 
 **Cost**: $0 (local only)  
 **Mock vs Real**: 100% real (tunnels to backend API)
@@ -303,18 +299,14 @@ GET  /api/ask/history                # Conversation memory
 - ✅ Citation chips (hover for source)
 - ✅ Loading states
 
-**Missing**:
-- 🔄 Backend /api/ask wiring (in progress)
-- 🔄 Streaming responses
+**Status**: Fully wired to `POST /api/ask` and `POST /api/ask/stream` (SSE)
 
 **Components**:
 - `<Composer/>` — Input + send
 - `<ChatMessage/>` — Answer + citations
 - `<CitationChip/>` — Source reference
 
-**Mock vs Real**: 
-- ✅ Frontend UI (100% real)
-- 🔄 Backend API (ready, awaiting T-009.6)
+**Mock vs Real**: 100% real — wired to backend
 
 ---
 
@@ -397,10 +389,11 @@ GET  /api/ask/history                # Conversation memory
 
 **Configuration** (via .env):
 ```bash
-LLM_PROVIDER=gemini         # or groq, ollama, fake
-GOOGLE_API_KEY=...          # for Gemini
-GROQ_API_KEY=...            # for Groq
-OLLAMA_BASE_URL=...         # for Ollama
+LLM_PROVIDER=groq           # or gemini, ollama, fake
+GROQ_API_KEY=...            # for Groq (get from console.groq.com)
+GROQ_API_KEYS=k1,k2,k3     # optional: round-robin rotation across keys
+GEMINI_API_KEY=...          # only if LLM_PROVIDER=gemini
+OLLAMA_BASE_URL=...         # only if LLM_PROVIDER=ollama
 ```
 
 **Cost**: $0 (free tier only; no paid APIs)  
@@ -421,7 +414,7 @@ OLLAMA_BASE_URL=...         # for Ollama
 **Supported Providers**:
 ```python
 # Production (local)
-- FastEmbed (onnxruntime-backed, 512-dim)
+- FastEmbed (onnxruntime-backed, 384-dim)
 - Fake provider (offline testing)
 
 # Experimental
@@ -452,25 +445,19 @@ EMBED_MODEL=BAAI/bge-small-en-v1.5  # default
 
 #### Analysis DB (L1 + L4)
 ```sql
-projects            -- repo metadata
-sources             -- ingested files (code, pdf, etc.)
-symbols             -- L1 nodes (modules, classes, functions)
+repos               -- repo metadata
+nodes               -- L1 nodes (modules, classes, functions)
 edges               -- L1 relationships (imports, calls)
-domains             -- L4 clusters (filesystem-driven groups)
+groups              -- L3/L4 clusters (directory-based)
+embeddings          -- 384-dim vectors (pgvector cosine search)
+source_units        -- document chunks (PDFs, Markdown, etc.)
+ingest_jobs         -- job queue + progress tracking
+sessions            -- multi-user session isolation
 ```
 
-#### Spec DB (L2 + L3 + Memory)
+#### Spec DB (L2)
 ```sql
 specs               -- generated specifications (versioned)
-spec_versions       -- immutable version history (SHA-256 keyed)
-groups              -- L3 clusters (directory-based)
-group_summaries     -- group abstracts + fingerprints
-conversation_facts  -- memory store (persists across sessions)
-```
-
-#### pgvector Extension
-```sql
-embedding_vectors   -- 512-dim cosine search table
 ```
 
 **Migrations**: ✅ Auto-applied on startup (Alembic)  
@@ -507,12 +494,12 @@ embedding_vectors   -- 512-dim cosine search table
 | Frontend ↔ backend binding | 80% | Routes work, needs wiring in 6a |
 | Git history connector | Planned | Not yet implemented |
 
-### Mocked 🎭
-| Component | What's Mocked | Why |
-|-----------|---------------|-----|
-| DEMO data | MOCK_SUBGRAPH | Frontend fallback when API unavailable |
-| Jira connector | Schema only | Not yet implemented |
-| Drift detection | Schema only | Planned for Phase 5 |
+### Not Yet Implemented 📋
+| Component | Status |
+|-----------|--------|
+| Jira connector | Schema only — not yet implemented |
+| Conversation memory persistence | Schema ready — UI flow pending |
+| Git history connector | Planned |
 
 ---
 
@@ -619,7 +606,7 @@ LLM_PROVIDER=fake EMBED_PROVIDER=fake pytest
 ### Development Setup
 ```bash
 # Backend
-cd /home/cxld/projects/spec-atlas-ki-platform
+cd spec-atlas-ki-platform
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
@@ -645,9 +632,10 @@ pytest -xvs
 # .env (example)
 ANALYSIS_DB_URL=postgresql://user:pass@localhost/analysis
 SPEC_DB_URL=postgresql://user:pass@localhost/specs
-LLM_PROVIDER=gemini  # or groq, ollama, fake
-GOOGLE_API_KEY=...
-EMBED_PROVIDER=fastembed
+LLM_PROVIDER=groq            # or gemini, ollama, fake
+GROQ_API_KEY=gsk_your_key
+GROQ_API_KEYS=gsk_k1,gsk_k2  # optional multi-key rotation
+EMBED_PROVIDER=fake           # or fastembed
 ```
 
 ---

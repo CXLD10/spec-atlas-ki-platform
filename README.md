@@ -141,8 +141,11 @@ cat > .env << 'EOF'
 ANALYSIS_DB_URL=postgresql+psycopg://spec_atlas:spec_atlas_dev@localhost:5432/spec_atlas_analysis
 SPEC_DB_URL=postgresql+psycopg://spec_atlas:spec_atlas_dev@localhost:5432/spec_atlas_spec
 LLM_PROVIDER=groq
-GROQ_API_KEY=your_key_here_KEY_HERE
+GROQ_API_KEY=gsk_your_key_here
+GROQ_API_KEYS=gsk_key1,gsk_key2,gsk_key3
+GROQ_MODEL=llama-3.1-8b-instant
 EMBED_PROVIDER=fake
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 EOF
 ```
 
@@ -160,7 +163,7 @@ Open a terminal and run:
 
 ```bash
 source .venv/bin/activate
-cd /home/cxld/projects/spec-atlas-ki-platform
+cd spec-atlas-ki-platform
 export PYTHONPATH=$PWD/src
 uvicorn spec_atlas.api.app:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -172,7 +175,7 @@ Wait for the message: `Uvicorn running on http://0.0.0.0:8000`
 Open another terminal and run:
 
 ```bash
-cd /home/cxld/projects/spec-atlas-ki-platform/frontend
+cd spec-atlas-ki-platform/frontend
 npm install
 ```
 
@@ -232,7 +235,7 @@ You are now ready to start indexing repositories.
 - **Database**: PostgreSQL + pgvector
 - **ORM**: SQLAlchemy
 - **Parsing**: tree-sitter
-- **Embeddings**: Ollama (default) or Groq
+- **Embeddings**: fake (default, offline) or fastembed (local onnxruntime)
 - **LLM**: Groq (free) or Ollama
 
 ### Frontend

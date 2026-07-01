@@ -14,9 +14,9 @@
 - **Database:** Connected ✅
 
 ### ✅ Frontend
-- **URL:** http://localhost:5179 (or 5173)
+- **URL:** http://localhost:5173
 - **Process:** Vite dev server (npm run dev)
-- **Port:** 5179/5173
+- **Port:** 5173
 - **Status:** Running
 
 ### ✅ Database
@@ -79,7 +79,7 @@ curl -X POST http://localhost:8000/api/ask \
 Expected: Answer with citations to actual specs (not generic LLM response)
 
 ### 4. Use the Web Interface
-- Open http://localhost:5179
+- Open http://localhost:5173
 - Paste a GitHub/GitLab repo URL
 - Click "Index Repository"
 - Wait for indexing to complete
@@ -127,7 +127,7 @@ Expected: Answer with citations to actual specs (not generic LLM response)
 
 ### Q&A Pipeline
 1. ✅ User asks question
-2. ✅ Query is embedded (fake embeddings for now)
+2. ✅ Query is embedded (fake provider by default; set EMBED_PROVIDER=fastembed for real vectors)
 3. ✅ Vector search finds relevant specs
 4. ✅ LLM answers using specs as context
 5. ✅ Citations point to actual source code
@@ -156,7 +156,7 @@ EMBED_DIM=384
 pkill -9 -f "uvicorn"
 
 # Restart
-cd /home/cxld/projects/spec-atlas-ki-platform
+cd .
 make dev > /tmp/backend.log 2>&1 &
 ```
 
@@ -177,7 +177,7 @@ docker run -d --name spec-atlas-postgres-only \
 
 sleep 10
 
-cd /home/cxld/projects/spec-atlas-ki-platform
+cd .
 make dev > /tmp/backend.log 2>&1 &
 ```
 
@@ -196,11 +196,11 @@ make dev > /tmp/backend.log 2>&1 &
 All backend tests pass:
 ```bash
 LLM_PROVIDER=fake EMBED_PROVIDER=fake make test
-# 499 passed ✅
+# 442 passed ✅
 ```
 
 ## Summary
 
 **Everything is configured, running, and ready to use.** The critical Groq JSON mode fix (commit ebd70a4) ensures the RAG pipeline will work correctly. Spec generation will now complete successfully, and answers will be grounded in actual code specs with proper citations.
 
-**Next step:** Open http://localhost:5179 and test!
+**Next step:** Open http://localhost:5173 and test!
