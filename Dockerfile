@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy project files
 COPY pyproject.toml README.md alembic.ini ./
 COPY src ./src
-COPY alembic ./alembic
+COPY migrations ./migrations
 
 # Install dependencies
 RUN pip install --no-cache-dir -e .
@@ -36,7 +36,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy app files
 COPY pyproject.toml README.md alembic.ini ./
 COPY src ./src
-COPY alembic ./alembic
+COPY migrations ./migrations
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
