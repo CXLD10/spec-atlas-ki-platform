@@ -10,10 +10,13 @@ This phase:
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from spec_atlas.db.analysis import Node, Repo
 from spec_atlas.ingest.strategies.module_analyzer import ModuleAnalyzer
@@ -69,24 +72,24 @@ class Phase6SpecGenerator:
             List of (spec_dict, provenance_dict) tuples.
         """
         # Phase 1: Analyze codebase into modules
-        print(f"[Phase 6] Analyzing codebase structure for {repo.name}...")
+        logger.info("[Phase 6] Analyzing codebase structure for %s...", repo.name)
         hierarchy = self.module_analyzer.analyze_codebase(session, repo)
-        print(f"  -> {hierarchy.module_count} modules, {hierarchy.entity_count} entities")
+        logger.info("  -> %d modules, %d entities", hierarchy.module_count, hierarchy.entity_count)
 
         # Phase 2: Select high-quality entities for spec generation
-        print(f"[Phase 6] Selecting {self.target_spec_count} entities for specs...")
+        logger.info("[Phase 6] Selecting %d entities for specs...", self.target_spec_count)
         selected_entities = self.spec_selector.select_entities(hierarchy)
-        print(f"  -> Selected {len(selected_entities)} entities")
+        logger.info("  -> Selected %d entities", len(selected_entities))
 
         # Phase 3: Batch and generate specs
-        print(f"[Phase 6] Generating specs in batches of {self.batch_size}...")
+        logger.info("[Phase 6] Generating specs in batches of %d...", self.batch_size)
 
         # Show ETA accounting for rate limit throttling
         delay_time = (len(selected_entities) - 1) * 1.5  # 1.5s between specs
         llm_time_estimate = len(selected_entities) * 5  # ~5s per LLM call
         total_eta = delay_time + llm_time_estimate
-        print(f"  ⏱️  Rate-limited to ~1 request/1.5s to avoid Groq free-tier limits")
-        print(f"  ⏱️  ETA: {int(total_eta)}s (~{int(total_eta/60)} min) for {len(selected_entities)} specs")
+        logger.info("  Rate-limited to ~1 request/1.5s to avoid Groq free-tier limits")
+        logger.info("  ETA: %ds (~%d min) for %d specs", int(total_eta), int(total_eta / 60), len(selected_entities))
 
         specs = self._generate_specs_batched(
             session,
@@ -94,7 +97,7 @@ class Phase6SpecGenerator:
             selected_entities,
             llm_provider,
         )
-        print(f"  -> Generated {len(specs)} specs")
+        logger.info("  -> Generated %d specs", len(specs))
 
         return specs
 
@@ -124,7 +127,7 @@ class Phase6SpecGenerator:
         # Batch into groups of batch_size
         for batch_idx in range(0, len(selected_entities), self.batch_size):
             batch = selected_entities[batch_idx : batch_idx + self.batch_size]
-            print(f"  Batch {batch_idx // self.batch_size + 1}: {len(batch)} entities")
+            logger.debug("  Batch %d: %d entities", batch_idx // self.batch_size + 1, len(batch))
 
             for selected in batch:
                 try:
@@ -137,7 +140,7 @@ class Phase6SpecGenerator:
                         session.query(Node).filter(Node.id == selected.node_id).first()
                     )
                     if not focal_node:
-                        print(f"    ! Skipped {selected.qualified_name} (not found in DB)")
+                        logger.warning("    Skipped %s (not found in DB)", selected.qualified_name)
                         continue
 
                     # Fetch neighbors
@@ -167,10 +170,10 @@ class Phase6SpecGenerator:
 
                     all_specs.append((spec, provenance))
                     spec_count += 1
-                    print(f"    ✓ {selected.qualified_name} ({selected.reason})")
+                    logger.info("    OK %s (%s)", selected.qualified_name, selected.reason)
 
                 except Exception as e:
-                    print(f"    ! Error generating spec for {selected.qualified_name}: {e}")
+                    logger.error("    Error generating spec for %s: %s", selected.qualified_name, e)
 
         return all_specs
 

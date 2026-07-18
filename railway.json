@@ -4,7 +4,7 @@
     "builder": "dockerfile"
   },
   "deploy": {
-    "startCommand": "alembic upgrade head && uvicorn spec_atlas.api.app:app --host 0.0.0.0 --port 8000",
+    "startCommand": "alembic upgrade head && uvicorn spec_atlas.api.app:app --host 0.0.0.0 --port $PORT",
     "healthcheckUrl": "http://localhost:8000/health",
     "healthcheckInterval": 30,
     "healthcheckTimeout": 10

@@ -1,61 +1,178 @@
-.pipeline-hud {
-  position: fixed;
-  left: 2rem;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
-  pointer-events: auto;
-}
-
-.stages-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.phud {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  align-items: center;
+  gap: 2.5rem;
+  width: 100%;
 }
 
-.stage {
+/* ── Phases row ── */
+.phud-phases {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: wrap;
+  row-gap: 1.5rem;
+}
+
+.phud-phase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  min-width: 100px;
+}
+
+.phud-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--panel);
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 0.875rem;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  transition: border-color 0.4s, background 0.4s, box-shadow 0.4s;
+}
+
+.phud-phase--done .phud-dot {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: 0 0 10px var(--cyan-glow);
+}
+
+.phud-phase--active .phud-dot {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: 0 0 16px var(--cyan-glow);
+}
+
+.phud-check {
+  font-size: 0.75rem;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.phud-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: phud-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes phud-blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.35; transform: scale(0.65); }
+}
+
+/* Phase labels */
+.phud-phase-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.phud-phase-name {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-dim);
-  transition: color 0.3s ease;
+  color: var(--faint);
+  transition: color 0.4s;
 }
 
-.stage.active {
-  color: var(--stage-color);
+.phud-phase--done .phud-phase-name,
+.phud-phase--active .phud-phase-name {
+  color: var(--mid);
 }
 
-.stage.done {
-  color: var(--stage-color);
-  opacity: 0.7;
+.phud-phase--active .phud-phase-name {
+  color: var(--hi);
 }
 
-.stage-indicator {
-  display: inline-block;
-  font-size: 1.25rem;
+.phud-phase-sub {
+  font-size: 0.58rem;
+  color: var(--faint);
+  transition: color 0.4s;
+  white-space: nowrap;
+}
+
+.phud-phase--active .phud-phase-sub {
+  color: var(--dim);
+}
+
+/* Connector line */
+.phud-connector {
+  position: absolute;
+  top: 15px;
+  left: calc(100% - 2px);
+  width: calc(100% - 96px);
+  height: 1px;
+  background: var(--border);
+  transition: background 0.4s;
+  z-index: 0;
+  min-width: 16px;
+}
+
+.phud-connector--lit {
+  background: var(--primary);
+  opacity: 0.5;
+}
+
+/* ── Counters ── */
+.phud-counters {
+  display: flex;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 2rem;
+  gap: 2rem;
+}
+
+.phud-counter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 72px;
+}
+
+.phud-counter-val {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--primary);
   line-height: 1;
 }
 
-.stage-label {
+.phud-counter-lbl {
   font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
 }
 
-/* Mobile: hide HUD */
-@media (max-width: 768px) {
-  .pipeline-hud {
-    display: none;
-  }
+.phud-counter-divider {
+  width: 1px;
+  height: 36px;
+  background: var(--border);
 }
 
-/* Reduced motion: simpler transitions */
+@media (max-width: 600px) {
+  .phud-connector { display: none; }
+  .phud-counters  { gap: 1rem; padding: 0.75rem 1rem; }
+  .phud-counter-val { font-size: 1.1rem; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .stage {
-    transition: none;
-  }
+  .phud-pulse { animation: none; opacity: 1; }
 }

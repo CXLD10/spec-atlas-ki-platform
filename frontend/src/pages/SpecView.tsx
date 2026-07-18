@@ -41,9 +41,12 @@ export function SpecView() {
   }
 
   const renderMarkdown = (markdown: string) => {
-    // Simple markdown to HTML rendering
-    // For production, consider using a library like react-markdown or marked
-    let html = markdown
+    // Escape HTML entities first to prevent XSS, then apply markdown transforms
+    const escaped = markdown
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+    let html = escaped
       .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
       .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
       .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
@@ -53,6 +56,7 @@ export function SpecView() {
       .replace(/\n\n/g, '</p><p>')
       .split('\n')
       .join('<br/>')
+
 
     return <div className="markdown-content" dangerouslySetInnerHTML={{ __html: html }} />
   }

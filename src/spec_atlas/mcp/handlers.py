@@ -59,7 +59,7 @@ class MCPHandlers:
                             if hasattr(owner, "title")
                             else getattr(owner, "source_id", "")
                         ),
-                        "relevance": round(score, 4),
+                        "relevance": round(float(score), 4),
                         "kind": "group" if hasattr(owner, "title") else "source_unit",
                     }
                     for owner, score in results
@@ -226,7 +226,7 @@ class MCPHandlers:
                 "question": question,
                 "answer": answer_obj.text,
                 "claims": [{"claim": c.claim, "source": c.source} for c in answer_obj.claims],
-                "confidence": round(similarity, 4),
+                "confidence": round(float(similarity), 4),
                 "strategy": strategy,
             }
         except Exception as e:

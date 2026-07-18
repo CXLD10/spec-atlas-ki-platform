@@ -133,9 +133,7 @@ export function RepoAsk() {
                 <CitationChip
                   key={i}
                   source={claim.source}
-                  onClick={() => {
-                    console.log('Clicked citation:', claim.source);
-                  }}
+                  onClick={() => {}}
                 />
               ))}
             </div>

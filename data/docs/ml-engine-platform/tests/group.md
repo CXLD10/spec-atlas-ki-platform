@@ -21,12 +21,12 @@ This group contains 31 code components.
 - `test_candle_validation_non_monotonic` (function, python)
 - `test_degraded_flag_propagation` (function, python)
 - `test_inference_latency_field_present` (function, python)
+- `_build_registry` (function, python)
 - `test_model_activation_logic` (function, python)
 - `test_drift_detection_thresholds` (function, python)
 - `test_prediction_audit_logging` (function, python)
 - `test_monitoring_endpoints_and_metadata_integrity` (function, python)
 - `StubBatchInferenceEngine` (class, python)
-- `StubBatchInferenceEngine.predict` (method, python)
 - ... and 11 more
 
 ---

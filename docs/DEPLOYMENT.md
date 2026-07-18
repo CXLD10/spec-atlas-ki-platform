@@ -23,12 +23,18 @@
 3. **Configure Environment Variables**
    Railway Dashboard → Variables:
    ```
-   GROQ_API_KEYS=gsk_xxx,gsk_yyy,gsk_zzz,gsk_www
    ANALYSIS_DB_URL=postgresql://...
    SPEC_DB_URL=postgresql://...
+   LLM_PROVIDER=groq
+   GROQ_API_KEY=gsk_your_key_here
+   GROQ_API_KEYS=gsk_xxx,gsk_yyy,gsk_zzz,gsk_www
+   GROQ_MODEL=llama-3.1-8b-instant
+   EMBED_PROVIDER=fake
    PYTHONUNBUFFERED=1
+   ALLOWED_ORIGINS=https://your-frontend.vercel.app
    ```
    **Get keys from**: https://console.groq.com/keys (comma-separated, no spaces)
+   **ALLOWED_ORIGINS**: set to your Vercel deployment URL — without this, all API calls from the frontend will be blocked by CORS
 
 4. **Auto-deployment**
    - Dockerfile runs `alembic upgrade head` → migrations applied

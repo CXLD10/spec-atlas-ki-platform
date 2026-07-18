@@ -40,8 +40,9 @@ COPY alembic ./alembic
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Run migrations on startup, then start uvicorn
+# Run migrations on startup, then start uvicorn (PORT is injected by the host
+# platform — Render/Railway/Fly all set it; defaults to 8000 for local docker-compose)
 CMD alembic upgrade head && \
-    uvicorn spec_atlas.api.app:app --host 0.0.0.0 --port 8000
+    uvicorn spec_atlas.api.app:app --host 0.0.0.0 --port ${PORT:-8000}

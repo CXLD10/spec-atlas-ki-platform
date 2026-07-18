@@ -11,7 +11,7 @@
 ## Step 1: Start Databases (FIRST - Required for backend)
 
 ```bash
-cd /home/cxld/projects/spec-atlas-ki-platform
+cd .
 
 # Start PostgreSQL with pgvector (via Docker)
 docker-compose up -d
@@ -31,7 +31,7 @@ curl http://localhost:8000/health
 ## Step 2: Install Backend Dependencies
 
 ```bash
-cd /home/cxld/projects/spec-atlas-ki-platform
+cd .
 
 # Create/activate venv (if not already done)
 uv venv --python 3.12 .venv
@@ -44,7 +44,7 @@ uv pip install -e ".[dev]"
 ## Step 3: Set Environment Variables
 
 ```bash
-# File: /home/cxld/projects/spec-atlas-ki-platform/.env
+# File: ./.env
 # DO NOT commit this file - it's in .gitignore
 
 ANALYSIS_DB_URL=postgresql+psycopg://spec_atlas:spec_atlas_dev@localhost:5432/spec_atlas_analysis
@@ -52,12 +52,16 @@ SPEC_DB_URL=postgresql+psycopg://spec_atlas:spec_atlas_dev@localhost:5432/spec_a
 
 # LLM Provider - NEVER commit API keys!
 LLM_PROVIDER=groq
-GROQ_API_KEY=<YOUR_GROQ_API_KEY_HERE>  # Get from https://console.groq.com/keys
+GROQ_API_KEY=gsk_your_key_here       # Get from https://console.groq.com/keys
+GROQ_API_KEYS=gsk_key1,gsk_key2      # Optional: multiple keys for rate-limit rotation
 GROQ_MODEL=llama-3.1-8b-instant
 
 # Embedding (fake for local dev)
 EMBED_PROVIDER=fake
 EMBED_DIM=384
+
+# CORS (set to your frontend URL in production)
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
 
 ⚠️ **IMPORTANT:** Never commit your `.env` file. It's in `.gitignore` for a reason.
@@ -65,7 +69,7 @@ EMBED_DIM=384
 ## Step 4: Run Backend (Terminal 1)
 
 ```bash
-cd /home/cxld/projects/spec-atlas-ki-platform
+cd .
 
 # DO NOT use docker-compose spec-atlas service - use local uvicorn instead
 # (Docker version has issues with localhost:5432 connection)
@@ -83,7 +87,7 @@ make dev
 ## Step 5: Install & Run Frontend (Terminal 2)
 
 ```bash
-cd /home/cxld/projects/spec-atlas-ki-platform/frontend
+cd ./frontend
 
 # Install dependencies
 npm install
@@ -188,8 +192,8 @@ sleep 5
 # Start fresh
 docker-compose up -d
 sleep 15
-cd /home/cxld/projects/spec-atlas-ki-platform && make dev &
-cd /home/cxld/projects/spec-atlas-ki-platform/frontend && npm run dev &
+cd . && make dev &
+cd ./frontend && npm run dev &
 ```
 
 ## Architecture Overview
@@ -255,7 +259,7 @@ All fixes are in the current codebase:
 # Backend tests (uses fake LLM/embedding)
 LLM_PROVIDER=fake EMBED_PROVIDER=fake make test
 
-# Expected: 499 tests passed
+# Expected: 442 tests passed
 ```
 
 ## Key Ports

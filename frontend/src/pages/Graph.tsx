@@ -94,8 +94,8 @@ export default function Graph() {
           <div className="hud-layers">
             {(
               [
-                { key: 'L1', label: 'Sources', count: countL1 },
-                { key: 'L3', label: 'Cards', count: countL3 },
+                { key: 'L1', label: 'Code',    count: countL1 },
+                { key: 'L3', label: 'Cards',   count: countL3 },
                 { key: 'L4', label: 'Domains', count: countL4 },
               ] as const
             ).map(({ key, label, count }) => (
@@ -107,9 +107,7 @@ export default function Graph() {
                   aria-label={`Toggle ${label} layer`}
                 />
                 <span className={`layer-dot layer-dot--${key.toLowerCase()}`} />
-                <span>
-                  {key} {label} ({count})
-                </span>
+                <span>{label} ({count})</span>
               </label>
             ))}
           </div>

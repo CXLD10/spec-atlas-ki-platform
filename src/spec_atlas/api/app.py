@@ -59,14 +59,8 @@ def create_app(settings=None) -> FastAPI:
     try:
         from spec_atlas.embed import get_embedding_provider
         from spec_atlas.llm import get_llm_provider
-        from spec_atlas.llm.groq_manager import GroqKeyManager
 
         llm_provider = get_llm_provider(resolved)
-
-        # Inject GroqKeyManager into GroqProvider if applicable
-        if resolved.llm_provider == "groq" and hasattr(llm_provider, "key_manager"):
-            llm_provider.key_manager = GroqKeyManager()
-
         app.state.llm_provider = llm_provider
         app.state.embedding_provider = get_embedding_provider(resolved)
     except Exception as e:
@@ -91,10 +85,12 @@ def create_app(settings=None) -> FastAPI:
 
     app.add_middleware(SessionMiddleware)
 
-    # CORS Middleware (permissive for local dev)
+    # CORS Middleware — reads ALLOWED_ORIGINS from config (comma-separated list).
+    # Defaults to localhost dev ports; set ALLOWED_ORIGINS in .env for production.
+    allowed_origins = [o.strip() for o in resolved.allowed_origins.split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

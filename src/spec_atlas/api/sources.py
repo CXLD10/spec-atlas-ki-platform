@@ -342,26 +342,21 @@ async def import_jira_export(
 
 @router.delete("/sources/{repo_id}")
 async def delete_repo(request: Request, repo_id: str):
-    """Delete a repository (session-scoped). Cascades all related data."""
-    session_id = request.state.session_id
+    """Delete a repository by ID. Cascades all related data."""
     db_session = get_analysis_session_simple()
 
     try:
         repo = db_session.query(Repo).filter(
             Repo.id == uuid.UUID(repo_id),
-            Repo.session_id == session_id
         ).first()
 
         if not repo:
             raise HTTPException(status_code=404, detail="Repository not found")
 
-        from spec_atlas.session.manager import SessionManager
-        SessionManager.decrement_repo_count(db_session, session_id)
-
         db_session.delete(repo)
         db_session.commit()
 
-        logger.info(f"Deleted repo {repo_id} from session {session_id}")
+        logger.info(f"Deleted repo {repo_id}")
         return {"status": "deleted", "repo_id": repo_id}
 
     except ValueError:

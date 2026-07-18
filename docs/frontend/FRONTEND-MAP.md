@@ -12,15 +12,15 @@
 - **File:** `frontend/src/app/App.tsx:1-50`
 - **Library:** react-router-dom (v6.20.0)
 - **Routes:**
-  - `/` → Landing page
-  - `/projects` → Projects list & management
-  - `/graph` → Graphify (3D visualization)
-  - `/ask` → Q&A interface
-  - `/specify` → Spec creation tool
-  - `/dashboard` → Project dashboard
+  - `/` → Dashboard (home)
+  - `/sources` → Source manager
+  - `/kb` → Knowledge Base (specs browser)
+  - `/graph` → Knowledge Graph (3D isometric)
+  - `/ask` → Ask Atlas (Q&A chat)
+  - `/specify` → Spec generator tool
+  - `/mcp` → MCP server console
   - `/docs` → Documentation
   - `/index/:jobId` → Index progress tracking
-  - `/repo/:repoId/*` — Repo-scoped routes (ask, graphify, specify, explore)
 
 ### Layout & Shell
 - **TopBar:** `frontend/src/components/layout/TopBar.tsx` (+ TopBar.css) — Header with navigation
@@ -63,8 +63,8 @@
   - `frontend/src/api/useSpecGraph.ts` — Spec graph queries
 
 ### Styling Approach
-- **Method:** Hybrid: Tailwind CSS + CSS custom properties + component-scoped CSS files
-- **Tailwind:** Configured with GitHub Dark/Light themes in `frontend/tailwind.config.ts`
+- **Method:** CSS custom properties + component-scoped CSS files (Apple-inspired dark mode design)
+- **No Tailwind** — styling uses plain CSS + design tokens
 - **CSS Variables:** Defined in `frontend/src/app/theme/tokens.css`
   - Colors: `--bg`, `--panel`, `--ink`, `--cyan`, `--l1` (code), `--l3` (specs), `--l4` (groups)
   - Fonts: `--font-display` (Space Grotesk), `--font-mono` (JetBrains Mono)
@@ -109,19 +109,25 @@
 | `GET /api/documents` | List uploaded documents | **NEEDED** |
 | `GET /api/documents/:id` | Get one document metadata | **NEEDED** |
 | `GET /api/documents/:id/status` | Document ingestion progress | **NEEDED** (may reuse /api/ingest/:jobId/status) |
-| `GET /api/sources` | List both repos + documents (unified) | **NEEDED** (or merge /api/documents + repo listing) |
-| `GET /api/sources/:id` | Get source (repo or document) | **NEEDED** |
-| `GET /api/kb` | List knowledge cards/specs (all) | **NEEDS VERIFY** (may map to `/api/specs` listing endpoint) |
-| `GET /api/kb/:ref` | One knowledge card/spec + markdown | **VERIFY** (map to `/api/specs/{component_ref}` + markdown field) |
+| `GET /api/sources` | List both repos + documents (unified) | **DONE** — `api/sources.py` |
+| `GET /api/sources/:id` | Get source (repo or document) | **DONE** — `api/sources.py` |
+| `GET /api/kb` | List knowledge cards/specs (all) | **DONE** — `api/kb.py` |
+| `GET /api/kb/:ref` | One knowledge card/spec + markdown | **DONE** — `api/kb.py` |
 | `GET /api/source-snippet?doc=:id&page=:n` | Citation preview (file:line or p.N) | **NEEDED** |
 
-**Known live endpoints:**
+**Live endpoints:**
 - `POST /api/ingest` {repo_url} → JobStatus
-- `GET /api/ingest/:jobId/status` → JobStatus
-- `GET /api/specs/{component_ref}` → Spec (has summary, inputs, outputs, etc.)
-- `GET /api/specs/graph/{component_ref}` → relations
-- `GET /api/groups[/:id]` → Group/domain summaries
-- `POST /api/ask` {question, project_id} → answer + claims
+- `GET /api/ingest/{job_id}` → JobStatus (poll progress)
+- `GET /api/sources` → sources list
+- `DELETE /api/sources/{id}` → remove source
+- `GET /api/graph/nodes` + `GET /api/graph/edges` → graph data
+- `GET /api/groups` → group tree
+- `GET /api/specs/{component_ref}` → Spec
+- `POST /api/specs/generate/{component_ref}` → generate spec
+- `GET /api/kb` + `GET /api/kb/{ref}` → knowledge cards
+- `POST /api/ask` {question, repo} → answer + claims
+- `POST /api/ask/stream` → SSE streaming answer
+- `POST /api/mcp/call` {tool, args} → MCP tool result
 - `GET /health` → status
 
 **Frontend strategy:**

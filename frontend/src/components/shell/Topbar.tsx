@@ -26,13 +26,8 @@ interface SearchResult {
 export function Topbar() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { data: sources = [], isLoading: sourcesLoading } = useSources()
-  const { data: cards = [], isLoading: cardsLoading } = useCards()
-
-  // Debug: log data availability
-  useEffect(() => {
-    console.log('Topbar data:', { sources: sources.length, sourcesLoading, cards: cards.length, cardsLoading })
-  }, [sources, sourcesLoading, cards, cardsLoading])
+  const { data: sources = [] } = useSources()
+  const { data: cards = [] } = useCards()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
@@ -85,7 +80,6 @@ export function Topbar() {
       }
     })
 
-    console.log('Search results:', { query, found: searchResults.length })
     setResults(searchResults.slice(0, 8))
     setShowResults(searchResults.length > 0)
   }, [searchQuery, sources, cards])
